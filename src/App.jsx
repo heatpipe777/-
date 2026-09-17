@@ -2948,8 +2948,8 @@ export default function App() {
 
         <div className="relative z-10 flex items-start justify-between">
           <div>
-            <p className="text-[35px] font-bold" style={{ color: "rgba(255,255,255,0.95)" }}>사장님, 안녕하세요 👋</p>
-            <h1 className="text-[28px] font-black mt-1 tracking-tight text-white leading-tight whitespace-nowrap" style={{ letterSpacing: "-0.02em" }}>소상공인 정책자금 알리미</h1>
+            <p className="text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.95)" }}>사장님, 안녕하세요 👋</p>
+            <h1 className="text-[20px] font-black mt-1 tracking-tight text-white leading-tight whitespace-nowrap" style={{ letterSpacing: "-0.02em" }}>소상공인 정책자금 알리미</h1>
           </div>
           <button
             onClick={() => setMainTab("my")}
