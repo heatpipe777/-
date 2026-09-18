@@ -1024,55 +1024,50 @@ const CENTER_GROUPS = [
 
 // 지역센터 미니맵 미리보기 — iframe이 일부 환경(CSP 등)에서 차단될 수 있어 정적 이미지 방식 사용
 // 이미지 로드 실패 시 자연스러운 대체 화면으로 전환
+// 실제 배포 환경에서는 외부 네트워크 요청이 막힐 이유가 없어서, API 키 없이 쓸 수 있는
+// 구글 지도 embed(2014년부터 제공되는 공식 방식, q=주소&output=embed)로 실제 지도를 보여줘요
 function CenterMapPreview({ center }) {
   const detailUrl = `https://map.naver.com/p/search/${encodeURIComponent(center.address)}`;
+  const hasCoords = typeof center.lat === "number" && typeof center.lng === "number";
+  const bboxPad = 0.01;
+  const embedUrl = hasCoords
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${center.lng - bboxPad}%2C${center.lat - bboxPad * 0.8}%2C${center.lng + bboxPad}%2C${center.lat + bboxPad * 0.8}&layer=mapnik&marker=${center.lat}%2C${center.lng}`
+    : null;
 
   return (
-    <a
-      href={detailUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="relative block rounded-lg overflow-hidden mb-3"
-      style={{ height: 140, border: `1px solid ${BORDER}`, background: "#EAF1FB" }}
+    <div
+      className="relative rounded-lg overflow-hidden mb-3"
+      style={{ height: 140, border: `1px solid ${BORDER}`, background: "#EAEBF1" }}
     >
-      {/* 격자 배경 — 실제 지도 타일이 아니라, 네트워크 없이도 항상 표시되는 자체 제작 미니맵 */}
-      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 140" preserveAspectRatio="none">
-        <defs>
-          <pattern id={`grid-${center.name}`} width="26" height="26" patternUnits="userSpaceOnUse">
-            <path d="M 26 0 L 0 0 0 26" fill="none" stroke="#CFE0F7" strokeWidth="1" />
-          </pattern>
-        </defs>
-        <rect width="320" height="140" fill={`url(#grid-${center.name})`} />
-        <circle cx="60" cy="40" r="3" fill="#CFE0F7" />
-        <circle cx="250" cy="100" r="4" fill="#CFE0F7" />
-        <circle cx="200" cy="30" r="2.5" fill="#CFE0F7" />
-        <circle cx="90" cy="110" r="3" fill="#CFE0F7" />
-        <path d="M40,70 L280,70" stroke="#D7E6FA" strokeWidth="6" strokeLinecap="round" />
-        <path d="M160,10 L160,130" stroke="#D7E6FA" strokeWidth="6" strokeLinecap="round" />
-      </svg>
-
-      {/* 핀 마커 */}
-      <div className="absolute left-1/2 top-1/2 flex flex-col items-center" style={{ transform: "translate(-50%, -60%)" }}>
-        <svg width="30" height="37" viewBox="0 0 34 42">
-          <path d="M17,0 C7.6,0 0,7.6 0,17 C0,29 17,42 17,42 C17,42 34,29 34,17 C34,7.6 26.4,0 17,0 Z" fill={BLUE} />
-          <circle cx="17" cy="17" r="6.5" fill="white" />
-        </svg>
-        <div style={{ width: 30, height: 8, borderRadius: "50%", background: "rgba(61,99,221,0.18)", marginTop: -4 }} />
-      </div>
-
-      <span
-        className="absolute left-2.5 bottom-2.5 text-[11.5px] font-bold px-2.5 py-1 rounded-full"
-        style={{ background: "white", color: TEXT, boxShadow: "0 2px 6px rgba(0,0,0,0.08)" }}
+      {embedUrl && (
+        <iframe
+          title={`${center.name} 위치 미리보기`}
+          src={embedUrl}
+          className="w-full h-full"
+          style={{ border: 0 }}
+        />
+      )}
+      <a
+        href={detailUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="absolute inset-0 flex items-end justify-between p-2"
+        style={{ background: "linear-gradient(180deg, transparent 70%, rgba(0,0,0,0.25) 100%)" }}
       >
-        {center.name}
-      </span>
-      <span
-        className="absolute right-2.5 bottom-2.5 text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1"
-        style={{ background: "white", color: TEXT, boxShadow: "0 2px 6px rgba(0,0,0,0.08)" }}
-      >
-        자세히 보기 <ExternalLink size={11} />
-      </span>
-    </a>
+        <span
+          className="text-[11.5px] font-bold px-2.5 py-1 rounded-full"
+          style={{ background: "white", color: TEXT, boxShadow: "0 2px 6px rgba(0,0,0,0.08)" }}
+        >
+          {center.name}
+        </span>
+        <span
+          className="text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1"
+          style={{ background: "white", color: TEXT, boxShadow: "0 2px 6px rgba(0,0,0,0.08)" }}
+        >
+          자세히 보기 <ExternalLink size={11} />
+        </span>
+      </a>
+    </div>
   );
 }
 
