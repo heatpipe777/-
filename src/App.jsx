@@ -39,6 +39,8 @@ import {
   Check,
   Calculator,
 } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { App as CapApp } from "@capacitor/app";
 
 const BLUE = "#3D63DD";
 const BLUE_SOFT = "#EEF2FE";
@@ -1022,55 +1024,60 @@ const CENTER_GROUPS = [
   { label: "경남", members: ["경남"] },
 ];
 
-// 지역센터 미니맵 미리보기 — iframe이 일부 환경(CSP 등)에서 차단될 수 있어 정적 이미지 방식 사용
-// 이미지 로드 실패 시 자연스러운 대체 화면으로 전환
-// 실제 배포 환경에서는 외부 네트워크 요청이 막힐 이유가 없어서, API 키 없이 쓸 수 있는
-// 구글 지도 embed(2014년부터 제공되는 공식 방식, q=주소&output=embed)로 실제 지도를 보여줘요
+// 지역센터 미니맵 미리보기 — 오픈스트리트맵 embed(API 키 불필요)로 위치만 보여주고,
+// 지도 안에서 +/- 확대·축소만 가능해요. 네이버 지도로 이동은 아래 "네이버 지도에서 보기" 버튼 하나로 통일했어요
+// OSM 기본 하단 문구(문제점 보고·기부하기 등 2줄)는 iframe을 아래로 늘려 잘라내고, 라이선스상 필수인 저작권 표기만 작게 남겨요
+// 클립보드 복사: 최신 API가 막히면 예전 방식으로 한 번 더 시도하고, 성공 여부를 돌려줘요
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  }
+}
+
+const MAP_HEIGHT = 140;
+const MAP_CROP = 44; // 잘라낼 OSM 하단 문구 높이(px)
 function CenterMapPreview({ center }) {
-  const detailUrl = `https://map.naver.com/p/search/${encodeURIComponent(center.address)}`;
-  const hasCoords = typeof center.lat === "number" && typeof center.lng === "number";
-  const bboxPad = 0.01;
-  const embedUrl = hasCoords
-    ? `https://www.openstreetmap.org/export/embed.html?bbox=${center.lng - bboxPad}%2C${center.lat - bboxPad * 0.8}%2C${center.lng + bboxPad}%2C${center.lat + bboxPad * 0.8}&layer=mapnik&marker=${center.lat}%2C${center.lng}`
-    : null;
+  if (typeof center.lat !== "number" || typeof center.lng !== "number") return null;
+  const pad = 0.01;
+  const latSpan = pad * 0.8;
+  // iframe이 아래로 늘어난 만큼 지도 중심을 내려서, 마커가 보이는 영역 가운데 오도록 보정
+  const latShift = (latSpan * 2 * (MAP_CROP / 2)) / (MAP_HEIGHT + MAP_CROP);
+  const embedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${center.lng - pad}%2C${center.lat - latSpan - latShift}%2C${center.lng + pad}%2C${center.lat + latSpan - latShift}&layer=mapnik&marker=${center.lat}%2C${center.lng}`;
 
   return (
     <div
       className="relative rounded-lg overflow-hidden mb-3"
-      style={{ height: 140, border: `1px solid ${BORDER}`, background: "#EAEBF1" }}
+      style={{ height: MAP_HEIGHT, border: `1px solid ${BORDER}`, background: "#EAEBF1" }}
     >
-      {embedUrl && (
-        <iframe
-          title={`${center.name} 위치 미리보기`}
-          src={embedUrl}
-          className="w-full h-full"
-          style={{ border: 0 }}
-        />
-      )}
+      <iframe
+        title={`${center.name} 위치 미리보기`}
+        src={embedUrl}
+        className="w-full"
+        style={{ border: 0, height: MAP_HEIGHT + MAP_CROP }}
+      />
       <a
-        href={detailUrl}
+        href="https://www.openstreetmap.org/copyright"
         target="_blank"
         rel="noopener noreferrer"
-        className="absolute inset-0 flex items-end justify-between p-2"
-        style={{ background: "linear-gradient(180deg, transparent 70%, rgba(0,0,0,0.25) 100%)" }}
+        className="absolute bottom-0 right-0 px-1.5 py-0.5 text-[9.5px] rounded-tl-md"
+        style={{ background: "rgba(255,255,255,0.8)", color: MUTED }}
       >
-        <span
-          className="text-[11.5px] font-bold px-2.5 py-1 rounded-full"
-          style={{ background: "white", color: TEXT, boxShadow: "0 2px 6px rgba(0,0,0,0.08)" }}
-        >
-          {center.name}
-        </span>
-        <span
-          className="text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1"
-          style={{ background: "white", color: TEXT, boxShadow: "0 2px 6px rgba(0,0,0,0.08)" }}
-        >
-          자세히 보기 <ExternalLink size={11} />
-        </span>
+        © OpenStreetMap
       </a>
     </div>
   );
 }
-
 // 자주 묻는 질문 (앱 사용법 + 지원금 관련)
 const FAQ_DATA = [
   { category: "앱 이용", q: "회원가입이 필요한가요?", a: "아니요. 로그인 없이 바로 사용할 수 있어요." },
@@ -1311,6 +1318,7 @@ function TaxScheduleScreen({ onBack, favorites }) {
 function RegionalCentersScreen({ onBack, initialProvince }) {
   const [activeProvince, setActiveProvince] = useState(initialProvince || "전체");
   const [expandedMap, setExpandedMap] = useState(null);
+  const [copiedName, setCopiedName] = useState(null);
   const [page, setPage] = useState(1);
   const provinceScrollRef = useRef(null);
   const provinceChipRefs = useRef({});
@@ -1437,9 +1445,22 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
                 <MapPin size={13} className="shrink-0 mt-0.5" /> {c.city} 인근 (2026년 조직개편으로 신설 · 정확한 상세주소는 아직 확인 중이에요)
               </p>
             ) : (
-              <p className="text-[12.5px] mb-3 flex items-start gap-1.5" style={{ color: MUTED }}>
-                <MapPin size={13} className="shrink-0 mt-0.5" /> {c.address}
-              </p>
+              <div className="mb-3 flex items-start justify-between gap-2">
+                <p className="text-[12.5px] flex items-start gap-1.5" style={{ color: MUTED }}>
+                  <MapPin size={13} className="shrink-0 mt-0.5" /> {c.address}
+                </p>
+                <button
+                  onClick={async () => {
+                    if (!(await copyText(c.address))) return;
+                    setCopiedName(c.name);
+                    setTimeout(() => setCopiedName((n) => (n === c.name ? null : n)), 1500);
+                  }}
+                  className="shrink-0 text-[11px] font-semibold px-2 py-1 rounded-lg"
+                  style={copiedName === c.name ? { background: GREEN_SOFT, color: GREEN } : { background: "#EEF0F5", color: TEXT }}
+                >
+                  {copiedName === c.name ? "복사됨" : "복사"}
+                </button>
+              </div>
             )}
             <div className="flex gap-2">
               <a
@@ -1469,19 +1490,6 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
             {!c.addressPending && expandedMap === c.name && (
               <div className="mt-3 rounded-xl p-3.5" style={{ background: "#FAFAFA", border: `1px solid ${BORDER}` }}>
                 <CenterMapPreview center={c} />
-                <p className="text-[11px] font-semibold mb-1" style={{ color: MUTED }}>주소</p>
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <p className="text-[13.5px] font-bold leading-snug" style={{ color: TEXT }}>{c.address}</p>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard?.writeText(c.address);
-                    }}
-                    className="shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg"
-                    style={{ background: "#EEF0F5", color: TEXT }}
-                  >
-                    복사
-                  </button>
-                </div>
                 <a
                   href={`https://map.naver.com/p/search/${encodeURIComponent(c.address)}`}
                   target="_blank"
@@ -1489,7 +1497,7 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
                   className="w-full py-2.5 rounded-xl text-center text-[12.5px] font-bold flex items-center justify-center gap-1"
                   style={{ background: BLUE_SOFT, color: BLUE }}
                 >
-                  지도 앱에서 열기 <ExternalLink size={12} />
+                  네이버 지도에서 보기 <ExternalLink size={12} />
                 </a>
               </div>
             )}
@@ -2787,6 +2795,23 @@ export default function App() {
         : getDday(a.deadline) - getDday(b.deadline)
     );
   }, [query, region, category, showFavoritesOnly, favorites, sortBy, statusFilter]);
+
+  // 안드로이드 뒤로가기 버튼: 열린 창 닫기 → 이전 화면 → 홈 탭 → 그래도 홈이면 앱 종료
+  const backRef = useRef(null);
+  backRef.current = () => {
+    if (regionOpen) return setRegionOpen(false);
+    if (screen.view !== "home") return setScreen({ view: "home" });
+    if (homeScreen !== "hub") return setHomeScreen("hub");
+    if (mainTab !== "home") return setMainTab("home");
+    CapApp.exitApp();
+  };
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const handle = CapApp.addListener("backButton", () => backRef.current());
+    return () => {
+      handle.then((h) => h.remove());
+    };
+  }, []);
 
   const urgentCount = ALL_PROGRAMS.filter((p) => getDday(p.deadline) <= 7 && getDday(p.deadline) >= 0).length;
   const availableCount = ALL_PROGRAMS.length - urgentCount;
