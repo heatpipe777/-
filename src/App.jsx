@@ -3274,9 +3274,9 @@ export default function App() {
         </div>
 
         <div className="relative z-10">
-          <p className="text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.95)" }}>사장님, 안녕하세요 👋</p>
+          <p className="text-[15px] font-semibold" style={{ color: "#FFE27A" }}>사장님, 안녕하세요 👋</p>
           <h1 className="font-black text-white mt-1 whitespace-nowrap" style={{ fontSize: 21, lineHeight: 1.25, letterSpacing: "-0.03em" }}>
-            소상공인 정책자금 알리미
+            소상공인 정책자금 <span style={{ color: "#FFE27A" }}>알리미</span>
           </h1>
         </div>
         <button
