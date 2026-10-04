@@ -2086,37 +2086,9 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map((p) => {
-            const dday = getDday(p.deadline);
-            const color = urgencyColor(dday);
-            const catStyle = CATEGORY_COLORS[p.category] || { color: BLUE, bg: BLUE_SOFT, bg2: BLUE_SOFT };
-            const CatIcon = CATEGORY_ICON[p.category] || Wallet;
-            return (
-              <button
-                key={p.id}
-                onClick={() => onSelectProgram(p.id)}
-                className="w-full text-left rounded-[20px] p-3.5 flex items-center gap-3"
-                style={CARD}
-              >
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: `linear-gradient(135deg, ${catStyle.bg2}, ${catStyle.bg})` }}
-                >
-                  <CatIcon size={19} color={catStyle.color} strokeWidth={2.2} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  {dday <= 7 && dday >= 0 && (
-                    <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded mb-0.5 inline-block" style={{ background: RED_SOFT, color: RED }}>
-                      마감임박
-                    </span>
-                  )}
-                  <p className="text-[15px] font-bold truncate" style={{ color: TEXT }}>{p.name}</p>
-                  <p className="text-[11.5px] mt-0.5" style={{ color: MUTED }}>{p.region} · {p.amountLabel}</p>
-                </div>
-                <p className="text-[13px] font-bold shrink-0" style={{ color }}>{dday >= 0 ? `D-${dday}` : "마감"}</p>
-              </button>
-            );
-          })}
+          {filtered.map((p) => (
+              <ProgramRow key={p.id} p={p} onClick={() => onSelectProgram(p.id)} />
+          ))}
         </div>
       )}
 
@@ -2189,6 +2161,50 @@ function TrendChartIcon({ size = 24, color = "currentColor", strokeWidth = 2, cl
         strokeLinejoin="round"
       />
     </svg>
+  );
+}
+
+// 지원금 목록 카드 — 목록·즐겨찾기·맞춤진단 결과에서 같이 써요
+function ProgramRow({ p, onClick, actions }) {
+  const dday = getDday(p.deadline);
+  const color = urgencyColor(dday);
+  const cat = CATEGORY_COLORS[p.category] || { bg: BLUE };
+  const urgent = !p.recurring && dday >= 0 && dday <= 7;
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      className="w-full text-left rounded-[20px] px-4 py-3.5 active:scale-[0.99] transition-transform cursor-pointer"
+      style={CARD}
+    >
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <span className="text-[11px] font-bold px-2 py-0.5 rounded-md shrink-0" style={{ background: `${cat.bg}1A`, color: cat.bg }}>
+          {p.category}
+        </span>
+        <span className="text-[11.5px] truncate" style={{ color: MUTED }}>{p.region}</span>
+        <span className="flex-1" />
+        <span
+          className="text-[11px] font-bold px-2 py-0.5 rounded-md shrink-0 tabular-nums"
+          style={
+            p.recurring
+              ? { background: GREEN_SOFT, color: GREEN }
+              : dday < 0
+              ? { background: "#F1F2F5", color: MUTED }
+              : urgent
+              ? { background: RED, color: "white" }
+              : { background: `${color}1A`, color }
+          }
+        >
+          {p.recurring ? "상시접수" : dday < 0 ? "마감" : dday === 0 ? "오늘 마감" : `D-${dday}`}
+        </span>
+      </div>
+      <p className="text-[15px] font-bold leading-snug line-clamp-2 break-keep" style={{ color: TEXT }}>{p.name}</p>
+      <div className="flex items-center gap-2 mt-1.5">
+        <p className="text-[12px] truncate flex-1" style={{ color: MUTED }}>{p.amountLabel}</p>
+        {actions}
+      </div>
+    </div>
   );
 }
 
@@ -3586,58 +3602,18 @@ export default function App() {
             조건에 맞는 지원금이 없어요.
           </div>
         )}
-        {filtered.map((p) => {
-          const dday = getDday(p.deadline);
-          const color = urgencyColor(dday);
-          const catStyle = CATEGORY_COLORS[p.category] || { color: BLUE, bg: BLUE_SOFT };
-          const CatIcon = CATEGORY_ICON[p.category] || Wallet;
-          return (
-            <button
+        {filtered.map((p) => (
+            <ProgramRow
               key={p.id}
+              p={p}
               onClick={() => setScreen({ view: "detail", id: p.id })}
-              className="w-full text-left rounded-[20px] p-3.5 flex items-center gap-3"
-              style={CARD}
-            >
-              <div
-                className="w-14 h-14 rounded-full flex items-center justify-center shrink-0 relative overflow-hidden"
-                style={{
-                  background: `linear-gradient(135deg, ${catStyle.bg2}, ${catStyle.bg})`,
-                  boxShadow: `0 4px 10px ${catStyle.bg}55, inset 0 -3px 6px rgba(0,0,0,0.12)`,
-                }}
-              >
-                <div className="absolute -top-2 -left-2 w-7 h-7 rounded-full" style={{ background: "rgba(255,255,255,0.25)" }} />
-                <CatIcon size={23} color={catStyle.color} strokeWidth={2.3} className="relative" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  {dday <= 7 && dday >= 0 && (
-                    <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded shrink-0" style={{ background: RED_SOFT, color: RED }}>
-                      마감임박
-                    </span>
-                  )}
-                  {(p.detailed || p.verified) && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: GREEN }} />}
-                </div>
-                <p className="text-[15px] font-bold leading-snug line-clamp-2 break-keep" style={{ color: TEXT }}>{p.name}</p>
-                <p className="text-[12px] mt-1 truncate" style={{ color: MUTED }}>{p.region} · {p.amountLabel}</p>
-              </div>
-              <span
-                className="text-[11px] font-bold px-2 py-1 rounded-lg shrink-0 tabular-nums"
-                style={
-                  p.recurring
-                    ? { background: GREEN_SOFT, color: GREEN }
-                    : dday < 0
-                    ? { background: "#F1F2F5", color: MUTED }
-                    : { background: `${color}1A`, color }
-                }
-              >
-                {p.recurring ? "상시" : dday >= 0 ? `D-${dday}` : "마감"}
-              </span>
-              <button onClick={(e) => { e.stopPropagation(); toggleFavoriteId(p.id); }} className="shrink-0 p-0.5">
-                <Heart size={16} fill={favorites.has(p.id) ? RED : "none"} color={favorites.has(p.id) ? RED : "#C7CBD6"} />
-              </button>
-            </button>
-          );
-        })}
+              actions={
+                <button onClick={(e) => { e.stopPropagation(); toggleFavoriteId(p.id); }} className="shrink-0 -m-1 p-1" aria-label="즐겨찾기">
+                  <Heart size={17} fill={favorites.has(p.id) ? RED : "none"} color={favorites.has(p.id) ? RED : "#C7CBD6"} />
+                </button>
+              }
+            />
+        ))}
       </div>
 
       {regionOpen && (
@@ -3723,52 +3699,25 @@ export default function App() {
             </div>
           ) : (
             <div className="space-y-2">
-              {ALL_PROGRAMS.filter((p) => favorites.has(p.id)).map((p) => {
-                const dday = getDday(p.deadline);
-                const color = urgencyColor(dday);
-                const catStyle = CATEGORY_COLORS[p.category] || { color: BLUE, bg: BLUE_SOFT };
-                const CatIcon = CATEGORY_ICON[p.category] || Wallet;
-                return (
-                  <button
+              {ALL_PROGRAMS.filter((p) => favorites.has(p.id)).map((p) => (
+                  <ProgramRow
                     key={p.id}
+                    p={p}
                     onClick={() => setScreen({ view: "detail", id: p.id })}
-                    className="w-full text-left rounded-[20px] p-3.5 flex items-center gap-3"
-                    style={CARD}
-                  >
-                    <div
-                      className="w-14 h-14 rounded-full flex items-center justify-center shrink-0 relative overflow-hidden"
-                      style={{
-                        background: `linear-gradient(135deg, ${catStyle.bg2}, ${catStyle.bg})`,
-                        boxShadow: `0 4px 10px ${catStyle.bg}55, inset 0 -3px 6px rgba(0,0,0,0.12)`,
-                      }}
-                    >
-                      <div className="absolute -top-2 -left-2 w-7 h-7 rounded-full" style={{ background: "rgba(255,255,255,0.25)" }} />
-                      <CatIcon size={23} color={catStyle.color} strokeWidth={2.3} className="relative" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        {dday <= 7 && dday >= 0 && (
-                          <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded shrink-0" style={{ background: RED_SOFT, color: RED }}>
-                            마감임박
-                          </span>
+                    actions={
+                      <>
+                        {canNotify(p) && (
+                          <button onClick={(e) => { e.stopPropagation(); toggleNotifyId(p.id); }} className="shrink-0 -m-1 p-1" aria-label="마감 알림">
+                            <Bell size={17} fill={notifyIds.has(p.id) ? GOLD : "none"} color={notifyIds.has(p.id) ? GOLD : "#C7CBD6"} />
+                          </button>
                         )}
-                        {(p.detailed || p.verified) && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: GREEN }} />}
-                      </div>
-                      <p className="text-[18px] font-extrabold truncate" style={{ color: TEXT }}>{p.name}</p>
-                      <p className="text-[12px] font-normal mt-1" style={{ color: MUTED }}>{p.region} · {p.amountLabel}</p>
-                    </div>
-                    <p className="text-[13px] font-bold shrink-0" style={{ color: p.recurring ? GREEN : color }}>{p.recurring ? "상시접수" : dday >= 0 ? `D-${dday}` : "마감"}</p>
-                    {canNotify(p) && (
-                      <button onClick={(e) => { e.stopPropagation(); toggleNotifyId(p.id); }} className="shrink-0 p-0.5">
-                        <Bell size={16} fill={notifyIds.has(p.id) ? GOLD : "none"} color={notifyIds.has(p.id) ? GOLD : "#C7CBD6"} />
-                      </button>
-                    )}
-                    <button onClick={(e) => { e.stopPropagation(); toggleFavoriteId(p.id); }} className="shrink-0 p-0.5">
-                      <Heart size={16} fill={RED} color={RED} />
-                    </button>
-                  </button>
-                );
-              })}
+                        <button onClick={(e) => { e.stopPropagation(); toggleFavoriteId(p.id); }} className="shrink-0 -m-1 p-1 ml-1" aria-label="즐겨찾기 해제">
+                          <Heart size={17} fill={RED} color={RED} />
+                        </button>
+                      </>
+                    }
+                  />
+              ))}
             </div>
           )}
         </>
