@@ -3303,7 +3303,7 @@ export default function App() {
       <button
         onClick={() => setScreen({ view: diagnosis ? "diagnosisResult" : "diagnosis" })}
         className="relative overflow-hidden w-full text-left rounded-[24px] py-3.5 pl-2 pr-3.5 mb-5 flex items-center justify-between active:scale-[0.99] transition-transform"
-        style={{ background: "linear-gradient(120deg, #FFEDB5 0%, #FFF3D1 55%, #FFE69C 100%)" }}
+        style={{ background: "linear-gradient(120deg, #FFD54A 0%, #FFC21F 50%, #F2A30F 100%)", boxShadow: "0 8px 20px rgba(232,160,15,0.30)" }}
       >
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div
@@ -3313,7 +3313,7 @@ export default function App() {
               left: "-20%",
               width: "16%",
               height: "100%",
-              background: "linear-gradient(75deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%)",
+              background: "linear-gradient(75deg, transparent 0%, rgba(255,255,255,0.85) 50%, transparent 100%)",
               animation: "shimmerSweep 2.6s linear infinite",
             }}
           >
@@ -3338,16 +3338,13 @@ export default function App() {
             alt=""
             draggable={false}
             className="w-[84px] shrink-0"
-            style={{
-              WebkitMaskImage: "radial-gradient(ellipse 60% 60% at 50% 50%, #000 65%, transparent 100%)",
-              maskImage: "radial-gradient(ellipse 60% 60% at 50% 50%, #000 65%, transparent 100%)",
-            }}
+            style={{ filter: "drop-shadow(0 4px 8px rgba(150,90,0,0.35))" }}
           />
           <div className="min-w-0">
-            <p className="text-[16px] font-extrabold" style={{ color: "#0B1A36" }}>
+            <p className="text-[16px] font-extrabold" style={{ color: "#3E2A05" }}>
               {diagnosis ? "내 맞춤 지원금 결과 보기" : "30초 맞춤 진단 받기"}
             </p>
-            <p className="text-[12px] mt-1 leading-snug break-keep" style={{ color: "#6E6F73" }}>
+            <p className="text-[12px] mt-1 leading-snug break-keep" style={{ color: "#5C430F" }}>
               {diagnosis ? (
                 `${diagnosis.region} 사업장 기준으로 골라둔 지원금이 있어요`
               ) : (
@@ -3360,8 +3357,8 @@ export default function App() {
             </p>
           </div>
         </div>
-        <span className="relative z-10 w-9 h-9 rounded-full flex items-center justify-center shrink-0 ml-2" style={{ background: "rgba(255,255,255,0.75)" }}>
-          <ChevronRight size={18} color="#E39A12" strokeWidth={2.6} />
+        <span className="relative z-10 w-9 h-9 rounded-full flex items-center justify-center shrink-0 ml-2" style={{ background: "rgba(255,255,255,0.85)" }}>
+          <ChevronRight size={18} color="#C47F00" strokeWidth={2.6} />
         </span>
       </button>
 
