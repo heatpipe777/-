@@ -690,7 +690,7 @@ function HeartButton({ active, onClick }) {
 function SectionHeader({ title, onBack, right }) {
   return (
     <div className="flex items-center gap-2 mb-4">
-      <button onClick={onBack} className="navArrowBtn w-8 h-8 -ml-1.5 rounded-full flex items-center justify-center">
+      <button onClick={onBack} className="navArrowBtn w-8 h-8 -ml-1.5 rounded-full flex items-center justify-center" aria-label="뒤로가기">
         <ChevronLeft size={20} color={TEXT} />
       </button>
       <h2 className="text-base font-bold flex-1" style={{ color: TEXT }}>{title}</h2>
@@ -1688,6 +1688,7 @@ function FaqSearchScreen({ onBack }) {
             </button>
           );
         })}
+        <span data-scroll-end aria-hidden="true" className="shrink-0 w-6" />
       </div>
 
       {filtered.length === 0 ? (
@@ -1956,6 +1957,7 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
               {p}
             </button>
           ))}
+          <span data-scroll-end aria-hidden="true" className="shrink-0 w-6" />
         </div>
       </div>
 
@@ -3004,6 +3006,7 @@ function CalculatorToolkit({ onBack }) {
               {t.label}
             </button>
           ))}
+          <span data-scroll-end aria-hidden="true" className="shrink-0 w-6" />
         </div>
       </div>
 
@@ -3855,6 +3858,7 @@ export default function App() {
             </button>
           );
         })}
+        <span data-scroll-end aria-hidden="true" className="shrink-0 w-6" />
       </div>
 
       <div className="flex items-center justify-between mb-2.5">
@@ -3982,6 +3986,7 @@ export default function App() {
                   <span className="ml-1 opacity-70">{c === "전체" ? NEWS.length : NEWS.filter((n) => n.category === c).length}</span>
                 </button>
               ))}
+              <span data-scroll-end aria-hidden="true" className="shrink-0 w-6" />
             </div>
 
             {!featured && (
@@ -4082,7 +4087,7 @@ export default function App() {
           <div className="flex items-center gap-2 mb-4">
             <button
               onClick={() => setMainTab("home")}
-              className="navArrowBtn w-8 h-8 -ml-1.5 rounded-full flex items-center justify-center"
+              className="navArrowBtn w-8 h-8 -ml-1.5 rounded-full flex items-center justify-center" aria-label="뒤로가기"
             >
               <ChevronLeft size={20} color={TEXT} />
             </button>
@@ -4192,7 +4197,7 @@ export default function App() {
             ) : (
               <>
                 <div className="flex items-center gap-2 mb-4">
-                  <button onClick={() => setPickerStep("province")} className="w-7 h-7 -ml-1 rounded-full flex items-center justify-center active:bg-[#F2F3F7]">
+                  <button onClick={() => setPickerStep("province")} aria-label="시·도 다시 고르기" className="w-7 h-7 -ml-1 rounded-full flex items-center justify-center active:bg-[#F2F3F7]">
                     <ChevronLeft size={18} color={TEXT} />
                   </button>
                   <h2 className="text-base font-bold" style={{ color: TEXT }}>{tempProvince} 세부 지역</h2>
