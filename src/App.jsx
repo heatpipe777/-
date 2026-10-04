@@ -44,6 +44,10 @@ import {
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { LocalNotifications } from "@capacitor/local-notifications";
+import tileAllImg from "./assets/home-tiles/all.webp";
+import tileCenterImg from "./assets/home-tiles/center.webp";
+import tileExchangeImg from "./assets/home-tiles/exchange.webp";
+import tileNewsImg from "./assets/home-tiles/news.webp";
 
 const BLUE = "#3D63DD";
 const BLUE_SOFT = "#EEF2FE";
@@ -2098,86 +2102,6 @@ function TrendChartIcon({ size = 24, color = "currentColor", strokeWidth = 2, cl
   );
 }
 
-function AlarmTileArt() {
-  return (
-    <svg viewBox="0 0 100 100" className="w-20 h-20">
-      <defs>
-        <linearGradient id="alarmFace" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#FBC15B" />
-          <stop offset="100%" stopColor="#E08A2C" />
-        </linearGradient>
-      </defs>
-      <circle cx="26" cy="24" r="7" fill="#E08A2C" />
-      <circle cx="74" cy="24" r="7" fill="#E08A2C" />
-      <rect x="46" y="6" width="8" height="14" rx="4" fill="#C97A22" />
-      <circle cx="50" cy="56" r="34" fill="url(#alarmFace)" stroke="#C97A22" strokeWidth="2" />
-      <ellipse cx="38" cy="43" rx="9" ry="6" fill="rgba(255,255,255,0.35)" />
-      <line x1="50" y1="56" x2="50" y2="38" stroke="#7A4A12" strokeWidth="3.5" strokeLinecap="round" />
-      <line x1="50" y1="56" x2="64" y2="56" stroke="#7A4A12" strokeWidth="3.5" strokeLinecap="round" />
-      <circle cx="50" cy="56" r="3" fill="#7A4A12" />
-      <path d="M76 18 Q86 22 85 32" stroke="#F2A94A" strokeWidth="3" fill="none" strokeLinecap="round" />
-      <path d="M83 11 Q97 17 95 32" stroke="#F2A94A" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.7" />
-    </svg>
-  );
-}
-
-function SearchPinTileArt() {
-  return (
-    <svg viewBox="0 0 100 100" className="w-20 h-20">
-      <defs>
-        <linearGradient id="glassFill" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#FFFFFF" />
-          <stop offset="100%" stopColor="#FBD8E8" />
-        </linearGradient>
-      </defs>
-      <rect x="60" y="60" width="14" height="34" rx="7" transform="rotate(45 67 77)" fill="#D6478E" />
-      <circle cx="44" cy="44" r="30" fill="url(#glassFill)" stroke="#D6478E" strokeWidth="5" />
-      <path d="M44 25c-8 0-15 6.5-15 15 0 11 15 24 15 24s15-13 15-24c0-8.5-7-15-15-15z" fill="#D6478E" />
-      <circle cx="44" cy="40" r="5.5" fill="white" />
-      <ellipse cx="32" cy="27" rx="7" ry="4" fill="rgba(255,255,255,0.6)" />
-      <path d="M76 20 l3 7 l7 3 l-7 3 l-3 7 l-3 -7 l-7 -3 l7 -3 Z" fill="#F3A9C9" />
-    </svg>
-  );
-}
-
-function CoinTileArt() {
-  return (
-    <svg viewBox="0 0 100 100" className="w-20 h-20">
-      <defs>
-        <linearGradient id="coinTop" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#6FDBA6" />
-          <stop offset="100%" stopColor="#1E9A5C" />
-        </linearGradient>
-      </defs>
-      <ellipse cx="50" cy="72" rx="30" ry="10" fill="#B9EBD1" />
-      <ellipse cx="50" cy="60" rx="30" ry="10" fill="#8FE0BA" />
-      <ellipse cx="50" cy="46" rx="30" ry="10" fill="url(#coinTop)" />
-      <text x="50" y="51" textAnchor="middle" fontSize="17" fontWeight="800" fill="white">₩</text>
-      <path d="M75 20 l2.5 6 l6 2.5 l-6 2.5 l-2.5 6 l-2.5 -6 l-6 -2.5 l6 -2.5 Z" fill="#BFF2D8" />
-    </svg>
-  );
-}
-
-function MegaphoneTileArt() {
-  return (
-    <svg viewBox="0 0 100 100" className="w-20 h-20">
-      <defs>
-        <linearGradient id="megaBody" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#B48CFF" />
-          <stop offset="100%" stopColor="#7A46D6" />
-        </linearGradient>
-      </defs>
-      <rect x="16" y="46" width="14" height="20" rx="4" fill="#5E32B0" />
-      <path d="M30 40 L64 20 V86 L30 66 Z" fill="url(#megaBody)" />
-      <ellipse cx="64" cy="53" rx="10" ry="33" fill="url(#megaBody)" />
-      <path d="M40 66 l-4 16c-1 4 2 7 6 6l6-2 -3-20Z" fill="#5E32B0" />
-      <path d="M78 34 Q90 40 88 52" stroke="#D9C6FF" strokeWidth="3.5" fill="none" strokeLinecap="round" />
-      <path d="M82 24 Q100 32 96 50" stroke="#D9C6FF" strokeWidth="3.5" fill="none" strokeLinecap="round" opacity="0.7" />
-      <circle cx="20" cy="30" r="5" fill="#F3A9C9" />
-    </svg>
-  );
-}
-
 function CalculatorTileArt() {
   return (
     <svg viewBox="0 0 100 100" className="w-20 h-20">
@@ -3436,21 +3360,20 @@ export default function App() {
       <p className="text-[16px] font-bold mb-2.5" style={{ color: TEXT }}>많이 찾는 서비스</p>
       <div className="grid grid-cols-2 gap-3 mb-6">
         {[
-          { key: "all", label: "소상공인\n지원금", bg: "#FDEEDC", Art: AlarmTileArt, artScale: 2.1, onClick: () => { setStatusFilter("all"); setHomeScreen("list"); } },
-          { key: "center", label: "지역센터\n찾기", bg: "#FCEAF3", Art: SearchPinTileArt, artScale: 2.1, onClick: () => setScreen({ view: "centers" }) },
-          { key: "exchange", label: "금리·환율\n정보", bg: "#E7F7EF", Art: CoinTileArt, artScale: 2.7, onClick: () => setScreen({ view: "exchange" }) },
-          { key: "news", label: "정책뉴스\n확인", bg: "#F1ECFC", Art: MegaphoneTileArt, artScale: 2.1, onClick: () => setMainTab("news") },
+          { key: "all", label: "소상공인\n지원금", bg: "#FDEEDC", img: tileAllImg, onClick: () => { setStatusFilter("all"); setHomeScreen("list"); } },
+          { key: "center", label: "지역센터\n찾기", bg: "#FCEAF3", img: tileCenterImg, onClick: () => setScreen({ view: "centers" }) },
+          { key: "exchange", label: "금리·환율\n정보", bg: "#E7F7EF", img: tileExchangeImg, onClick: () => setScreen({ view: "exchange" }) },
+          { key: "news", label: "정책뉴스\n확인", bg: "#F1ECFC", img: tileNewsImg, onClick: () => setMainTab("news") },
         ].map((tile) => (
           <button
             key={tile.key}
             onClick={tile.onClick}
-            className="relative overflow-hidden p-5 text-left h-[232px] flex flex-col justify-between"
-            style={{ background: tile.bg, borderRadius: 34 }}
+            aria-label={tile.label.replace("\n", " ")}
+            className="relative overflow-hidden h-[232px] active:scale-[0.98] transition-transform"
+            style={{ background: tile.bg, borderRadius: 30 }}
           >
-            <p className="font-extrabold leading-snug whitespace-pre-line relative z-10" style={{ color: TEXT, fontSize: 23 }}>{tile.label}</p>
-            <div className="self-end -mr-2 -mb-2" style={{ transform: `rotate(8deg) scale(${tile.artScale})` }}>
-              <tile.Art />
-            </div>
+            {/* 타일 이미지에 제목 글자까지 들어 있어요 */}
+            <img src={tile.img} alt="" draggable={false} className="absolute inset-0 w-full h-full object-cover" />
           </button>
         ))}
       </div>
