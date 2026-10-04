@@ -2683,9 +2683,9 @@ function CalculatorToolkit({ onBack }) {
   );
 }
 
-// 뉴스 상세 화면 — 핵심 요약과 함께 원문을 앱 안에서 바로 볼 수 있게 해줘요
+// 뉴스 상세 화면 — 핵심 요약을 보여주고, 원문은 인앱 브라우저로 열어요
+// (기업마당 등 많은 사이트가 다른 앱 안에 끼워 보여주는 걸 막아서, 화면 안 미리보기는 쓰지 않아요)
 function NewsDetailScreen({ news, allNews, onBack, onSelectNews }) {
-  const [iframeFailed, setIframeFailed] = useState(false);
   const style = NEWS_CATEGORY_STYLE[news.category] || { bg: "#F2F3F7", color: MUTED };
   const related = allNews.filter((n) => n.id !== news.id && n.category === news.category).slice(0, 3);
   let domain = "";
@@ -2722,50 +2722,24 @@ function NewsDetailScreen({ news, allNews, onBack, onSelectNews }) {
         </ul>
       </div>
 
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-[13px] font-bold" style={{ color: TEXT }}>원문 기사</p>
-        <a
-          href={news.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[11.5px] font-semibold flex items-center gap-1"
-          style={{ color: BLUE }}
-        >
-          새 창에서 열기 <ExternalLink size={11} />
-        </a>
-      </div>
-
-      <div className="rounded-2xl overflow-hidden mb-2" style={{ border: `1px solid ${BORDER}` }}>
-        <div className="flex items-center justify-between px-3 py-2" style={{ background: INPUT_BG }}>
-          <span className="text-[11.5px] font-medium truncate" style={{ color: MUTED }}>{domain}</span>
-        </div>
-        {!iframeFailed ? (
-          <iframe
-            key={news.url}
-            src={news.url}
-            title={news.title}
-            className="w-full"
-            style={{ height: 420, border: "none", background: "white" }}
-            onError={() => setIframeFailed(true)}
-            sandbox="allow-scripts allow-same-origin allow-popups"
-          />
-        ) : (
-          <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
-            <p className="text-[12.5px]" style={{ color: MUTED }}>이 언론사는 인앱 보기를 지원하지 않아요.</p>
-          </div>
-        )}
-      </div>
-      <p className="text-[11px] mb-2" style={{ color: MUTED }}>
-        * 일부 언론사 사이트는 보안 설정 때문에 인앱 화면에 안 나올 수 있어요. 그럴 땐 아래 버튼으로 새 창에서 열어보세요.
-      </p>
+      <p className="text-[13px] font-bold mb-2" style={{ color: TEXT }}>원문 기사</p>
       <a
         href={news.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="w-full flex items-center justify-center gap-1.5 py-2.5 mb-5 rounded-xl text-[12.5px] font-bold"
-        style={{ background: BLUE_SOFT, color: BLUE }}
+        className="rounded-[20px] p-4 mb-6 flex items-center gap-3 active:scale-[0.99] transition-transform"
+        style={CARD}
       >
-        기사가 안 보이시나요? 새 창에서 열기 <ExternalLink size={12} />
+        <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: style.bg }}>
+          <Newspaper size={20} color={style.color} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[13.5px] font-bold truncate" style={{ color: TEXT }}>{news.source}</p>
+          <p className="text-[11.5px] truncate" style={{ color: MUTED }}>{domain}</p>
+        </div>
+        <span className="flex items-center gap-1 px-3 py-2 rounded-xl text-[12.5px] font-bold shrink-0" style={BTN_PRIMARY}>
+          원문 보기 <ExternalLink size={12} />
+        </span>
       </a>
 
       {related.length > 0 && (
