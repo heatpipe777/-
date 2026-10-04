@@ -2212,7 +2212,7 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
           <CheckCircle2 size={15} color="white" />
           <p className="text-[12.5px] text-white/80">사장님이 지금 신청할 수 있는</p>
         </div>
-        <p className="relative text-white font-extrabold text-[22px] leading-snug">지원금이 {open.length}건 있어요</p>
+        <p className="relative text-white font-extrabold text-[22px] mt-1 pt-0.5" style={{ lineHeight: 1.45 }}>지원금이 {open.length}건 있어요</p>
         {top.length > 0 && (
           <p className="relative text-[12.5px] mt-1 text-white/85">그중 {top.length}건은 사장님 상황에 특히 잘 맞아요</p>
         )}
@@ -3480,7 +3480,7 @@ export default function App() {
 
         <div className="relative z-10">
           <p className="text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.95)" }}>사장님, 안녕하세요 👋</p>
-          <h1 className="font-black mt-1 whitespace-nowrap" style={{ color: "white", fontSize: 21, lineHeight: 1.25, letterSpacing: "-0.03em" }}>
+          <h1 className="font-black mt-1 whitespace-nowrap" style={{ color: "white", fontSize: 21, lineHeight: 1.4, letterSpacing: "-0.03em" }}>
             소상공인 정책자금 알리미
           </h1>
         </div>
