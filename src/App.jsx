@@ -924,8 +924,8 @@ function SimpleDetail({ program, onBack }) {
 }
 
 // 환율정보 화면 — 공개 환율 API(open.er-api.com)에서 실시간 데이터를 받아와요
-// TODO(출시 전 보완): 무료 API라 호출 제한·SLA가 없음. 정식 출시 전 한국수출입은행
-// 공공 환율 API 또는 유료 API로 교체 검토.
+// 무료 공개 API — 상업적 이용 가능, 하루 1회 갱신. 약관상 "Rates By Exchange Rate API" 출처 링크를 꼭 표시해야 해요.
+// 기기마다 3시간 캐시라 호출 제한(IP당)에 걸릴 일은 거의 없어요.
 // unit: 화면에 "몇 단위당 원화"로 보여줄지 (엔·동·루피아는 1단위가 너무 작아 100단위 기준)
 // sample: 계산기에서 그 통화를 고르면 처음 넣어줄 금액 (자주 쓰는 단위)
 const FX_CURRENCIES = [
@@ -1192,7 +1192,10 @@ function ExchangeRateContent() {
           {renderGroup("그 외 통화", FX_CURRENCIES.filter((c) => !c.major))}
 
           <p className="text-[11px] text-center mt-2" style={{ color: MUTED }}>
-            기준시각: {updatedLabel} (하루 1회 갱신) · 출처: open.er-api.com
+            기준시각: {updatedLabel} (하루 1회 갱신) ·{" "}
+            <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener noreferrer" className="underline">
+              Rates By Exchange Rate API
+            </a>
           </p>
         </>
       )}
