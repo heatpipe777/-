@@ -37,12 +37,14 @@ import {
   RefreshCw,
   ArrowUpDown,
   Lightbulb,
+  Share2,
   BarChart3,
   ShieldCheck,
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { LocalNotifications } from "@capacitor/local-notifications";
+import { Share } from "@capacitor/share";
 import tileAllImg from "./assets/home-tiles/all.webp";
 import tileCenterImg from "./assets/home-tiles/center.webp";
 import tileExchangeImg from "./assets/home-tiles/exchange.webp";
@@ -627,6 +629,49 @@ function ConditionRow({ ok, text }) {
   );
 }
 
+// 지원금 정보를 카카오톡·문자 등으로 보내요 (앱: 안드로이드 공유창, 웹: 공유 또는 복사)
+async function shareProgram(p) {
+  const d = getDday(p.deadline);
+  const when = p.recurring ? "상시접수" : d < 0 ? "접수 마감" : `마감 ${p.deadline} (D-${d})`;
+  const text = [
+    `[지원금알리미] ${p.name}`,
+    `· 지역: ${regionLabel(p)}`,
+    `· 지원: ${p.amountLabel}`,
+    `· 접수: ${when}`,
+    "",
+    "자세한 조건은 지원금알리미에서 확인하세요 👇",
+  ].join("\n");
+  const url = "https://sosanggongin.vercel.app";
+  try {
+    if (Capacitor.isNativePlatform()) {
+      await Share.share({ title: p.name, text, url, dialogTitle: "지원금 정보 공유하기" });
+    } else if (navigator.share) {
+      await navigator.share({ title: p.name, text, url });
+    } else {
+      await copyText(`${text}\n${url}`);
+      alert("지원금 정보를 복사했어요. 원하는 곳에 붙여넣기 하세요.");
+    }
+  } catch (e) {
+    // 사용자가 공유창을 닫은 경우 — 아무것도 하지 않아요
+  }
+}
+
+function ShareButton({ program }) {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        shareProgram(program);
+      }}
+      aria-label="공유하기"
+      className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+      style={{ background: "#F5F6F9" }}
+    >
+      <Share2 size={15} color={MUTED} strokeWidth={2} />
+    </button>
+  );
+}
+
 function HeartButton({ active, onClick }) {
   return (
     <button
@@ -792,7 +837,12 @@ function DetailedGuide({ program, onBack, favorites, onToggleFavorite }) {
       <SectionHeader
         title={program.name}
         onBack={onBack}
-        right={<HeartButton active={favorites.has(program.id)} onClick={() => onToggleFavorite(program.id)} />}
+        right={
+          <div className="flex items-center gap-1.5">
+            <ShareButton program={program} />
+            <HeartButton active={favorites.has(program.id)} onClick={() => onToggleFavorite(program.id)} />
+          </div>
+        }
       />
       <div className="rounded-xl border overflow-hidden mb-6" style={{ borderColor: BORDER, background: BLUE_SOFT }}>
         <button onClick={() => setInfoOpen(!infoOpen)} className="w-full flex items-center justify-between px-4 py-3.5">
@@ -863,7 +913,7 @@ function FaqList({ items }) {
 }
 
 // 예시 데이터 프로그램용 간단 상세 화면
-function SimpleDetail({ program, onBack }) {
+function SimpleDetail({ program, onBack, favorites, onToggleFavorite }) {
   const dday = getDday(program.deadline);
   const color = urgencyColor(dday);
   const catStyle = CATEGORY_COLORS[program.category] || { color: BLUE, bg: BLUE_SOFT, bg2: BLUE_SOFT };
@@ -871,7 +921,16 @@ function SimpleDetail({ program, onBack }) {
   const closed = dday < 0 && !program.recurring;
   return (
     <div>
-      <SectionHeader title="지원금 상세" onBack={onBack} />
+      <SectionHeader
+        title="지원금 상세"
+        onBack={onBack}
+        right={
+          <div className="flex items-center gap-1.5">
+            <ShareButton program={program} />
+            <HeartButton active={favorites.has(program.id)} onClick={() => onToggleFavorite(program.id)} />
+          </div>
+        }
+      />
       {closed && (
         <div className="rounded-[20px] p-4 mb-3 flex items-start gap-2.5" style={{ background: "#F4F5F8" }}>
           <Clock size={15} color={MUTED} className="shrink-0 mt-0.5" />
@@ -941,6 +1000,13 @@ function SimpleDetail({ program, onBack }) {
       >
         {closed ? "다음 공고 확인하기" : "신청하러 가기"} <ExternalLink size={15} />
       </a>
+      <button
+        onClick={() => shareProgram(program)}
+        className="w-full mt-2.5 py-3.5 rounded-2xl text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] transition-transform"
+        style={{ background: BLUE_SOFT, color: BLUE }}
+      >
+        <Share2 size={15} /> 다른 사장님께 공유하기
+      </button>
       <p className="text-[11px] text-center mt-2" style={{ color: MUTED }}>
         소상공인24(sbiz24.kr)에서 실제 정보를 확인해보세요
       </p>
@@ -3294,7 +3360,8 @@ export default function App() {
 
   const filtered = useMemo(() => {
     return ALL_PROGRAMS.filter((p) => {
-      const matchesRegion = region === "전체" || (region === "전국" ? isNational(p) : availableIn(p, region));
+      const baseRegion = region.split(" ")[0];
+      const matchesRegion = region === "전체" || (baseRegion === "전국" ? isNational(p) : availableIn(p, baseRegion));
       const matchesQuery =
         query.trim() === "" ||
         p.name.includes(query) ||
@@ -3358,7 +3425,7 @@ export default function App() {
         {program.detailed ? (
           <DetailedGuide program={program} onBack={() => setScreen({ view: "home" })} favorites={favorites} onToggleFavorite={toggleFavoriteId} />
         ) : (
-          <SimpleDetail program={program} onBack={() => setScreen({ view: "home" })} />
+          <SimpleDetail program={program} onBack={() => setScreen({ view: "home" })} favorites={favorites} onToggleFavorite={toggleFavoriteId} />
         )}
       </Shell>
     );
@@ -3436,6 +3503,7 @@ export default function App() {
           onBack={() => setScreen({ view: "home" })}
           onComplete={(answers) => {
             setDiagnosis(answers);
+            if (region === "전체" && answers.region) setRegion(answers.region);
             setStatusFilter("available");
             setScreen({ view: "diagnosisResult" });
           }}
@@ -3843,66 +3911,6 @@ export default function App() {
         ))}
       </div>
 
-      {regionOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-10" onClick={() => setRegionOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="bg-white w-full max-w-md md:max-w-xl rounded-t-2xl p-6 pb-8 max-h-[75%] overflow-y-auto">
-            <div className="w-9 h-1 bg-[#E5E7EE] rounded-full mx-auto mb-5" />
-
-            {pickerStep === "province" ? (
-              <>
-                <h2 className="text-base font-bold mb-4" style={{ color: TEXT }}>지역 선택</h2>
-                <div className="grid grid-cols-3 gap-2">
-                  {REGIONS.map((r) => {
-                    const active = region === r;
-                    return (
-                      <button
-                        key={r}
-                        onClick={() => selectProvince(r)}
-                        className="py-2.5 rounded-lg border text-sm flex items-center justify-center gap-1"
-                        style={active ? { background: BLUE, borderColor: BLUE, color: "white" } : { background: "white", borderColor: BORDER, color: TEXT }}
-                      >
-                        {r}
-                        {DISTRICTS[r] && <ChevronDown size={11} style={{ transform: "rotate(-90deg)" }} color={active ? "white" : MUTED} />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center gap-2 mb-4">
-                  <button onClick={() => setPickerStep("province")} className="w-7 h-7 -ml-1 rounded-full flex items-center justify-center active:bg-[#F2F3F7]">
-                    <ChevronLeft size={18} color={TEXT} />
-                  </button>
-                  <h2 className="text-base font-bold" style={{ color: TEXT }}>{tempProvince} 세부 지역</h2>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    onClick={() => selectDistrict("전체")}
-                    className="py-2.5 rounded-lg border text-sm"
-                    style={{ background: BLUE_SOFT, borderColor: BLUE, color: BLUE }}
-                  >
-                    {tempProvince} 전체
-                  </button>
-                  {DISTRICTS[tempProvince].map((d) => (
-                    <button
-                      key={d}
-                      onClick={() => selectDistrict(d)}
-                      className="py-2.5 rounded-lg border text-sm"
-                      style={{ background: "white", borderColor: BORDER, color: TEXT }}
-                    >
-                      {d}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[11px] mt-4" style={{ color: MUTED }}>
-                  * 2026년 기준 행정구역이에요. 시/군 통합 등 행정구역 변경 시 업데이트가 필요해요.
-                </p>
-              </>
-            )}
-          </div>
-        </div>
-      )}
         </>
       )}
       </>
@@ -4082,15 +4090,20 @@ export default function App() {
           </div>
 
           <p className="text-[12px] font-bold mb-2 px-1" style={{ color: MUTED }}>내 정보</p>
-          <div className="rounded-[20px] p-4 mb-3 flex items-center gap-3" style={CARD}>
-            <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: BLUE_SOFT }}>
-              <MapPin size={17} color={BLUE} />
+          <button onClick={openPicker} className="w-full text-left rounded-[20px] p-4 mb-3 flex items-center justify-between gap-3" style={CARD}>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: BLUE_SOFT }}>
+                <MapPin size={17} color={BLUE} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold" style={{ color: TEXT }}>내 지역</p>
+                <p className="text-[12px] truncate" style={{ color: MUTED }}>
+                  {region === "전체" ? "아직 설정 전이에요 · 눌러서 정해 주세요" : `${region} · 지원금 목록이 이 지역 기준으로 열려요`}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-semibold" style={{ color: TEXT }}>내 지역</p>
-              <p className="text-[12px]" style={{ color: MUTED }}>{region}</p>
-            </div>
-          </div>
+            <ChevronRight size={16} color="#C3C8D4" className="shrink-0" />
+          </button>
           <button
             onClick={() => setScreen({ view: "diagnosis" })}
             className="w-full text-left rounded-[20px] p-4 mb-3 flex items-center justify-between gap-3"
@@ -4148,6 +4161,68 @@ export default function App() {
           <p className="text-[11.5px] text-center mt-8" style={{ color: MUTED }}>지원금알리미 v1.0</p>
           <p className="text-[11px] text-center mt-1 leading-relaxed" style={{ color: MUTED }}>정부·공공기관의 공식 앱이 아닌 민간 정보 서비스예요</p>
         </>
+      )}
+
+      {regionOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-end justify-center" style={{ zIndex: 60 }} onClick={() => setRegionOpen(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="bg-white w-full max-w-md md:max-w-xl rounded-t-2xl p-6 pb-8 max-h-[75%] overflow-y-auto">
+            <div className="w-9 h-1 bg-[#E5E7EE] rounded-full mx-auto mb-5" />
+
+            {pickerStep === "province" ? (
+              <>
+                <h2 className="text-base font-bold mb-1" style={{ color: TEXT }}>내 지역 선택</h2>
+                <p className="text-[12px] mb-4" style={{ color: MUTED }}>선택한 지역은 저장돼서, 다음에도 이 지역 기준으로 지원금을 보여드려요. (전국 지원금도 함께 보여요)</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {REGIONS.map((r) => {
+                    const active = region === r || region.startsWith(r + " ");
+                    return (
+                      <button
+                        key={r}
+                        onClick={() => selectProvince(r)}
+                        className="py-2.5 rounded-lg border text-sm flex items-center justify-center gap-1"
+                        style={active ? { background: BLUE, borderColor: BLUE, color: "white" } : { background: "white", borderColor: BORDER, color: TEXT }}
+                      >
+                        {r}
+                        {DISTRICTS[r] && <ChevronDown size={11} style={{ transform: "rotate(-90deg)" }} color={active ? "white" : MUTED} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-4">
+                  <button onClick={() => setPickerStep("province")} className="w-7 h-7 -ml-1 rounded-full flex items-center justify-center active:bg-[#F2F3F7]">
+                    <ChevronLeft size={18} color={TEXT} />
+                  </button>
+                  <h2 className="text-base font-bold" style={{ color: TEXT }}>{tempProvince} 세부 지역</h2>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => selectDistrict("전체")}
+                    className="py-2.5 rounded-lg border text-sm"
+                    style={{ background: BLUE_SOFT, borderColor: BLUE, color: BLUE }}
+                  >
+                    {tempProvince} 전체
+                  </button>
+                  {DISTRICTS[tempProvince].map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => selectDistrict(d)}
+                      className="py-2.5 rounded-lg border text-sm"
+                      style={{ background: "white", borderColor: BORDER, color: TEXT }}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] mt-4" style={{ color: MUTED }}>
+                  * 2026년 기준 행정구역이에요. 시/군 통합 등 행정구역 변경 시 업데이트가 필요해요.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Bottom tab bar */}
