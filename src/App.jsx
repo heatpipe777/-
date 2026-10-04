@@ -311,16 +311,134 @@ let TAX_SCHEDULE = buildTaxSchedule();
 
 const REGIONS = ["전체", "전국", "서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
 
-// 진단(온보딩) 답변과 지원금이 맞는지 대략 판별 (근사치 — 매출·연차 조건은 '경영안정바우처'처럼
-// 구조화된 데이터가 있는 항목만 정확히 반영되고, 나머지 예시 항목은 지역만 맞으면 느슨하게 매칭)
+// ---- 맞춤 진단 ----
+// 질문 보기 (결과 화면의 요약에도 같이 써요)
+const DIAG_INDUSTRY = [
+  { key: "food", label: "음식점·카페" },
+  { key: "retail", label: "도소매·쇼핑몰" },
+  { key: "service", label: "서비스 (미용·학원·수리 등)" },
+  { key: "mfg", label: "제조·건설·운수" },
+  { key: "etc", label: "기타" },
+];
+const DIAG_REVENUE = [
+  { key: "under30", label: "3천만원 이하" },
+  { key: "30to100", label: "3천만원 ~ 1억원" },
+  { key: "100to140", label: "1억원 ~ 1억 4백만원" },
+  { key: "over140", label: "1억 4백만원 초과" },
+];
+const DIAG_YEARS = [
+  { key: "pre", label: "아직 창업 전이에요 (예비 창업)" },
+  { key: "under1", label: "1년 미만" },
+  { key: "1to3", label: "1~3년" },
+  { key: "over3", label: "3년 이상" },
+];
+const DIAG_EMPLOYEES = [
+  { key: "0", label: "없어요 (혼자 운영)" },
+  { key: "1to4", label: "1~4명" },
+  { key: "5to9", label: "5~9명" },
+  { key: "10plus", label: "10명 이상" },
+];
+const DIAG_NEEDS = [
+  { key: "funds", label: "운영자금·대출", categories: ["경영", "보증", "신용"] },
+  { key: "fixed", label: "고정비 줄이기 (공과금·전기료 등)", categories: ["고정비", "에너지"] },
+  { key: "hire", label: "직원 채용·인건비", categories: ["고용"] },
+  { key: "digital", label: "장비·디지털 도입 (키오스크 등)", categories: ["디지털전환", "에너지"] },
+  { key: "refinance", label: "비싼 대출 갈아타기", categories: [] },
+  { key: "restart", label: "재기·재창업", categories: ["재기"] },
+];
+const DIAG_SITUATION = [
+  { key: "decline", label: "매출이 줄었어요" },
+  { key: "lowCredit", label: "신용점수가 낮은 편이에요" },
+  { key: "closing", label: "폐업했거나 폐업을 고민 중이에요" },
+  { key: "none", label: "해당 없어요" },
+];
+const diagLabel = (list, key) => (list.find((o) => o.key === key) || {}).label;
+
+// 상시근로자 기준으로 소상공인에 해당하는지 (제조·건설·운수는 10인 미만, 그 외 5인 미만)
+function isSmallBusiness(diag) {
+  if (!diag.employees) return true;
+  if (diag.employees === "10plus") return false;
+  if (diag.employees === "5to9") return diag.industry === "mfg";
+  return true;
+}
+
+// 지원금 하나가 진단 답변에 맞는지 판정하고, 추천 점수와 이유를 함께 돌려줘요
+function diagnoseProgram(p, diag) {
+  const needs = diag.needs || [];
+  const situation = diag.situation || [];
+  const lowCredit = situation.includes("lowCredit");
+  const restartCase = situation.includes("closing") || needs.includes("restart") || diag.yearsBand === "pre";
+  const declineCase = situation.includes("decline");
+
+  // 1) 지역
+  const regionOk = p.region === "전국" || p.region === diag.region || (p.name.includes("대구·경북") && diag.region === "경북");
+  if (!regionOk) return { eligible: false };
+
+  // 2) 소상공인 규모 — 아니면 중소기업도 받을 수 있는 자금만
+  const target = typeof p.target === "string" ? p.target : "";
+  if (!isSmallBusiness(diag) && !/중소기업|소기업/.test(target)) return { eligible: false };
+
+  // 3) 예비 창업자 — 사업자등록 전이라 재창업·재도전 자금 외에는 대상이 아니에요
+  if (diag.yearsBand === "pre" && p.category !== "재기") return { eligible: false };
+
+  // 4) 매출 조건
+  if (p.detailed && diag.revenueBand === "over140") return { eligible: false };
+  if (p.id === 15 && diag.revenueBand === "over140") return { eligible: false };
+
+  // 5) 신용·재기 전용 자금은 해당하는 분만
+  if ((p.id === 102 || p.id === 13) && !lowCredit) return { eligible: false };
+  if (p.id === 103 && !lowCredit && !needs.includes("refinance")) return { eligible: false };
+  if (p.category === "재기" && !restartCase && !(p.id === 21 && declineCase)) return { eligible: false };
+
+  // 추천 점수와 이유
+  let score = 0;
+  const reasons = [];
+  const need = DIAG_NEEDS.find((n) => needs.includes(n.key) && n.categories.includes(p.category));
+  if (need) {
+    score += 3;
+    reasons.push(`'${need.label.split(" (")[0]}'에 맞는 지원이에요`);
+  }
+  if (p.id === 103 && needs.includes("refinance")) {
+    score += 3;
+    reasons.push("비싼 대출을 저금리로 바꿀 수 있어요");
+  }
+  if (lowCredit && p.category === "신용") {
+    score += 2;
+    reasons.push("신용점수가 낮아도 신청할 수 있어요");
+  }
+  if (declineCase && (p.id === "voucher" || p.id === 101 || p.id === 21)) {
+    score += 2;
+    reasons.push("매출 감소 소상공인에게 도움이 돼요");
+  }
+  if (restartCase && p.category === "재기") {
+    score += 2;
+    reasons.push("재기·재창업을 지원해요");
+  }
+  if (diag.employees && diag.employees !== "0" && p.category === "고용") {
+    score += 1;
+    if (!need) reasons.push("직원을 고용 중이면 인건비를 받을 수 있어요");
+  }
+  if (diag.industry === "food" && p.category === "에너지") {
+    score += 1;
+    if (!need) reasons.push("냉장고 등 전기를 많이 쓰는 음식점에 유리해요");
+  }
+  if (p.region !== "전국") {
+    score += 1;
+    if (reasons.length === 0) reasons.push(`우리 지역(${diag.region}) 소상공인 전용이에요`);
+  }
+
+  // 확인이 필요한 조건
+  const warnings = [];
+  if (p.id === 11 && lowCredit) warnings.push("신용점수 기준(NICE 710점 이상)을 확인하세요");
+  if (p.detailed && diag.yearsBand === "under1") warnings.push("2025년 이전에 개업했어야 해요");
+
+  return { eligible: true, score, reason: reasons[0] || warnings[0] || null, warnings };
+}
+
+// 예전 코드 호환용
 function matchesDiagnosis(p, diag) {
   if (!diag) return true;
-  const regionOk = p.region === "전국" || p.region === diag.region;
-  let revenueOk = true;
-  if (p.detailed) revenueOk = diag.revenueBand !== "over140";
-  let yearsOk = true;
-  if (p.category === "창업") yearsOk = diag.yearsBand === "under1";
-  return regionOk && revenueOk && yearsOk;
+  return diagnoseProgram(p, diag).eligible;
 }
 
 // 시/도별 구·시·군 목록 (2026년 기준 행정구역 전체)
@@ -1908,46 +2026,35 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
 // ---- 맞춤 진단(온보딩) ----
 function DiagnosisWizard({ onBack, onComplete }) {
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState({ region: null, revenueBand: null, yearsBand: null });
+  const [answers, setAnswers] = useState({ region: null, industry: null, revenueBand: null, yearsBand: null, employees: null, needs: [], situation: [] });
 
   const STEPS = [
-    {
-      key: "region",
-      question: "사업장이 있는 지역이 어디인가요?",
-      grid: true,
-      options: REGIONS.filter((r) => r !== "전체").map((r) => ({ key: r, label: r })),
-    },
-    {
-      key: "revenueBand",
-      question: "최근 1년 연매출은 어느 정도인가요?",
-      options: [
-        { key: "under30", label: "3천만원 이하" },
-        { key: "30to100", label: "3천만원 ~ 1억원" },
-        { key: "100to140", label: "1억원 ~ 1억 4백만원" },
-        { key: "over140", label: "1억 4백만원 초과" },
-      ],
-    },
-    {
-      key: "yearsBand",
-      question: "사업을 시작한 지 얼마나 되셨나요?",
-      options: [
-        { key: "under1", label: "1년 미만" },
-        { key: "1to3", label: "1~3년" },
-        { key: "over3", label: "3년 이상" },
-      ],
-    },
+    { key: "region", question: "사업장이 있는 지역이 어디인가요?", grid: true, options: REGIONS.filter((r) => r !== "전체").map((r) => ({ key: r, label: r })) },
+    { key: "industry", question: "어떤 업종을 운영하고 계세요?", options: DIAG_INDUSTRY },
+    { key: "revenueBand", question: "최근 1년 연매출은 어느 정도인가요?", options: DIAG_REVENUE },
+    { key: "yearsBand", question: "사업을 시작한 지 얼마나 되셨나요?", options: DIAG_YEARS },
+    { key: "employees", question: "사장님을 빼고 직원은 몇 명인가요?", hint: "4대보험에 가입된 상시 직원 기준이에요", options: DIAG_EMPLOYEES },
+    { key: "needs", question: "지금 가장 필요한 지원은 무엇인가요?", hint: "여러 개 고를 수 있어요", multi: true, options: DIAG_NEEDS },
+    { key: "situation", question: "해당되는 상황이 있나요?", hint: "여러 개 고를 수 있어요", multi: true, options: DIAG_SITUATION },
   ];
-
   const current = STEPS[step];
+  const selected = answers[current.key];
 
+  const goNext = (next) => {
+    if (step < STEPS.length - 1) setStep(step + 1);
+    else onComplete({ ...next, version: 2 });
+  };
   const pick = (value) => {
     const next = { ...answers, [current.key]: value };
     setAnswers(next);
-    if (step < STEPS.length - 1) {
-      setStep(step + 1);
-    } else {
-      onComplete(next);
-    }
+    goNext(next);
+  };
+  const toggle = (value) => {
+    let list = selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value];
+    // "해당 없어요"는 다른 보기와 같이 고를 수 없어요
+    if (value === "none") list = list.includes("none") ? ["none"] : [];
+    else list = list.filter((v) => v !== "none");
+    setAnswers({ ...answers, [current.key]: list });
   };
 
   return (
@@ -1956,6 +2063,7 @@ function DiagnosisWizard({ onBack, onComplete }) {
         <button
           onClick={() => (step === 0 ? onBack() : setStep(step - 1))}
           className="navArrowBtn w-8 h-8 -ml-1.5 rounded-full flex items-center justify-center shrink-0"
+          aria-label="뒤로가기"
         >
           <ChevronLeft size={20} color={TEXT} />
         </button>
@@ -1967,7 +2075,8 @@ function DiagnosisWizard({ onBack, onComplete }) {
       </div>
 
       <p className="text-[11.5px] font-bold mb-1.5" style={{ color: BLUE }}>{step + 1} / {STEPS.length}</p>
-      <h2 className="text-[19px] font-bold mb-6 leading-snug" style={{ color: TEXT }}>{current.question}</h2>
+      <h2 className="text-[19px] font-bold leading-snug" style={{ color: TEXT }}>{current.question}</h2>
+      <p className="text-[12px] mt-1 mb-5" style={{ color: MUTED }}>{current.hint || " "}</p>
 
       {current.grid ? (
         <div className="grid grid-cols-3 gap-2">
@@ -1976,12 +2085,43 @@ function DiagnosisWizard({ onBack, onComplete }) {
               key={opt.key}
               onClick={() => pick(opt.key)}
               className="py-3.5 rounded-2xl text-[14px] font-semibold active:scale-[0.97] transition-transform"
-              style={{ ...CARD, color: TEXT }}
+              style={selected === opt.key ? { ...CHIP_ON } : { ...CARD, color: TEXT }}
             >
               {opt.label}
             </button>
           ))}
         </div>
+      ) : current.multi ? (
+        <>
+          <div className="space-y-2">
+            {current.options.map((opt) => {
+              const on = selected.includes(opt.key);
+              return (
+                <button
+                  key={opt.key}
+                  onClick={() => toggle(opt.key)}
+                  className="w-full text-left px-4 py-4 rounded-2xl text-[14px] font-semibold flex items-center justify-between active:scale-[0.99] transition-transform"
+                  style={on ? { background: BLUE_SOFT, border: `1.5px solid ${BLUE}`, color: BLUE } : { ...CARD, color: TEXT }}
+                >
+                  {opt.label}
+                  <span
+                    className="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
+                    style={on ? { background: BLUE } : { border: "1.5px solid #C9CEDA" }}
+                  >
+                    {on && <Check size={13} color="white" strokeWidth={3} />}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <button
+            onClick={() => goNext(answers)}
+            className="w-full mt-5 py-4 rounded-2xl text-[14.5px] font-bold active:scale-[0.99] transition-transform"
+            style={selected.length ? BTN_PRIMARY : { background: "#E7E9F0", color: MUTED }}
+          >
+            {selected.length ? (step === STEPS.length - 1 ? "결과 보기" : "다음") : "건너뛰기"}
+          </button>
+        </>
       ) : (
         <div className="space-y-2">
           {current.options.map((opt) => (
@@ -1989,7 +2129,7 @@ function DiagnosisWizard({ onBack, onComplete }) {
               key={opt.key}
               onClick={() => pick(opt.key)}
               className="w-full text-left px-4 py-4 rounded-2xl text-[14px] font-semibold flex items-center justify-between active:scale-[0.99] transition-transform"
-              style={{ ...CARD, color: TEXT }}
+              style={selected === opt.key ? { background: BLUE_SOFT, border: `1.5px solid ${BLUE}`, color: BLUE } : { ...CARD, color: TEXT }}
             >
               {opt.label}
               <ChevronRight size={16} color="#C3C8D4" />
@@ -1999,33 +2139,58 @@ function DiagnosisWizard({ onBack, onComplete }) {
       )}
 
       <p className="text-[11px] mt-6" style={{ color: MUTED }}>
-        * 30초면 끝나요. 답변은 나중에 MY 탭에서 다시 바꿀 수 있어요.
+        * 1분이면 끝나요. 답변은 언제든 다시 진단해서 바꿀 수 있어요.
       </p>
     </div>
   );
 }
 
 function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, onSelectProgram, statusFilter, setStatusFilter }) {
-  const matched = ALL_PROGRAMS.filter((p) => matchesDiagnosis(p, diagnosis));
-  const urgent = matched.filter((p) => {
-    const d = getDday(p.deadline);
-    return d <= 7 && d >= 0;
-  }).length;
-  const available = matched.filter((p) => getDday(p.deadline) > 7).length;
+  const results = ALL_PROGRAMS.map((p) => ({ p, r: diagnoseProgram(p, diagnosis) })).filter((x) => x.r.eligible);
+  const open = results.filter((x) => !isExpired(x.p));
+  const urgentCount = open.filter((x) => getDday(x.p.deadline) <= 7).length;
 
-  const filtered = matched
-    .filter((p) => {
-      const d = getDday(p.deadline);
+  const sorted = results
+    .filter((x) => {
+      const d = getDday(x.p.deadline);
       if (statusFilter === "urgent") return d <= 7 && d >= 0;
       if (statusFilter === "available") return d >= 0;
       return true;
     })
-    .sort(byDeadline);
+    .sort((a, b) => {
+      const ea = isExpired(a.p) ? 1 : 0;
+      const eb = isExpired(b.p) ? 1 : 0;
+      if (ea !== eb) return ea - eb;
+      if (b.r.score !== a.r.score) return b.r.score - a.r.score;
+      return byDeadline(a.p, b.p);
+    });
+  const top = sorted.filter((x) => !isExpired(x.p) && x.r.score >= 3).slice(0, 3);
+  const rest = sorted.filter((x) => !top.includes(x));
+
+  // 진단 답변 요약
+  const chips = [
+    diagnosis.region,
+    diagLabel(DIAG_INDUSTRY, diagnosis.industry),
+    diagLabel(DIAG_REVENUE, diagnosis.revenueBand) && `연매출 ${diagLabel(DIAG_REVENUE, diagnosis.revenueBand)}`,
+    diagLabel(DIAG_YEARS, diagnosis.yearsBand) && (diagnosis.yearsBand === "pre" ? "예비 창업" : `업력 ${diagLabel(DIAG_YEARS, diagnosis.yearsBand)}`),
+    diagnosis.employees && (diagnosis.employees === "0" ? "직원 없음" : `직원 ${diagLabel(DIAG_EMPLOYEES, diagnosis.employees)}`),
+  ].filter(Boolean);
+
+  // 진단 전체에 대한 안내
+  const notices = [];
+  if (!isSmallBusiness(diagnosis))
+    notices.push("직원 수 기준으로 '소상공인'이 아닐 수 있어요 (제조·건설·운수 10인 미만, 그 외 5인 미만). 중소기업도 받을 수 있는 자금만 보여드려요.");
+  if (diagnosis.yearsBand === "pre")
+    notices.push("예비 창업자는 사업자등록 후 받을 수 있는 지원금이 대부분이에요. 창업 지원은 'K-스타트업(k-startup.go.kr)'에서 찾아보세요.");
+  if (diagnosis.revenueBand === "over140")
+    notices.push("연매출 1억 4백만원 이상이면 경영안정바우처 같은 일부 지원금은 받을 수 없어요.");
+  if (!diagnosis.version)
+    notices.push("예전 방식으로 진단한 결과예요. '다시 진단'을 누르면 업종·필요한 지원까지 반영해 더 정확하게 추천해드려요.");
 
   return (
     <div>
       <SectionHeader
-        title="맞춤 지원금 결과"
+        title="맞춤 진단 결과"
         onBack={onBack}
         right={
           <div className="flex items-center gap-2 shrink-0">
@@ -2040,64 +2205,99 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
         }
       />
 
-      <div className="rounded-2xl p-5 mb-3" style={{ background: BLUE }}>
-        <div className="flex items-center gap-1.5 mb-2">
-          <CheckCircle2 size={16} color="white" />
-          <p className="text-[12.5px]" style={{ color: "#C6D3FA" }}>사장님이 받을 수 있는</p>
+      {/* 결과 요약 */}
+      <div className="relative overflow-hidden rounded-[24px] p-5 mb-3" style={{ background: "linear-gradient(135deg, #5B8DF7 0%, #3D63DD 100%)" }}>
+        <div className="absolute -right-10 -top-12 w-40 h-40 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
+        <div className="relative flex items-center gap-1.5 mb-1.5">
+          <CheckCircle2 size={15} color="white" />
+          <p className="text-[12.5px] text-white/80">사장님이 지금 신청할 수 있는</p>
         </div>
-        <p className="text-white font-extrabold text-[21px] leading-snug">지원금이 총 {matched.length}건 있어요!</p>
-        <p className="text-[12px] mt-1" style={{ color: "#C6D3FA" }}>확인하고 신청해보세요.</p>
+        <p className="relative text-white font-extrabold text-[22px] leading-snug">지원금이 {open.length}건 있어요</p>
+        {top.length > 0 && (
+          <p className="relative text-[12.5px] mt-1 text-white/85">그중 {top.length}건은 사장님 상황에 특히 잘 맞아요</p>
+        )}
+        <div className="relative flex flex-wrap gap-1.5 mt-3.5">
+          {chips.map((c) => (
+            <span key={c} className="text-[11px] font-semibold px-2 py-1 rounded-full text-white" style={{ background: "rgba(255,255,255,0.18)" }}>
+              {c}
+            </span>
+          ))}
+        </div>
       </div>
 
-      <button
-        onClick={onViewAll}
-        className="w-full flex items-center justify-center gap-1 py-2.5 mb-4 rounded-xl text-[12px] font-semibold"
-        style={CHIP_OFF}
-      >
-        진단 조건과 상관없이 전체 지원금 보기 <ChevronRight size={13} />
-      </button>
-
-      <div className="flex gap-1.5 mb-4">
-        {[
-          { key: "all", label: "전체", count: matched.length },
-          { key: "available", label: "신청가능", count: available },
-          { key: "urgent", label: "마감임박", count: urgent },
-        ].map((s) => {
-          const active = statusFilter === s.key;
-          return (
-            <button
-              key={s.key}
-              onClick={() => setStatusFilter(s.key)}
-              className="flex-1 py-2 rounded-xl text-xs font-semibold"
-              style={active ? CHIP_ON : CHIP_OFF}
-            >
-              {s.label} <span style={{ opacity: 0.75 }}>({s.count})</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="text-center py-16 text-sm" style={{ color: MUTED }}>
-          조건에 맞는 지원금이 아직 없어요.
-          <br />
-          "지원금 전체보기"에서 더 찾아보세요.
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map((p) => (
-              <ProgramRow key={p.id} p={p} onClick={() => onSelectProgram(p.id)} />
+      {notices.length > 0 && (
+        <div className="rounded-[20px] p-4 mb-3 space-y-2" style={{ background: GOLD_SOFT }}>
+          {notices.map((n) => (
+            <div key={n} className="flex items-start gap-2">
+              <AlertTriangle size={14} color={GOLD} className="shrink-0 mt-0.5" />
+              <p className="text-[12px] leading-relaxed break-keep" style={{ color: "#7A5A1E" }}>{n}</p>
+            </div>
           ))}
         </div>
       )}
 
-      <p className="text-[11px] text-center mt-6" style={{ color: MUTED }}>
-        * 지역은 정확히 반영되고, 매출·업력 조건은 정보가 구조화된 일부 지원금에만 정확히 적용돼요. 나머지는 상세화면에서 조건을 꼭 확인하세요.
+      {/* 추천 지원금 */}
+      {top.length > 0 && statusFilter !== "urgent" && (
+        <>
+          <div className="flex items-center gap-2 mt-5 mb-2.5">
+            <span className="w-1 h-4 rounded-full" style={{ background: BLUE }} />
+            <p className="text-[15px] font-bold" style={{ color: TEXT }}>사장님께 딱 맞는 지원금</p>
+          </div>
+          <div className="space-y-2 mb-5">
+            {top.map(({ p, r }) => (
+              <ProgramRow key={p.id} p={p} reason={r.reason} highlight onClick={() => onSelectProgram(p.id)} />
+            ))}
+          </div>
+        </>
+      )}
+
+      <div className="flex items-center gap-2 mt-2 mb-2.5">
+        <span className="w-1 h-4 rounded-full" style={{ background: "#C3C8D4" }} />
+        <p className="text-[15px] font-bold" style={{ color: TEXT }}>{top.length > 0 && statusFilter !== "urgent" ? "함께 볼 만한 지원금" : "받을 수 있는 지원금"}</p>
+      </div>
+      <div className="flex gap-1.5 mb-3">
+        {[
+          { key: "all", label: "전체", count: results.length },
+          { key: "available", label: "신청가능", count: open.length },
+          { key: "urgent", label: "마감임박", count: urgentCount },
+        ].map((s) => (
+          <button
+            key={s.key}
+            onClick={() => setStatusFilter(s.key)}
+            className="flex-1 py-2 rounded-xl text-xs font-semibold"
+            style={statusFilter === s.key ? CHIP_ON : CHIP_OFF}
+          >
+            {s.label} <span style={{ opacity: 0.75 }}>({s.count})</span>
+          </button>
+        ))}
+      </div>
+
+      {(statusFilter === "urgent" ? sorted : rest).length === 0 ? (
+        <div className="text-center py-12 text-sm" style={{ color: MUTED }}>
+          {statusFilter === "urgent" ? "마감이 7일 이내로 남은 지원금은 없어요." : "더 보여드릴 지원금이 없어요."}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {(statusFilter === "urgent" ? sorted : rest).map(({ p, r }) => (
+            <ProgramRow key={p.id} p={p} reason={isExpired(p) ? null : r.reason} onClick={() => onSelectProgram(p.id)} />
+          ))}
+        </div>
+      )}
+
+      <button
+        onClick={onViewAll}
+        className="w-full flex items-center justify-center gap-1 py-3 mt-4 rounded-2xl text-[12.5px] font-semibold"
+        style={CHIP_OFF}
+      >
+        조건과 상관없이 전체 지원금 보기 <ChevronRight size={13} />
+      </button>
+
+      <p className="text-[11px] mt-4 leading-relaxed" style={{ color: MUTED }}>
+        * 답변을 바탕으로 한 참고용 추천이에요. 신용점수·고용 기간 같은 세부 조건은 지원금마다 달라서, 신청 전 상세 화면과 공식 공고를 꼭 확인하세요.
       </p>
     </div>
   );
 }
-
 
 // "경영" 카테고리용 커스텀 아이콘 — 막대그래프 + 상승 화살표를 합친 차트 느낌
 // 돈주머니 일러스트 — 맞춤 진단 CTA용. sharp 렌더링으로 큰/56px/40px 검증 완료
@@ -2164,7 +2364,7 @@ function TrendChartIcon({ size = 24, color = "currentColor", strokeWidth = 2, cl
 }
 
 // 지원금 목록 카드 — 목록·즐겨찾기·맞춤진단 결과에서 같이 써요
-function ProgramRow({ p, onClick, actions }) {
+function ProgramRow({ p, onClick, actions, reason, highlight }) {
   const dday = getDday(p.deadline);
   const color = urgencyColor(dday);
   const cat = CATEGORY_COLORS[p.category] || { bg: BLUE };
@@ -2175,7 +2375,7 @@ function ProgramRow({ p, onClick, actions }) {
       tabIndex={0}
       onClick={onClick}
       className="w-full text-left rounded-[20px] px-4 py-3.5 active:scale-[0.99] transition-transform cursor-pointer"
-      style={CARD}
+      style={highlight ? { ...CARD, border: `1.5px solid ${BLUE}55`, boxShadow: "0 6px 18px rgba(61,99,221,0.12)" } : CARD}
     >
       <div className="flex items-center gap-1.5 mb-1.5">
         <span className="text-[11px] font-bold px-2 py-0.5 rounded-md shrink-0" style={{ background: `${cat.bg}1A`, color: cat.bg }}>
@@ -2203,6 +2403,11 @@ function ProgramRow({ p, onClick, actions }) {
         <p className="text-[12px] truncate flex-1" style={{ color: MUTED }}>{p.amountLabel}</p>
         {actions}
       </div>
+      {reason && (
+        <p className="flex items-center gap-1 text-[11.5px] font-semibold mt-2 pt-2" style={{ color: BLUE, borderTop: "1px dashed #E6E9F2" }}>
+          <CheckCircle2 size={12} /> {reason}
+        </p>
+      )}
     </div>
   );
 }
@@ -3342,14 +3547,14 @@ export default function App() {
           />
           <div className="min-w-0">
             <p className="text-[16px] font-extrabold" style={{ color: "#3E2A05" }}>
-              {diagnosis ? "내 맞춤 지원금 결과 보기" : "30초 맞춤 진단 받기"}
+              {diagnosis ? "내 맞춤 지원금 결과 보기" : "1분 맞춤 진단 받기"}
             </p>
             <p className="text-[12px] mt-1 leading-snug break-keep" style={{ color: "#5C430F" }}>
               {diagnosis ? (
-                `${diagnosis.region} 사업장 기준으로 골라둔 지원금이 있어요`
+                `${diagnosis.region}${diagnosis.industry ? ` · ${diagLabel(DIAG_INDUSTRY, diagnosis.industry).split(" (")[0]}` : ""} 기준으로 골라둔 지원금이 있어요`
               ) : (
                 <>
-                  지역·매출·업력만 답하면 나에게 맞는
+                  몇 가지만 답하면 사장님 상황에 맞는
                   <br />
                   지원금만 보여드려요!
                 </>
@@ -3866,7 +4071,7 @@ export default function App() {
               <div className="min-w-0">
                 <p className="text-sm font-semibold" style={{ color: TEXT }}>맞춤 진단</p>
                 <p className="text-[12px] truncate" style={{ color: MUTED }}>
-                  {diagnosis ? `${diagnosis.region} · 진단 완료 (다시 진단하기)` : "아직 진단 전이에요 · 30초면 끝나요"}
+                  {diagnosis ? `${diagnosis.region} · 진단 완료 (다시 진단하기)` : "아직 진단 전이에요 · 1분이면 끝나요"}
                 </p>
               </div>
             </div>
