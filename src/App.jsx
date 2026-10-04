@@ -38,6 +38,13 @@ import {
   ArrowUpDown,
   Lightbulb,
   Share2,
+  Tag,
+  Target,
+  Receipt,
+  CalendarDays,
+  Briefcase,
+  BadgeCheck,
+  Copy,
   BarChart3,
   ShieldCheck,
 } from "lucide-react";
@@ -2860,16 +2867,23 @@ function DeadlineSoonList({ onSelect }) {
 }
 
 // ---- 사장님 필수 계산기 툴킷 ----
+// ---- 사장님 필수 계산기 ----
+// 숫자 입력: 내부 값은 숫자, 화면에는 천 단위 쉼표를 붙여 보여줘요
 function useNumberInput(initial) {
-  const [raw, setRaw] = useState(initial);
-  const num = Number(String(raw).replace(/[^0-9.]/g, "")) || 0;
-  const onChange = (e) => setRaw(e.target.value.replace(/[^0-9.]/g, ""));
-  return [num, raw, onChange];
+  const [raw, setRaw] = useState(String(initial).replace(/[^0-9.]/g, ""));
+  const num = Number(raw) || 0;
+  const onChange = (e) => {
+    let v = e.target.value.replace(/[^0-9.]/g, "");
+    const dot = v.indexOf(".");
+    if (dot !== -1) v = v.slice(0, dot + 1) + v.slice(dot + 1).replace(/\./g, "");
+    setRaw(v.replace(/^0+(?=\d)/, ""));
+  };
+  return [num, withCommas(raw), onChange];
 }
 
-function CalcNumberField({ label, value, onChange, suffix, placeholder }) {
+function CalcNumberField({ label, value, onChange, suffix, placeholder, hint }) {
   return (
-    <div className="mb-4">
+    <div className="mb-3.5">
       <p className="text-[13px] font-semibold mb-1.5" style={{ color: TEXT }}>{label}</p>
       <div className="flex items-center rounded-xl px-3.5 py-3" style={{ background: INPUT_BG }}>
         <input
@@ -2878,31 +2892,74 @@ function CalcNumberField({ label, value, onChange, suffix, placeholder }) {
           value={value}
           onChange={onChange}
           placeholder={placeholder}
-          className="flex-1 min-w-0 bg-transparent outline-none text-[16px] font-semibold"
+          className="flex-1 min-w-0 bg-transparent outline-none text-[16px] font-semibold tabular-nums"
           style={{ color: TEXT }}
         />
-        {suffix && <span className="text-[13px] font-medium ml-2" style={{ color: MUTED }}>{suffix}</span>}
+        {suffix && <span className="text-[13px] font-medium ml-2 shrink-0" style={{ color: MUTED }}>{suffix}</span>}
       </div>
+      {hint && <p className="text-[11px] mt-1 px-1" style={{ color: MUTED }}>{hint}</p>}
     </div>
   );
 }
 
-function CalcResultCard({ rows }) {
+// 계산 방식 고르기 (예: 판매가 정하기 / 마진 확인)
+function CalcModeSwitch({ value, onChange, options }) {
   return (
-    <div className="rounded-2xl p-4" style={{ background: BLUE_SOFT }}>
-      <div className="flex items-center gap-1.5 mb-3">
-        <ClipboardIcon />
-        <p className="text-[13px] font-bold" style={{ color: TEXT }}>계산 결과</p>
+    <div className="flex p-1 rounded-xl mb-4" style={{ background: INPUT_BG }}>
+      {options.map((o) => (
+        <button
+          key={o.key}
+          onClick={() => onChange(o.key)}
+          className="flex-1 py-2 rounded-lg text-[12.5px] font-semibold transition-colors"
+          style={value === o.key ? { background: "white", color: BLUE, boxShadow: "0 1px 4px rgba(40,60,120,0.12)" } : { color: MUTED }}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function CalcNotice({ tone = "red", children }) {
+  const red = tone === "red";
+  return (
+    <div className="rounded-xl px-3.5 py-3 mb-3.5 flex items-start gap-2" style={{ background: red ? RED_SOFT : GREEN_SOFT }}>
+      {red ? <XCircle size={14} color={RED} className="shrink-0 mt-0.5" /> : <CheckCircle2 size={14} color={GREEN} className="shrink-0 mt-0.5" />}
+      <p className="text-[12px] leading-relaxed break-keep" style={{ color: red ? RED : GREEN }}>{children}</p>
+    </div>
+  );
+}
+
+// 계산 결과 카드 — 결과를 복사해서 메모·카톡에 붙여넣을 수 있어요
+function CalcResultCard({ rows, title = "계산 결과" }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    const text = [`[지원금알리미 계산기] ${title}`, ...rows.map((r) => `· ${r.label}: ${r.value}`)].join("\n");
+    if (await copyText(text)) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    }
+  };
+  return (
+    <div className="rounded-[18px] p-4" style={{ background: BLUE_SOFT }}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-1.5">
+          <ClipboardIcon />
+          <p className="text-[13px] font-bold" style={{ color: TEXT }}>{title}</p>
+        </div>
+        <button onClick={copy} className="flex items-center gap-1 text-[11.5px] font-semibold px-2.5 py-1 rounded-full" style={{ background: "white", color: copied ? GREEN : BLUE }}>
+          {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "복사됨" : "결과 복사"}
+        </button>
       </div>
       <div className="space-y-2.5">
         {rows.map((row, i) => (
           <div
             key={i}
-            className="flex items-center justify-between"
+            className="flex items-center justify-between gap-3"
             style={i > 0 ? { borderTop: `1px solid rgba(61,99,221,0.12)`, paddingTop: 10 } : {}}
           >
             <span className={row.primary ? "text-[13.5px] font-semibold" : "text-[13px]"} style={{ color: row.primary ? TEXT : row.tone === "red" ? RED : MUTED }}>{row.label}</span>
-            <span className={row.primary ? "text-[23px] font-extrabold" : "text-[15px] font-bold"} style={{ color: row.primary ? BLUE : row.tone === "red" ? RED : TEXT }}>{row.value}</span>
+            <span className={`${row.primary ? "text-[22px] font-extrabold" : "text-[15px] font-bold"} tabular-nums text-right`} style={{ color: row.primary ? BLUE : row.tone === "red" ? RED : TEXT }}>{row.value}</span>
           </div>
         ))}
       </div>
@@ -2923,21 +2980,79 @@ function ClipboardIcon() {
 function won(n) {
   return `${Math.round(n).toLocaleString("ko-KR")}원`;
 }
+function pct(n) {
+  return `${(Math.round(n * 10) / 10).toLocaleString("ko-KR")}%`;
+}
 
+// 마진율: 판매가 대비 이익 비율 (마진율 30% = 판매가의 30%가 남는 돈)
 function MarginCalc() {
-  const [cost, costRaw, onCostChange] = useNumberInput("8,000");
+  const [mode, setMode] = useState("price");
+  const [cost, costRaw, onCostChange] = useNumberInput("8000");
   const [margin, marginRaw, onMarginChange] = useNumberInput("30");
-  const marginAmount = cost * (margin / 100);
-  const price = cost + marginAmount;
+  const [sell, sellRaw, onSellChange] = useNumberInput("12000");
+  const okMargin = margin < 100;
+  const price = okMargin ? cost / (1 - margin / 100) : 0;
+  const myMargin = sell > 0 ? ((sell - cost) / sell) * 100 : 0;
   return (
     <div>
-      <p className="text-[12.5px] mb-4" style={{ color: MUTED }}>원가 및 마진율 설정</p>
-      <CalcNumberField label="상품 원가 (원)" value={costRaw} onChange={onCostChange} placeholder="8,000" suffix="원" />
-      <CalcNumberField label="목표 마진율 (%)" value={marginRaw} onChange={onMarginChange} placeholder="30" suffix="%" />
+      <CalcModeSwitch value={mode} onChange={setMode} options={[{ key: "price", label: "판매가 정하기" }, { key: "check", label: "내 마진 확인" }]} />
+      <CalcNumberField label="상품 원가" value={costRaw} onChange={onCostChange} placeholder="8,000" suffix="원" hint="재료비·포장비 등 1개를 만드는 데 드는 돈" />
+      {mode === "price" ? (
+        <>
+          <CalcNumberField label="목표 마진율" value={marginRaw} onChange={onMarginChange} placeholder="30" suffix="%" hint="판매가 중 남기고 싶은 비율" />
+          {!okMargin && <CalcNotice>마진율은 100%보다 작아야 해요.</CalcNotice>}
+          <CalcResultCard
+            title="판매가 계산 결과"
+            rows={[
+              { label: "판매가 (부가세 별도)", value: won(price), primary: true },
+              { label: "소비자가 (부가세 10% 포함)", value: won(price * 1.1) },
+              { label: "1개 팔 때 남는 돈", value: won(price - cost), tone: "red" },
+            ]}
+          />
+        </>
+      ) : (
+        <>
+          <CalcNumberField label="현재 판매가 (부가세 별도)" value={sellRaw} onChange={onSellChange} placeholder="12,000" suffix="원" />
+          {sell > 0 && sell < cost && <CalcNotice>판매가가 원가보다 낮아요. 팔수록 손해예요.</CalcNotice>}
+          <CalcResultCard
+            title="마진 확인 결과"
+            rows={[
+              { label: "마진율 (판매가 대비)", value: pct(myMargin), primary: true },
+              { label: "1개 팔 때 남는 돈", value: won(sell - cost), tone: sell < cost ? "red" : undefined },
+              { label: "원가 대비 이익률", value: cost > 0 ? pct(((sell - cost) / cost) * 100) : "-" },
+            ]}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+// 손익분기점: 한 달 고정비를 다 갚으려면 얼마를 팔아야 하는지
+function BreakEvenCalc() {
+  const [fixed, fixedRaw, onFixedChange] = useNumberInput("5000000");
+  const [costRate, costRateRaw, onCostRateChange] = useNumberInput("35");
+  const [ticket, ticketRaw, onTicketChange] = useNumberInput("15000");
+  const [days, daysRaw, onDaysChange] = useNumberInput("26");
+  const ok = costRate < 100;
+  const monthly = ok ? fixed / (1 - costRate / 100) : 0;
+  const daily = days > 0 ? monthly / days : 0;
+  const customers = ticket > 0 ? Math.ceil(daily / ticket) : 0;
+  return (
+    <div>
+      <CalcNumberField label="한 달 고정비" value={fixedRaw} onChange={onFixedChange} placeholder="5,000,000" suffix="원" hint="월세·인건비·관리비·대출이자 등 매달 나가는 돈" />
+      <CalcNumberField label="원가율 (변동비 비율)" value={costRateRaw} onChange={onCostRateChange} placeholder="35" suffix="%" hint="매출 중 재료비·카드수수료 등으로 나가는 비율" />
+      <div className="grid grid-cols-2 gap-2.5">
+        <CalcNumberField label="손님 1명 평균 결제" value={ticketRaw} onChange={onTicketChange} placeholder="15,000" suffix="원" />
+        <CalcNumberField label="한 달 영업일" value={daysRaw} onChange={onDaysChange} placeholder="26" suffix="일" />
+      </div>
+      {!ok && <CalcNotice>원가율은 100%보다 작아야 해요.</CalcNotice>}
       <CalcResultCard
+        title="손익분기점"
         rows={[
-          { label: "권장 판매가격", value: won(price), primary: true },
-          { label: "마진액", value: won(marginAmount), tone: "red" },
+          { label: "한 달 최소 매출", value: won(monthly), primary: true },
+          { label: "하루 최소 매출", value: won(daily) },
+          { label: "하루 필요한 손님", value: `${customers.toLocaleString("ko-KR")}명`, tone: "red" },
         ]}
       />
     </div>
@@ -2945,405 +3060,399 @@ function MarginCalc() {
 }
 
 function VatSplitCalc() {
-  const [total, totalRaw, onTotalChange] = useNumberInput("110,000");
+  const [mode, setMode] = useState("split");
+  const [total, totalRaw, onTotalChange] = useNumberInput("110000");
+  const [supplyIn, supplyRaw, onSupplyChange] = useNumberInput("100000");
   const supply = total / 1.1;
-  const vat = total - supply;
   return (
     <div>
-      <p className="text-[12.5px] mb-4" style={{ color: MUTED }}>부가세 포함 판매가 입력</p>
-      <CalcNumberField label="판매가 (부가세 포함, 원)" value={totalRaw} onChange={onTotalChange} placeholder="110,000" suffix="원" />
-      <CalcResultCard
-        rows={[
-          { label: "부가세 (10%)", value: won(vat), primary: true },
-          { label: "공급가액", value: won(supply) },
-        ]}
-      />
+      <CalcModeSwitch value={mode} onChange={setMode} options={[{ key: "split", label: "합계에서 쪼개기" }, { key: "add", label: "공급가에 더하기" }]} />
+      {mode === "split" ? (
+        <>
+          <CalcNumberField label="합계 금액 (부가세 포함)" value={totalRaw} onChange={onTotalChange} placeholder="110,000" suffix="원" hint="카드 매출·영수증 금액처럼 부가세가 들어간 금액" />
+          <CalcResultCard
+            title="부가세 쪼개기"
+            rows={[
+              { label: "부가세 (10%)", value: won(total - supply), primary: true },
+              { label: "공급가액", value: won(supply) },
+            ]}
+          />
+        </>
+      ) : (
+        <>
+          <CalcNumberField label="공급가액 (부가세 별도)" value={supplyRaw} onChange={onSupplyChange} placeholder="100,000" suffix="원" hint="견적서·세금계산서의 공급가액" />
+          <CalcResultCard
+            title="부가세 더하기"
+            rows={[
+              { label: "합계 금액", value: won(supplyIn * 1.1), primary: true },
+              { label: "부가세 (10%)", value: won(supplyIn * 0.1) },
+            ]}
+          />
+        </>
+      )}
     </div>
   );
 }
 
 function WeeklyAllowanceCalc() {
-  const [wage, wageRaw, onWageChange] = useNumberInput("10,320");
-  const [hours, hoursRaw, onHoursChange] = useNumberInput("40");
+  const [wage, wageRaw, onWageChange] = useNumberInput("10320");
+  const [hours, hoursRaw, onHoursChange] = useNumberInput("20");
   const eligible = hours >= 15;
-  const cappedHours = Math.min(hours, 40);
-  const allowance = eligible ? (cappedHours / 40) * 8 * wage : 0;
+  const allowance = eligible ? (Math.min(hours, 40) / 40) * 8 * wage : 0;
+  const monthly = allowance * (365 / 7 / 12);
   return (
     <div>
-      <p className="text-[12.5px] mb-4" style={{ color: MUTED }}>시급 및 주 근무시간 입력</p>
-      <CalcNumberField label="시급 (원)" value={wageRaw} onChange={onWageChange} placeholder="10,320" suffix="원" />
-      <CalcNumberField label="1주 근무시간 (시간)" value={hoursRaw} onChange={onHoursChange} placeholder="40" suffix="시간" />
-      {!eligible && (
-        <div className="rounded-xl px-3.5 py-3 mb-4 flex items-start gap-2" style={{ background: RED_SOFT }}>
-          <Info size={13} color={RED} className="shrink-0 mt-0.5" />
-          <p className="text-[12px]" style={{ color: RED }}>1주 15시간 미만 근무는 주휴수당 지급 대상이 아니에요.</p>
-        </div>
-      )}
+      <CalcNumberField label="시급" value={wageRaw} onChange={onWageChange} placeholder="10,320" suffix="원" hint={`2026년 최저시급 ${MIN_WAGE_2026.toLocaleString("ko-KR")}원`} />
+      <CalcNumberField label="1주 근무시간" value={hoursRaw} onChange={onHoursChange} placeholder="20" suffix="시간" />
+      {!eligible && <CalcNotice>1주 15시간 미만 근무는 주휴수당 지급 대상이 아니에요.</CalcNotice>}
+      {wage > 0 && wage < MIN_WAGE_2026 && <CalcNotice>입력한 시급이 2026년 최저시급보다 낮아요.</CalcNotice>}
       <CalcResultCard
-        rows={[{ label: "주휴수당 (1주 기준)", value: won(allowance), primary: true }]}
+        title="주휴수당"
+        rows={[
+          { label: "주휴수당 (1주)", value: won(allowance), primary: true },
+          { label: "한 달 주휴수당 (약 4.35주)", value: won(monthly) },
+          { label: "한 달 급여 합계 (주휴 포함)", value: won(wage * hours * (365 / 7 / 12) + monthly) },
+        ]}
       />
     </div>
   );
 }
 
 function LoanInterestCalc() {
-  const [principal, principalRaw, onPrincipalChange] = useNumberInput("30,000,000");
+  const [principal, principalRaw, onPrincipalChange] = useNumberInput("30000000");
   const [rate, rateRaw, onRateChange] = useNumberInput("4.5");
-  const [months, monthsRaw, onMonthsChange] = useNumberInput("12");
-  const [method, setMethod] = useState("bullet"); // "bullet" | "equalPI"
-
-  const monthlyRate = rate / 100 / 12;
-
-  // 만기일시상환: 매달 이자만 내고, 만기에 원금을 한 번에 상환
-  const bulletMonthlyPay = principal * monthlyRate;
-  const bulletTotalInterest = bulletMonthlyPay * months;
-
-  // 원리금균등상환: 매달 원금+이자를 합쳐 똑같은 금액을 상환
+  const [months, monthsRaw, onMonthsChange] = useNumberInput("24");
+  const [method, setMethod] = useState("equalPI");
+  const r = rate / 100 / 12;
   const n = Math.max(1, Math.round(months));
-  const equalPIMonthlyPay =
-    monthlyRate === 0
-      ? principal / n
-      : (principal * monthlyRate * Math.pow(1 + monthlyRate, n)) / (Math.pow(1 + monthlyRate, n) - 1);
-  const equalPITotalPay = equalPIMonthlyPay * n;
-  const equalPITotalInterest = equalPITotalPay - principal;
-
+  // 만기일시: 매달 이자만, 만기에 원금
+  const bulletMonthly = principal * r;
+  // 원리금균등: 매달 같은 금액
+  const piMonthly = r === 0 ? principal / n : (principal * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  // 원금균등: 원금은 매달 같고 이자는 줄어듦
+  const pFirst = principal / n + principal * r;
+  const pTotalInterest = (principal * r * (n + 1)) / 2;
+  const results = {
+    equalPI: { first: piMonthly, interest: piMonthly * n - principal, label: "매달 갚는 돈 (같은 금액)" },
+    equalP: { first: pFirst, interest: pTotalInterest, label: "첫 달 갚는 돈 (점점 줄어요)" },
+    bullet: { first: bulletMonthly, interest: bulletMonthly * n, label: "매달 이자" },
+  };
+  const cur = results[method];
   return (
     <div>
-      <p className="text-[12.5px] mb-4" style={{ color: MUTED }}>대출 조건 입력</p>
-      <CalcNumberField label="대출 원금 (원)" value={principalRaw} onChange={onPrincipalChange} placeholder="30,000,000" suffix="원" />
-      <CalcNumberField label="연 이자율 (%)" value={rateRaw} onChange={onRateChange} placeholder="4.5" suffix="%" />
-      <CalcNumberField label="대출 기간 (개월)" value={monthsRaw} onChange={onMonthsChange} placeholder="12" suffix="개월" />
-
+      <CalcNumberField label="대출 원금" value={principalRaw} onChange={onPrincipalChange} placeholder="30,000,000" suffix="원" />
+      <div className="grid grid-cols-2 gap-2.5">
+        <CalcNumberField label="연 이자율" value={rateRaw} onChange={onRateChange} placeholder="4.5" suffix="%" />
+        <CalcNumberField label="대출 기간" value={monthsRaw} onChange={onMonthsChange} placeholder="24" suffix="개월" />
+      </div>
       <p className="text-[13px] font-semibold mb-1.5" style={{ color: TEXT }}>상환 방식</p>
-      <div className="grid grid-cols-2 gap-2 mb-4">
+      <CalcModeSwitch
+        value={method}
+        onChange={setMethod}
+        options={[
+          { key: "equalPI", label: "원리금균등" },
+          { key: "equalP", label: "원금균등" },
+          { key: "bullet", label: "만기일시" },
+        ]}
+      />
+      <CalcResultCard
+        title="대출이자 계산"
+        rows={[
+          { label: cur.label, value: won(cur.first), primary: true },
+          { label: `총 이자 (${n}개월)`, value: won(cur.interest), tone: "red" },
+          { label: "총 갚는 돈", value: won(principal + cur.interest) },
+        ]}
+      />
+      {/* 세 방식 총 이자 비교 */}
+      <div className="rounded-[18px] mt-3 overflow-hidden" style={{ border: `1px solid ${BORDER}` }}>
+        <p className="text-[12px] font-bold px-3.5 py-2" style={{ background: INPUT_BG, color: MUTED }}>상환 방식별 총 이자 비교</p>
         {[
-          { key: "bullet", label: "만기일시상환\n(매달 이자만)" },
-          { key: "equalPI", label: "원리금균등상환\n(매달 동일금액)" },
-        ].map((m) => (
-          <button
-            key={m.key}
-            onClick={() => setMethod(m.key)}
-            className="px-3 py-2.5 rounded-xl text-[12.5px] font-semibold text-center whitespace-pre-line leading-snug"
-            style={
-              method === m.key
-                ? CHIP_ON
-                : CHIP_OFF
-            }
-          >
-            {m.label}
-          </button>
+          ["원금균등", results.equalP.interest],
+          ["원리금균등", results.equalPI.interest],
+          ["만기일시", results.bullet.interest],
+        ].map(([k, v], i) => (
+          <div key={k} className="flex items-center justify-between px-3.5 py-2.5" style={{ borderTop: i > 0 ? `1px solid ${BORDER}` : "none" }}>
+            <span className="text-[12.5px]" style={{ color: TEXT }}>{k}{i === 0 && <span className="ml-1 text-[11px] font-bold" style={{ color: GREEN }}>이자 가장 적음</span>}</span>
+            <span className="text-[12.5px] font-bold tabular-nums" style={{ color: TEXT }}>{won(v)}</span>
+          </div>
         ))}
       </div>
+    </div>
+  );
+}
 
-      {method === "bullet" ? (
-        <CalcResultCard
-          rows={[
-            { label: "월 상환액 (이자만)", value: won(bulletMonthlyPay), primary: true },
-            { label: `총 이자 (${n}개월)`, value: won(bulletTotalInterest) },
-            { label: "만기 시 별도 상환", value: won(principal) },
-          ]}
-        />
-      ) : (
-        <CalcResultCard
-          rows={[
-            { label: "월 상환액 (원리금 합계)", value: won(equalPIMonthlyPay), primary: true },
-            { label: `총 상환액 (${n}개월)`, value: won(equalPITotalPay) },
-            { label: "총 이자", value: won(equalPITotalInterest) },
-          ]}
-        />
-      )}
-      <p className="text-[11px] mt-3" style={{ color: MUTED }}>
-        {method === "bullet"
-          ? "* 만기일시상환은 매달 이자만 내다가 만기에 원금을 한 번에 갚는 방식이에요. 실제 상품마다 조건이 달라질 수 있어요."
-          : "* 원리금균등상환은 매달 똑같은 금액을 내는 방식으로, 초반엔 이자 비중이 크고 갈수록 원금 비중이 커져요. 참고용 계산이에요."}
+// 2026년 요율: 국민연금 9.5%(각 4.75%), 건강보험 7.19%(각 3.595%), 장기요양 = 건보료×13.14%,
+// 고용보험 근로자 0.9%·사업주 1.15%(150인 미만), 산재 = 도소매·음식·숙박업 0.8% + 출퇴근 0.06%
+function InsuranceCalc() {
+  const [pay, payRaw, onPayChange] = useNumberInput("2500000");
+  const pension = pay * 0.0475;
+  const health = pay * 0.03595;
+  const ltc = health * 0.1314;
+  const empWorker = pay * 0.009;
+  const empEmployer = pay * 0.0115;
+  const injury = pay * 0.0086;
+  const workerTotal = pension + health + ltc + empWorker;
+  const employerTotal = pension + health + ltc + empEmployer + injury;
+  const breakdown = [
+    { label: "국민연금", worker: pension, employer: pension },
+    { label: "건강보험", worker: health, employer: health },
+    { label: "장기요양보험", worker: ltc, employer: ltc },
+    { label: "고용보험", worker: empWorker, employer: empEmployer },
+    { label: "산재보험", worker: 0, employer: injury },
+  ];
+  return (
+    <div>
+      <CalcNumberField label="직원 월 급여 (세전)" value={payRaw} onChange={onPayChange} placeholder="2,500,000" suffix="원" />
+      <div className="rounded-[18px] overflow-hidden mb-3.5" style={{ border: `1px solid ${BORDER}` }}>
+        <div className="grid grid-cols-3 px-3.5 py-2" style={{ background: INPUT_BG }}>
+          <span className="text-[11.5px] font-semibold" style={{ color: MUTED }}>항목</span>
+          <span className="text-[11.5px] font-semibold text-right" style={{ color: MUTED }}>직원 부담</span>
+          <span className="text-[11.5px] font-semibold text-right" style={{ color: MUTED }}>사장님 부담</span>
+        </div>
+        {breakdown.map((row, i) => (
+          <div key={row.label} className="grid grid-cols-3 px-3.5 py-2.5" style={i > 0 ? { borderTop: `1px solid ${BORDER}` } : {}}>
+            <span className="text-[12.5px] font-medium" style={{ color: TEXT }}>{row.label}</span>
+            <span className="text-[12.5px] text-right tabular-nums" style={{ color: row.worker > 0 ? TEXT : MUTED }}>{row.worker > 0 ? won(row.worker) : "-"}</span>
+            <span className="text-[12.5px] text-right tabular-nums" style={{ color: TEXT }}>{won(row.employer)}</span>
+          </div>
+        ))}
+      </div>
+      <CalcResultCard
+        title="4대보험료"
+        rows={[
+          { label: "사장님 실제 인건비 (월)", value: won(pay + employerTotal), primary: true },
+          { label: "사장님 부담 보험료", value: won(employerTotal), tone: "red" },
+          { label: "직원 월급에서 빠지는 보험료", value: won(workerTotal) },
+        ]}
+      />
+      <p className="text-[11px] mt-3 leading-relaxed" style={{ color: MUTED }}>
+        * 2026년 요율 기준(산재보험은 도소매·음식·숙박업 0.86%)이에요. 업종에 따라 산재보험료가 달라요.
       </p>
     </div>
   );
 }
 
-function InsuranceCalc() {
-  const [pay, payRaw, onPayChange] = useNumberInput("2,500,000");
-  // 2026년 기준 요율: 국민연금 9.5%(각 4.75%), 건강보험 7.19%(각 3.595%),
-  // 장기요양보험 = 건강보험료 × 13.14%(각 절반), 고용보험 근로자 0.9% / 사업주 약 1.15%(사업장 규모별 상이)
-  const pension = pay * 0.0475;
-  const health = pay * 0.03595;
-  const healthTotal = health * 2;
-  const ltcTotal = healthTotal * 0.1314;
-  const ltc = ltcTotal / 2;
-  const employmentWorker = pay * 0.009;
-  const employmentEmployer = pay * 0.0115;
-  const injuryEmployer = pay * 0.007; // 업종별 상이, 평균 참고치
-
-  const workerTotal = pension + health + ltc + employmentWorker;
-  const employerTotal = pension + health + ltc + employmentEmployer + injuryEmployer;
-  const totalLaborCost = pay + employerTotal;
-
-  const breakdown = [
-    { label: "국민연금", worker: pension, employer: pension },
-    { label: "건강보험", worker: health, employer: health },
-    { label: "장기요양보험", worker: ltc, employer: ltc },
-    { label: "고용보험", worker: employmentWorker, employer: employmentEmployer },
-    { label: "산재보험", worker: 0, employer: injuryEmployer },
-  ];
-
+// 퇴직금: 1년 이상 일한 직원(주 15시간 이상)에게 1년마다 30일분 평균임금
+function SeveranceCalc() {
+  const [pay, payRaw, onPayChange] = useNumberInput("2500000");
+  const [years, yearsRaw, onYearsChange] = useNumberInput("2");
+  const [extraMonths, monthsRaw, onMonthsChange] = useNumberInput("6");
+  const totalMonths = years * 12 + extraMonths;
+  const eligible = totalMonths >= 12;
+  const dailyAvg = (pay * 3) / 91; // 퇴직 전 3개월 임금 ÷ 그 기간 일수(약 91일)
+  const workDays = totalMonths * (365 / 12);
+  const severance = eligible ? dailyAvg * 30 * (workDays / 365) : 0;
   return (
     <div>
-      <p className="text-[12.5px] mb-4" style={{ color: MUTED }}>월 급여 입력</p>
-      <CalcNumberField label="월 급여 (세전, 원)" value={payRaw} onChange={onPayChange} placeholder="2,500,000" suffix="원" />
-
-      <p className="text-[13px] font-bold mb-2" style={{ color: TEXT }}>항목별 내역</p>
-      <div className="rounded-2xl overflow-hidden mb-4" style={{ border: `1px solid ${BORDER}` }}>
-        <div className="grid grid-cols-3 px-3.5 py-2" style={{ background: INPUT_BG }}>
-          <span className="text-[11.5px] font-semibold" style={{ color: MUTED }}>항목</span>
-          <span className="text-[11.5px] font-semibold text-right" style={{ color: MUTED }}>근로자 부담</span>
-          <span className="text-[11.5px] font-semibold text-right" style={{ color: MUTED }}>사업주 부담</span>
-        </div>
-        {breakdown.map((row, i) => (
-          <div
-            key={row.label}
-            className="grid grid-cols-3 px-3.5 py-2.5"
-            style={i > 0 ? { borderTop: `1px solid ${BORDER}` } : {}}
-          >
-            <span className="text-[12.5px] font-medium" style={{ color: TEXT }}>{row.label}</span>
-            <span className="text-[12.5px] text-right tabular-nums" style={{ color: row.worker > 0 ? TEXT : MUTED }}>
-              {row.worker > 0 ? won(row.worker) : "-"}
-            </span>
-            <span className="text-[12.5px] text-right tabular-nums" style={{ color: TEXT }}>{won(row.employer)}</span>
-          </div>
-        ))}
+      <CalcNumberField label="최근 3개월 평균 월급 (세전)" value={payRaw} onChange={onPayChange} placeholder="2,500,000" suffix="원" hint="기본급 + 매달 주는 수당 (주휴수당 포함)" />
+      <p className="text-[13px] font-semibold mb-1.5" style={{ color: TEXT }}>일한 기간</p>
+      <div className="grid grid-cols-2 gap-2.5">
+        <CalcNumberField label="" value={yearsRaw} onChange={onYearsChange} placeholder="2" suffix="년" />
+        <CalcNumberField label="" value={monthsRaw} onChange={onMonthsChange} placeholder="6" suffix="개월" />
       </div>
-
+      {!eligible ? (
+        <CalcNotice>1년 미만 일한 직원은 퇴직금 지급 대상이 아니에요.</CalcNotice>
+      ) : (
+        <CalcNotice tone="green">1년 이상, 주 15시간 이상 일했다면 퇴직금을 줘야 해요. 퇴사 후 14일 안에 지급해요.</CalcNotice>
+      )}
       <CalcResultCard
+        title="퇴직금"
         rows={[
-          { label: "사업주 총 인건비 (급여+부담액)", value: won(totalLaborCost), primary: true },
-          { label: "사업주 부담액 합계", value: won(employerTotal) },
-          { label: "근로자 공제액 합계 (본인부담)", value: won(workerTotal) },
+          { label: "예상 퇴직금", value: won(severance), primary: true },
+          { label: "1일 평균임금", value: won(dailyAvg) },
+          { label: "일한 기간", value: `${Math.floor(totalMonths / 12)}년 ${Math.round(totalMonths % 12)}개월` },
         ]}
       />
-      <p className="text-[11px] mt-3" style={{ color: MUTED }}>
-        * 2026년 국민연금 9.5%·건강보험 7.19%·장기요양보험(건보료의 13.14%)·고용보험 근로자 0.9% 기준 참고용 계산이에요.
-        산재보험은 업종별로 요율이 달라 평균치로 반영했고, 전액 사업주가 부담해요. 정확한 금액은 4대사회보험 정보연계센터에서 확인하세요.
+      <p className="text-[11px] mt-3 leading-relaxed" style={{ color: MUTED }}>
+        * 상여금·연차수당은 빠진 간편 계산이에요. 정확한 금액은 고용노동부 퇴직금 계산기(moel.go.kr)에서 확인하세요.
       </p>
     </div>
   );
 }
 
 function CardFeeCalc() {
-  const [amount, amountRaw, onAmountChange] = useNumberInput("100,000");
+  const [amount, amountRaw, onAmountChange] = useNumberInput("10000000");
   const [rate, rateRaw, onRateChange] = useNumberInput("1.5");
   const fee = amount * (rate / 100);
-  const settled = amount - fee;
   return (
     <div>
-      <p className="text-[12.5px] mb-4" style={{ color: MUTED }}>판매금액 및 카드수수료율 입력</p>
-      <CalcNumberField label="판매 금액 (원)" value={amountRaw} onChange={onAmountChange} placeholder="100,000" suffix="원" />
-      <CalcNumberField label="카드수수료율 (%)" value={rateRaw} onChange={onRateChange} placeholder="1.5" suffix="%" />
+      <CalcNumberField label="카드 매출 (한 달)" value={amountRaw} onChange={onAmountChange} placeholder="10,000,000" suffix="원" />
+      <CalcNumberField label="카드수수료율" value={rateRaw} onChange={onRateChange} placeholder="1.5" suffix="%" hint="영세가맹점(연매출 3억 이하) 신용카드 0.4%대" />
       <CalcResultCard
+        title="카드수수료"
         rows={[
-          { label: "실 정산 입금액", value: won(settled), primary: true },
-          { label: "카드수수료", value: won(fee) },
+          { label: "실제 입금액", value: won(amount - fee), primary: true },
+          { label: "한 달 카드수수료", value: won(fee), tone: "red" },
+          { label: "1년이면", value: won(fee * 12) },
         ]}
       />
-      <p className="text-[11px] mt-3" style={{ color: MUTED }}>
-        * 소상공인 우대수수료율은 매출 규모(영세·중소·일반)와 카드사에 따라 달라요. 정확한 요율은{" "}
-        <a href="https://gongsi.crefia.or.kr" target="_blank" rel="noopener noreferrer" className="font-semibold underline" style={{ color: MUTED }}>
-          여신금융협회 공시정보 포털
-        </a>
-        에서 확인하세요.
-      </p>
     </div>
   );
 }
 
 const MIN_WAGE_2026 = 10320;
 function MinWageCheckCalc() {
-  const [pay, payRaw, onPayChange] = useNumberInput("2,156,880");
+  const [pay, payRaw, onPayChange] = useNumberInput("2156880");
   const [hours, hoursRaw, onHoursChange] = useNumberInput("209");
   const effectiveWage = hours > 0 ? pay / hours : 0;
   const isViolation = effectiveWage < MIN_WAGE_2026;
-  const gap = (MIN_WAGE_2026 - effectiveWage) * hours;
   return (
     <div>
-      <p className="text-[12.5px] mb-4" style={{ color: MUTED }}>월 급여 및 월 소정근로시간 입력</p>
-      <CalcNumberField label="월 급여 (세전, 원)" value={payRaw} onChange={onPayChange} placeholder="2,156,880" suffix="원" />
-      <CalcNumberField label="월 소정근로시간 (시간)" value={hoursRaw} onChange={onHoursChange} placeholder="209" suffix="시간" />
-      <div
-        className="rounded-xl px-3.5 py-3 mb-4 flex items-start gap-2"
-        style={{ background: isViolation ? RED_SOFT : GREEN_SOFT }}
-      >
-        {isViolation ? (
-          <XCircle size={14} color={RED} className="shrink-0 mt-0.5" />
-        ) : (
-          <CheckCircle2 size={14} color={GREEN} className="shrink-0 mt-0.5" />
-        )}
-        <p className="text-[12px]" style={{ color: isViolation ? RED : GREEN }}>
-          {isViolation
-            ? `2026년 최저시급(${MIN_WAGE_2026.toLocaleString("ko-KR")}원)보다 낮아요. 최저임금 위반 소지가 있어요.`
-            : `2026년 최저시급(${MIN_WAGE_2026.toLocaleString("ko-KR")}원) 이상으로 지급하고 있어요.`}
-        </p>
-      </div>
+      <CalcNumberField label="월 급여 (세전)" value={payRaw} onChange={onPayChange} placeholder="2,156,880" suffix="원" />
+      <CalcNumberField label="월 소정근로시간" value={hoursRaw} onChange={onHoursChange} placeholder="209" suffix="시간" hint="주 40시간이면 주휴 포함 209시간" />
+      <CalcNotice tone={isViolation ? "red" : "green"}>
+        {isViolation
+          ? `2026년 최저시급(${MIN_WAGE_2026.toLocaleString("ko-KR")}원)보다 낮아요. 최저임금 위반 소지가 있어요.`
+          : `2026년 최저시급(${MIN_WAGE_2026.toLocaleString("ko-KR")}원) 이상으로 지급하고 있어요.`}
+      </CalcNotice>
       <CalcResultCard
+        title="최저임금 체크"
         rows={[
           { label: "환산 시급", value: won(effectiveWage), primary: true },
-          ...(isViolation ? [{ label: "월 기준 부족액", value: won(gap) }] : []),
+          { label: "최저임금 기준 월급", value: won(MIN_WAGE_2026 * hours) },
+          ...(isViolation ? [{ label: "한 달 부족한 금액", value: won((MIN_WAGE_2026 - effectiveWage) * hours), tone: "red" }] : []),
         ]}
       />
-      <p className="text-[11px] mt-3" style={{ color: MUTED }}>* 주 40시간 근무 기준 월 소정근로시간은 주휴시간 포함 약 209시간이에요. 실제 계약서상 근로시간을 입력하면 더 정확해요.</p>
     </div>
   );
 }
 
-function CalculatorToolkit({ onBack }) {
-  const TABS = [
-    { key: "margin", label: "마진율·판매가", Comp: MarginCalc },
-    { key: "vat", label: "부가세 쪼개기", Comp: VatSplitCalc },
-    { key: "allowance", label: "주휴수당", Comp: WeeklyAllowanceCalc },
-    { key: "loan", label: "대출이자", Comp: LoanInterestCalc },
-    { key: "insurance", label: "4대보험료", Comp: InsuranceCalc },
-    { key: "cardfee", label: "카드수수료", Comp: CardFeeCalc },
-    { key: "minwage", label: "최저임금 체크", Comp: MinWageCheckCalc },
-  ];
-  const CALC_TIPS = {
-    margin: [
-      "마진율은 '판매가 대비' 비율이에요. 원가 대비로 계산하는 마크업(이익률)과 헷갈리기 쉬워요.",
-      "여기 나온 판매가는 부가세를 뺀 금액이에요. 소비자가로 붙이려면 부가세 계산기로 한 번 더 확인해보세요.",
-    ],
-    vat: [
-      "일반과세자는 공급가액의 10%가 부가세예요. 간이과세자는 업종별 부가율이 적용돼서 계산이 달라요.",
-      "카드 매출은 부가세가 이미 포함된 금액으로 들어와요. 신고할 땐 쪼개서 봐야 정확해요.",
-    ],
-    allowance: [
-      "주 15시간 이상 일하고 소정근로일을 다 채운 근로자에게 주휴수당을 줘야 해요.",
-      "주휴수당을 빼먹으면 최저임금 위반이 될 수 있으니, 최저임금 체크 계산기로도 같이 확인해보세요.",
-    ],
-    loan: [
-      "정책자금은 시중은행 대출보다 금리가 낮은 편이에요. 금리 정보 화면에서 비교해보세요.",
-      "같은 금리라도 상환 방식(원리금균등·원금균등·만기일시)에 따라 총 이자가 꽤 달라져요.",
-    ],
-    insurance: [
-      "4대보험은 사업주와 근로자가 나눠서 부담해요. 여기 나온 건 사업주 부담분 기준이에요.",
-      <span>
-        <strong>두루누리 사회보험료 지원</strong> — 근로자 10인 미만 사업장에서 월평균보수 270만원 미만인 신규가입 근로자라면 고용보험·국민연금료의 최대 80%를 지원받을 수 있어요.{" "}
-        <a href="https://www.4insure.or.kr" target="_blank" rel="noopener noreferrer" className="font-semibold underline" style={{ color: "#8A6520" }}>
-          4대사회보험정보연계센터
-        </a>
-        에서 온라인 신청하거나, 근로복지공단(1588-0075)·국민연금공단(1355)으로 문의해보세요.
-      </span>,
-    ],
-    cardfee: [
-      <span>
-        영세·중소 가맹점은 우대 수수료율이 적용돼요. 내 가맹점 등급과 카드사별 수수료율은{" "}
-        <a href="https://gongsi.crefia.or.kr" target="_blank" rel="noopener noreferrer" className="font-semibold underline" style={{ color: "#8A6520" }}>
-          여신금융협회 공시정보 포털
-        </a>
-        에서 조회하거나, 이용 중인 카드사 고객센터로 문의하세요.
-      </span>,
-      "수수료는 보통 정산일에 차감돼서 입금돼요. 실제 통장에 들어오는 금액으로 계산해보세요.",
-    ],
-    minwage: [
-      "최저임금에는 기본급 외에 매월 지급되는 상여금·복리후생비 일부도 포함될 수 있어요.",
-      "위반 시 3년 이하 징역 또는 2천만원 이하 벌금 대상이라, 꼭 미리 확인하는 게 좋아요.",
-    ],
-  };
+const CALC_TABS = [
+  { key: "margin", label: "마진율·판매가", short: "마진·판매가", Icon: Tag, color: "#3D63DD", Comp: MarginCalc },
+  { key: "breakeven", label: "손익분기점", short: "손익분기점", Icon: Target, color: "#E5674D", Comp: BreakEvenCalc },
+  { key: "vat", label: "부가세 계산", short: "부가세", Icon: Receipt, color: "#2C9F6B", Comp: VatSplitCalc },
+  { key: "loan", label: "대출이자", short: "대출이자", Icon: Landmark, color: "#7A46D6", Comp: LoanInterestCalc },
+  { key: "insurance", label: "4대보험료", short: "4대보험", Icon: ShieldCheck, color: "#0E9AA7", Comp: InsuranceCalc },
+  { key: "allowance", label: "주휴수당", short: "주휴수당", Icon: CalendarDays, color: "#D6478E", Comp: WeeklyAllowanceCalc },
+  { key: "severance", label: "퇴직금", short: "퇴직금", Icon: Briefcase, color: "#B8862A", Comp: SeveranceCalc },
+  { key: "cardfee", label: "카드수수료", short: "카드수수료", Icon: CreditCard, color: "#4F6FE0", Comp: CardFeeCalc },
+  { key: "minwage", label: "최저임금 체크", short: "최저임금", Icon: BadgeCheck, color: "#C2410C", Comp: MinWageCheckCalc },
+];
+const CALC_TIPS = {
+  margin: [
+    "마진율은 '판매가 대비' 비율이에요. 원가 8,000원에 마진 30%면 판매가는 10,400원이 아니라 11,429원이에요.",
+    "배달앱 판매라면 중개수수료(약 6~10%)와 배달비까지 원가에 넣어야 실제로 남는 돈이 보여요.",
+  ],
+  breakeven: [
+    "손익분기점보다 적게 팔면 적자, 많이 팔면 흑자예요. 고정비를 줄이면 손익분기점이 바로 내려가요.",
+    "사장님 본인 인건비(생활비)도 고정비에 넣어야 '실제로 버는' 기준을 알 수 있어요.",
+  ],
+  vat: [
+    "일반과세자는 공급가액의 10%가 부가세예요. 간이과세자는 업종별 부가율이 적용돼서 계산이 달라요.",
+    "카드 매출은 부가세가 포함된 금액으로 들어와요. 부가세는 내 돈이 아니니 따로 모아두세요.",
+  ],
+  loan: [
+    "총 이자는 원금균등 < 원리금균등 < 만기일시 순으로 많아져요. 대신 원금균등은 초반에 갚는 돈이 커요.",
+    "정책자금은 시중은행보다 금리가 낮은 편이에요. 금리·환율 화면에서 비교해보세요.",
+  ],
+  insurance: [
+    "직원 월급 외에 사장님이 약 10%를 더 부담해요. 채용 전에 '실제 인건비'로 계산해보세요.",
+    <span key="duru">
+      <strong>두루누리 사회보험료 지원</strong> — 직원 10명 미만 사업장에서 월급 270만원 미만 신규 직원은 고용보험·국민연금 최대 80%를 지원받을 수 있어요.{" "}
+      <a href="https://www.4insure.or.kr" target="_blank" rel="noopener noreferrer" className="font-semibold underline" style={{ color: "#8A6520" }}>
+        4대사회보험정보연계센터
+      </a>
+      에서 신청하세요.
+    </span>,
+  ],
+  allowance: [
+    "주 15시간 이상 일하고 정해진 근무일을 다 채운 직원에게 주휴수당을 줘야 해요.",
+    "주휴수당을 빼먹으면 최저임금 위반이 될 수 있어요. 최저임금 체크로도 같이 확인하세요.",
+  ],
+  severance: [
+    "아르바이트도 1년 이상, 주 15시간 이상 일했다면 퇴직금 대상이에요.",
+    "매달 퇴직금을 월급에 나눠 주는 건 원칙적으로 인정되지 않아요. 퇴직연금(IRP 등)을 활용하면 부담을 나눌 수 있어요.",
+  ],
+  cardfee: [
+    <span key="crefia">
+      영세·중소 가맹점은 우대 수수료율이 적용돼요. 내 가맹점 등급은{" "}
+      <a href="https://gongsi.crefia.or.kr" target="_blank" rel="noopener noreferrer" className="font-semibold underline" style={{ color: "#8A6520" }}>
+        여신금융협회 공시정보 포털
+      </a>
+      에서 확인하세요.
+    </span>,
+    "카드수수료 지원사업을 하는 지자체도 있어요. 지원금 목록에서 '고정비'를 찾아보세요.",
+  ],
+  minwage: [
+    "2026년 최저시급은 10,320원, 주 40시간 기준 월 2,156,880원이에요.",
+    "위반하면 3년 이하 징역 또는 2천만원 이하 벌금 대상이라 꼭 미리 확인하세요.",
+  ],
+};
+const CALC_TAB_KEY = "calcTab";
 
-  const [tab, setTab] = useState("margin");
-  const active = TABS.find((t) => t.key === tab);
+function CalculatorToolkit({ onBack }) {
+  const [tab, setTabState] = useState(() => {
+    try {
+      const saved = localStorage.getItem(CALC_TAB_KEY);
+      return CALC_TABS.some((t) => t.key === saved) ? saved : "margin";
+    } catch (e) {
+      return "margin";
+    }
+  });
+  const setTab = (k) => {
+    setTabState(k);
+    try {
+      localStorage.setItem(CALC_TAB_KEY, k);
+    } catch (e) {
+      // 저장 안 돼도 괜찮아요
+    }
+  };
+  const active = CALC_TABS.find((t) => t.key === tab);
   const Active = active.Comp;
   const tips = CALC_TIPS[tab] || [];
-  const tabScrollRef = useRef(null);
-  const chipRefs = useRef({});
-  const currentIndex = TABS.findIndex((t) => t.key === tab);
-  const [dir, setDir] = useState(1);
-  const goToTab = (d) => {
-    setDir(d);
-    const nextIndex = (currentIndex + d + TABS.length) % TABS.length;
-    setTab(TABS[nextIndex].key);
-  };
-  useEffect(() => {
-    chipRefs.current[tab]?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-  }, [tab]);
+  const cardRef = useRef(null);
 
   return (
     <div>
-      <HeroHeader icon={Calculator} color={BLUE} title="사장님 필수 계산기" subtitle="마진율·부가세·대출이자 등 자주 쓰는 계산을 바로 해보세요" onBack={onBack} />
+      <HeroHeader icon={Calculator} color={BLUE} title="사장님 필수 계산기" subtitle="가격 정하기부터 인건비·대출까지 자주 쓰는 계산을 바로 해보세요" onBack={onBack} />
 
-      <style>{`
-        @keyframes calcPageInRight { 0% { opacity: 0; transform: translateX(28px); } 100% { opacity: 1; transform: translateX(0); } }
-        @keyframes calcPageInLeft { 0% { opacity: 0; transform: translateX(-28px); } 100% { opacity: 1; transform: translateX(0); } }
-      `}</style>
-
-      <div className="-mx-5 px-5 mb-4">
-        <div
-          ref={tabScrollRef}
-          className="flex gap-1.5 overflow-x-auto pt-1 pb-3 -mt-1 -mb-2"
-          style={{
-            scrollbarWidth: "none",
-            WebkitMaskImage: "linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%)",
-            maskImage: "linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%)",
-          }}
-        >
-          {TABS.map((t) => (
+      {/* 계산기 고르기 */}
+      <div className="grid grid-cols-3 md:grid-cols-5 gap-2 mb-4">
+        {CALC_TABS.map((t) => {
+          const on = t.key === tab;
+          return (
             <button
               key={t.key}
-              ref={(el) => (chipRefs.current[t.key] = el)}
-              onClick={() => setTab(t.key)}
-              className="shrink-0 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap"
-              style={
-                tab === t.key
-                  ? CHIP_ON
-                  : CHIP_OFF
-              }
+              onClick={() => {
+                setTab(t.key);
+                setTimeout(() => cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+              }}
+              aria-label={t.label}
+              className="flex flex-col items-center gap-1.5 py-3 rounded-[18px] transition-colors active:scale-[0.97]"
+              style={on ? { background: `${t.color}14`, border: `1.5px solid ${t.color}66` } : { ...CARD }}
             >
-              {t.label}
+              <span className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: on ? t.color : `${t.color}14` }}>
+                <t.Icon size={18} color={on ? "white" : t.color} strokeWidth={2.2} />
+              </span>
+              <span className="text-[11.5px] font-semibold" style={{ color: on ? t.color : TEXT }}>{t.short}</span>
             </button>
-          ))}
-          <span data-scroll-end aria-hidden="true" className="shrink-0 w-6" />
-        </div>
+          );
+        })}
       </div>
 
-      <div className="-mx-5 relative">
-        <button
-          onClick={() => goToTab(-1)}
-          aria-label="이전 계산기"
-          className="navArrowBtn absolute left-1 top-1/2 z-10 w-10 h-10 rounded-full flex items-center justify-center"
-          style={{ transform: "translateY(-50%)" }}
-        >
-          <ChevronLeft size={20} color={TEXT} strokeWidth={2.5} />
-        </button>
-
-        <div className="px-14">
-          <div
-            key={tab}
-            className="rounded-2xl p-4"
-            style={{ background: "white", border: `1px solid ${BORDER}`, animation: `${dir === 1 ? "calcPageInRight" : "calcPageInLeft"} 0.22s ease` }}
-          >
-            <p className="text-[15px] font-bold mb-4" style={{ color: TEXT }}>{active.label}</p>
-            <Active />
-          </div>
+      <div ref={cardRef} key={tab} className="rounded-[22px] p-4 scroll-mt-4" style={{ ...CARD, animation: "calcFadeIn 0.2s ease" }}>
+        <style>{`@keyframes calcFadeIn { 0% { opacity: 0; transform: translateY(6px); } 100% { opacity: 1; transform: translateY(0); } }`}</style>
+        <div className="flex items-center gap-2 mb-4">
+          <span className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `${active.color}14` }}>
+            <active.Icon size={16} color={active.color} strokeWidth={2.2} />
+          </span>
+          <p className="text-[16px] font-bold" style={{ color: TEXT }}>{active.label}</p>
         </div>
-
-        <button
-          onClick={() => goToTab(1)}
-          aria-label="다음 계산기"
-          className="navArrowBtn absolute right-1 top-1/2 z-10 w-10 h-10 rounded-full flex items-center justify-center"
-          style={{ transform: "translateY(-50%)" }}
-        >
-          <ChevronRight size={20} color={TEXT} strokeWidth={2.5} />
-        </button>
+        <Active />
       </div>
 
       {tips.length > 0 && (
-        <div className="relative overflow-hidden rounded-2xl p-4 mt-3" style={{ background: "#FFFBF0" }}>
+        <div className="relative overflow-hidden rounded-[20px] p-4 mt-3" style={{ background: "#FFFBF0" }}>
           <div className="absolute -right-6 -bottom-8 w-24 h-24 rounded-full" style={{ background: "rgba(217,166,46,0.08)" }} />
           <div className="relative flex items-center gap-1.5 mb-2.5">
-            <Info size={14} color="#B8862A" />
+            <Lightbulb size={14} color="#B8862A" />
             <p className="text-[13px] font-bold" style={{ color: "#8A6520" }}>알아두면 좋아요</p>
           </div>
           <ul className="relative space-y-2">
             {tips.map((t, i) => (
-              <li key={i} className="text-[12.5px] leading-relaxed flex items-start gap-1.5" style={{ color: "#6B5220" }}>
-                <span className="mt-1.5 w-1 h-1 rounded-full shrink-0" style={{ background: "#B8862A" }} />
-                {t}
+              <li key={i} className="text-[12.5px] leading-relaxed flex items-start gap-1.5 break-keep" style={{ color: "#6B5220" }}>
+                <span className="mt-2 w-1 h-1 rounded-full shrink-0" style={{ background: "#B8862A" }} />
+                <span>{t}</span>
               </li>
             ))}
           </ul>
@@ -4043,10 +4152,10 @@ export default function App() {
           {[
             { label: "마진율·판매가", Icon: BarChart3 },
             { label: "부가세 쪼개기", Icon: Calculator },
-            { label: "주휴수당", Icon: User },
+            { label: "손익분기점", Icon: Target },
             { label: "대출이자", Icon: Coins },
             { label: "4대보험료", Icon: ShieldCheck },
-            { label: "카드수수료", Icon: CreditCard },
+            { label: "퇴직금", Icon: Briefcase },
             { label: "최저임금 체크", Icon: CheckCircle2 },
           ].map(({ label, Icon }) => (
             <span
