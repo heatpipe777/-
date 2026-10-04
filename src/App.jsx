@@ -1081,18 +1081,41 @@ function ExchangeRateContent() {
   const [status, setStatus] = useState(cached ? "ready" : "loading");
   const [refreshing, setRefreshing] = useState(false);
   const [offline, setOffline] = useState(false);
+  const [checkedAt, setCheckedAt] = useState(cached ? cached.savedAt : null); // 마지막으로 서버에 확인한 시각
+  const [refreshMsg, setRefreshMsg] = useState(null); // 새로고침 결과 안내 { ok, text }
+  const msgTimer = useRef(null);
 
   const [code, setCode] = useState("USD");
   const [toKrw, setToKrw] = useState(true); // true: 외화 → 원화, false: 원화 → 외화
   const [amount, setAmount] = useState("100");
 
-  const load = async () => {
+  // manual: 사장님이 직접 새로고침 버튼을 누른 경우 — 결과를 눈에 보이게 알려줘요
+  const load = async (manual = false) => {
     setRefreshing(true);
+    clearTimeout(msgTimer.current);
+    setRefreshMsg(null);
+    const started = Date.now();
+    const prevUpdated = updatedAt;
+    const showMsg = (msg) => {
+      setRefreshMsg(msg);
+      msgTimer.current = setTimeout(() => setRefreshMsg(null), 3500);
+    };
+    // 너무 빨리 끝나면 눌렀는지 모르니, 확인 중 표시를 최소 0.7초는 보여줘요
+    const minWait = () => new Promise((r) => setTimeout(r, Math.max(0, 700 - (Date.now() - started))));
     try {
-      const res = await fetch("https://open.er-api.com/v6/latest/KRW");
+      // 휴대폰에 저장된 예전 응답을 쓰지 않고 매번 서버에서 새로 받아요
+      const res = await fetch("https://open.er-api.com/v6/latest/KRW", { cache: "no-store" });
       if (!res.ok) throw new Error("network");
       const data = await res.json();
       if (data.result !== "success") throw new Error("api");
+      if (manual) await minWait();
+      setCheckedAt(Date.now());
+      if (manual)
+        showMsg(
+          prevUpdated && prevUpdated === data.time_last_update_utc
+            ? { ok: true, text: "최신 환율이에요 (하루 1번 바뀌어요)" }
+            : { ok: true, text: "새 환율로 바꿨어요" }
+        );
       setRates(data.rates);
       setUpdatedAt(data.time_last_update_utc);
       setStatus("ready");
@@ -1103,6 +1126,10 @@ function ExchangeRateContent() {
         // 저장 실패해도 화면 표시는 그대로 돼요
       }
     } catch (e) {
+      if (manual) {
+        await minWait();
+        showMsg({ ok: false, text: "환율을 받아오지 못했어요. 인터넷 연결을 확인해 주세요" });
+      }
       // 저장된 환율이 있으면 그걸 계속 보여주고, 없을 때만 오류 화면
       if (rates || cached) setOffline(true);
       else setStatus("error");
@@ -1110,6 +1137,15 @@ function ExchangeRateContent() {
       setRefreshing(false);
     }
   };
+  useEffect(() => () => clearTimeout(msgTimer.current), []);
+  const checkedLabel = checkedAt
+    ? (() => {
+        const d = new Date(checkedAt);
+        const sameDay = new Date().toDateString() === d.toDateString();
+        const hm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        return sameDay ? `오늘 ${hm}` : `${d.getMonth() + 1}.${d.getDate()} ${hm}`;
+      })()
+    : null;
 
   useEffect(() => {
     if (!cached || Date.now() - (cached.savedAt || 0) > FX_CACHE_TTL) load();
@@ -1199,7 +1235,7 @@ function ExchangeRateContent() {
           <p className="text-[13px] mb-3" style={{ color: MUTED }}>환율 정보를 불러오지 못했어요. 네트워크 상태를 확인하고 다시 시도해주세요.</p>
           <div className="flex items-center justify-center gap-2">
             <button
-              onClick={load}
+              onClick={() => load(true)}
               className="inline-flex items-center gap-1 text-[12.5px] font-semibold px-3 py-2 rounded-full"
               style={CHIP_ON}
             >
@@ -1274,13 +1310,30 @@ function ExchangeRateContent() {
           </div>
 
           <div className="flex items-center justify-between gap-2 mb-2 px-1">
-            <p className="text-[11px]" style={{ color: offline ? RED : MUTED }}>
-              {offline ? "인터넷 연결이 없어 저장된 환율을 보여드려요" : "통화를 누르면 계산기에 바로 넣어드려요"}
-            </p>
-            <button onClick={load} disabled={refreshing} className="flex items-center gap-1 text-[11.5px] font-semibold shrink-0" style={{ color: BLUE }}>
-              <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} /> 새로고침
+            <div className="min-w-0">
+              <p className="text-[11px]" style={{ color: offline ? RED : MUTED }}>
+                {offline ? "인터넷 연결이 없어 저장된 환율을 보여드려요" : "통화를 누르면 계산기에 바로 넣어드려요"}
+              </p>
+              {checkedLabel && <p className="text-[10.5px] mt-0.5" style={{ color: "#A3A9B8" }}>마지막 확인 {checkedLabel}</p>}
+            </div>
+            <button
+              onClick={() => load(true)}
+              disabled={refreshing}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[11.5px] font-semibold shrink-0 active:scale-95 transition-transform"
+              style={{ background: BLUE_SOFT, color: BLUE, opacity: refreshing ? 0.75 : 1 }}
+            >
+              <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} /> {refreshing ? "확인 중…" : "새로고침"}
             </button>
           </div>
+          {refreshMsg && (
+            <div
+              className="flex items-center gap-1.5 rounded-xl px-3 py-2 mb-2 text-[12px] font-semibold"
+              style={refreshMsg.ok ? { background: GREEN_SOFT, color: GREEN } : { background: RED_SOFT, color: RED }}
+              role="status"
+            >
+              {refreshMsg.ok ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />} {refreshMsg.text}
+            </div>
+          )}
 
           {renderGroup("주요 통화", FX_CURRENCIES.filter((c) => c.major))}
           {renderGroup("그 외 통화", FX_CURRENCIES.filter((c) => !c.major))}
