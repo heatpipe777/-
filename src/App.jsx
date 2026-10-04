@@ -56,6 +56,8 @@ import toolFaqImg from "./assets/home-tiles/tool-faq.webp";
 import toolDocsImg from "./assets/home-tiles/tool-docs.webp";
 import calcArtImg from "./assets/home-tiles/calc-art.webp";
 import noticeImg from "./assets/home-tiles/notice.webp";
+import heroMegaImg from "./assets/home-tiles/hero-mega.webp";
+import ctaCoinImg from "./assets/home-tiles/cta-coin.webp";
 
 const BLUE = "#3D63DD";
 const BLUE_SOFT = "#EEF2FE";
@@ -2031,21 +2033,6 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
 }
 
 
-// 상단 히어로 배너용 장식 일러스트 (반투명 코인 스택)
-function HeroCoinArt() {
-  return (
-    <svg viewBox="0 0 160 140" className="w-36 h-32">
-      <ellipse cx="120" cy="108" rx="34" ry="12" fill="rgba(255,255,255,0.14)" />
-      <ellipse cx="120" cy="96" rx="34" ry="12" fill="rgba(255,255,255,0.18)" />
-      <ellipse cx="120" cy="84" rx="34" ry="12" fill="rgba(255,255,255,0.26)" />
-      <text x="120" y="90" textAnchor="middle" fontSize="15" fontWeight="800" fill="rgba(255,255,255,0.85)">₩</text>
-      <ellipse cx="58" cy="118" rx="24" ry="9" fill="rgba(255,255,255,0.12)" />
-      <ellipse cx="58" cy="109" rx="24" ry="9" fill="rgba(255,255,255,0.18)" />
-      <path d="M132 40 l3 7 l7 3 l-7 3 l-3 7 l-3 -7 l-7 -3 l7 -3 Z" fill="rgba(255,255,255,0.35)" />
-    </svg>
-  );
-}
-
 // "경영" 카테고리용 커스텀 아이콘 — 막대그래프 + 상승 화살표를 합친 차트 느낌
 // 돈주머니 일러스트 — 맞춤 진단 CTA용. sharp 렌더링으로 큰/56px/40px 검증 완료
 function MoneyBagArt({ className = "w-20 h-20" }) {
@@ -2111,6 +2098,11 @@ function TrendChartIcon({ size = 24, color = "currentColor", strokeWidth = 2, cl
 }
 
 // 마감이 가까운 지원금 3개 (상시 접수 사업은 마감일이 없어서 제외)
+const RANK_TONES = [
+  { bg: "#FEEBF1", fg: "#F04D6E" },
+  { bg: "#F0E9FD", fg: "#8B62D9" },
+  { bg: "#E6F0FE", fg: "#3D72E8" },
+];
 function DeadlineSoonList({ onSelect }) {
   const items = ALL_PROGRAMS.filter((p) => !isExpired(p) && p.deadline !== "2099-12-31")
     .sort((a, b) => getDday(a.deadline) - getDday(b.deadline))
@@ -2125,17 +2117,26 @@ function DeadlineSoonList({ onSelect }) {
       {items.map((p, index) => {
         const d = getDday(p.deadline);
         const urgent = d <= 7;
+        const tone = RANK_TONES[index];
         return (
-          <button key={p.id} onClick={() => onSelect(p.id)} className="w-full flex items-center gap-2.5 px-1" style={{ height: 36 }}>
-            <span className="text-[13px] font-extrabold w-4 shrink-0 text-center tabular-nums" style={{ color: RED }}>
+          <button
+            key={p.id}
+            onClick={() => onSelect(p.id)}
+            className="w-full flex items-center gap-3 py-3"
+            style={{ borderTop: index > 0 ? "1px solid #F1F2F6" : "none" }}
+          >
+            <span
+              className="w-8 h-8 rounded-full flex items-center justify-center text-[14px] font-extrabold shrink-0 tabular-nums"
+              style={{ background: tone.bg, color: tone.fg }}
+            >
               {index + 1}
             </span>
-            <span className="text-[12px] font-semibold truncate flex-1 text-left" style={{ color: TEXT }}>
+            <span className="text-[13.5px] font-semibold truncate flex-1 text-left" style={{ color: TEXT }}>
               {p.name}
             </span>
             <span
-              className="text-[10.5px] font-bold px-1.5 py-0.5 rounded-md shrink-0 tabular-nums"
-              style={urgent ? { background: RED_SOFT, color: RED } : { background: "#EEF0F4", color: MUTED }}
+              className="text-[11.5px] font-bold px-2 py-1 rounded-lg shrink-0 tabular-nums"
+              style={urgent ? { background: RED, color: "white" } : { background: tone.bg, color: tone.fg }}
             >
               {d === 0 ? "오늘 마감" : `D-${d}`}
             </span>
@@ -3155,38 +3156,57 @@ export default function App() {
       {homeScreen === "hub" ? (
         <>
       <div
-        className="relative overflow-hidden mb-2 px-5 pt-5 pb-5"
-        style={{ background: "linear-gradient(135deg, #4E77F0 0%, #2947B0 100%)", borderRadius: 32 }}
+        className="relative overflow-hidden mb-3 pl-5 pr-4 pt-5 pb-5"
+        style={{ background: "linear-gradient(135deg, #6AAEFE 0%, #4E86FA 45%, #3E72F6 100%)", borderRadius: 28 }}
       >
         {/* 배경 장식 원 */}
-        <div className="absolute -right-10 -top-14 w-44 h-44 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
-        <div className="absolute right-3 top-16 w-16 h-16 rounded-full" style={{ background: "rgba(255,255,255,0.10)" }} />
-        <div className="absolute -right-2 -bottom-10 opacity-90">
-          <HeroCoinArt />
-        </div>
+        <div className="absolute -right-12 -top-16 w-48 h-48 rounded-full" style={{ background: "rgba(255,255,255,0.07)" }} />
+        <div className="absolute -left-10 -bottom-16 w-40 h-40 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }} />
+        {/* 확성기 + 알림 말풍선 그림 */}
+        <img
+          src={heroMegaImg}
+          alt=""
+          draggable={false}
+          className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none"
+          style={{
+            width: "40%",
+            WebkitMaskImage: "radial-gradient(ellipse 72% 72% at 55% 50%, #000 60%, transparent 100%)",
+            maskImage: "radial-gradient(ellipse 72% 72% at 55% 50%, #000 60%, transparent 100%)",
+          }}
+        />
+        {/* 그림 속 종 말풍선을 누르면 알림 설정(MY)으로 */}
+        <button
+          onClick={() => setMainTab("my")}
+          aria-label="알림 설정"
+          className="absolute z-10 rounded-full"
+          style={{ right: "3%", top: "10%", width: "14%", aspectRatio: "1 / 1" }}
+        />
 
-        <div className="relative z-10 flex items-start justify-between">
-          <div>
-            <p className="text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.95)" }}>사장님, 안녕하세요 👋</p>
-            <h1 className="text-[20px] font-black mt-1 tracking-tight text-white leading-tight whitespace-nowrap" style={{ letterSpacing: "-0.02em" }}>소상공인 정책자금 알리미</h1>
-          </div>
-          <button
-            onClick={() => setMainTab("my")}
-            className="relative w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: "rgba(255,255,255,0.18)" }}
+        <div className="relative z-10" style={{ maxWidth: "64%" }}>
+          <span
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold text-white"
+            style={{ background: "rgba(30,70,200,0.28)", border: "1px solid rgba(255,255,255,0.18)" }}
           >
-            <Bell size={18} color="white" />
-            <span
-              className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
-              style={{ background: "#FF6B6B", boxShadow: "0 0 0 2px #2947B0" }}
-            />
-          </button>
+            <Bell size={12} color="white" fill="white" /> 사장님, 안녕하세요 👋
+          </span>
+          <h1 className="font-black tracking-tight text-white mt-2.5" style={{ fontSize: 25, lineHeight: 1.22, letterSpacing: "-0.02em" }}>
+            소상공인 정책자금
+            <br />
+            <span style={{ color: "#A9F2FF" }}>알리미</span>
+          </h1>
         </div>
-
-        <div className="relative z-10 mt-4 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.16)" }}>
-          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#6FDBA6" }} />
+        <button
+          onClick={() => {
+            setStatusFilter("available");
+            setHomeScreen("list");
+          }}
+          className="relative z-10 mt-3.5 inline-flex items-center gap-1.5 pl-2.5 pr-2 py-1.5 rounded-full"
+          style={{ background: "rgba(255,255,255,0.18)" }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#81F5BE" }} />
           <span className="text-[12px] font-semibold text-white">지금 신청할 수 있는 지원금 {ALL_PROGRAMS.filter((p) => !isExpired(p)).length}건</span>
-        </div>
+          <ChevronRight size={13} color="white" />
+        </button>
       </div>
 
       {/* 맞춤 진단 CTA — 기존에 만들어둔 진단 기능으로 들어가는 입구가 없었어서 추가 */}
@@ -3198,8 +3218,8 @@ export default function App() {
       `}</style>
       <button
         onClick={() => setScreen({ view: diagnosis ? "diagnosisResult" : "diagnosis" })}
-        className="relative overflow-hidden w-full text-left rounded-2xl p-4 mb-5 flex items-center justify-between"
-        style={{ background: "linear-gradient(135deg, #FFE58A 0%, #FFC233 100%)", border: "1px solid #FFD873" }}
+        className="relative overflow-hidden w-full text-left rounded-[24px] py-3.5 pl-2 pr-3.5 mb-5 flex items-center justify-between active:scale-[0.99] transition-transform"
+        style={{ background: "linear-gradient(120deg, #FFEDB5 0%, #FFF3D1 55%, #FFE69C 100%)" }}
       >
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div
@@ -3228,34 +3248,51 @@ export default function App() {
             />
           </div>
         </div>
-        <div className="relative z-10 flex items-center gap-3 min-w-0">
-          <div className="w-14 h-14 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(255,255,255,0.55)" }}>
-            <MoneyBagArt className="w-10 h-10" />
-          </div>
+        <div className="relative z-10 flex items-center gap-1.5 min-w-0">
+          <img
+            src={ctaCoinImg}
+            alt=""
+            draggable={false}
+            className="w-[84px] shrink-0"
+            style={{
+              WebkitMaskImage: "radial-gradient(ellipse 60% 60% at 50% 50%, #000 65%, transparent 100%)",
+              maskImage: "radial-gradient(ellipse 60% 60% at 50% 50%, #000 65%, transparent 100%)",
+            }}
+          />
           <div className="min-w-0">
-            <p className="text-[14.5px] font-bold" style={{ color: "#4A2F05" }}>
+            <p className="text-[16px] font-extrabold" style={{ color: "#0B1A36" }}>
               {diagnosis ? "내 맞춤 지원금 결과 보기" : "30초 맞춤 진단 받기"}
             </p>
-            <p className="text-[11.5px] mt-0.5 truncate" style={{ color: "#6B4A12" }}>
-              {diagnosis ? `${diagnosis.region} 사업장 기준으로 골라둔 지원금이 있어요` : "지역·매출·업력만 답하면 나에게 맞는 지원금만 보여드려요"}
+            <p className="text-[12px] mt-1 leading-snug break-keep" style={{ color: "#6E6F73" }}>
+              {diagnosis ? (
+                `${diagnosis.region} 사업장 기준으로 골라둔 지원금이 있어요`
+              ) : (
+                <>
+                  지역·매출·업력만 답하면 나에게 맞는
+                  <br />
+                  지원금만 보여드려요!
+                </>
+              )}
             </p>
           </div>
         </div>
-        <ChevronRight size={18} color="#6B4A12" className="relative z-10 shrink-0" />
+        <span className="relative z-10 w-9 h-9 rounded-full flex items-center justify-center shrink-0 ml-2" style={{ background: "rgba(255,255,255,0.75)" }}>
+          <ChevronRight size={18} color="#E39A12" strokeWidth={2.6} />
+        </span>
       </button>
 
 
       {/* 마감 임박 지원금 */}
       <div className="flex items-center justify-between mt-4 mb-2.5">
         <div className="flex items-center gap-1.5">
-          <p className="text-[13.5px] font-bold" style={{ color: TEXT }}>마감 임박 지원금</p>
-          <Clock size={13} color={RED} />
+          <p className="text-[16px] font-bold" style={{ color: TEXT }}>마감 임박 지원금</p>
+          <Clock size={15} color="#F0567A" strokeWidth={2.4} />
         </div>
         <button onClick={() => setHomeScreen("list")} className="text-[11px] font-medium flex items-center gap-0.5" style={{ color: MUTED }}>
           전체보기 <ChevronRight size={12} />
         </button>
       </div>
-      <div className="rounded-2xl mb-6 px-3 py-1.5" style={{ background: "#FAFAFB" }}>
+      <div className="rounded-[22px] mb-6 px-3.5 py-1 bg-white" style={{ border: "1px solid #F0F1F6", boxShadow: "0 6px 20px rgba(40,60,120,0.06)" }}>
         <DeadlineSoonList key={dayKey} onSelect={(id) => setScreen({ view: "detail", id })} />
       </div>
 
