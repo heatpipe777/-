@@ -4,9 +4,7 @@ import {
   MapPin,
   ChevronLeft,
   ChevronDown,
-  ChevronUp,
   ChevronRight,
-  Minus,
   Info,
   Users,
   PiggyBank,
@@ -20,7 +18,6 @@ import {
   X,
   Zap,
   Home,
-  TrendingUp,
   Smartphone,
   Rocket,
   Bell,
@@ -35,7 +32,6 @@ import {
   AlertTriangle,
   Coins,
   FileText,
-  ClipboardCheck,
   Check,
   Calculator,
   RefreshCw,
@@ -435,11 +431,6 @@ function diagnoseProgram(p, diag) {
   return { eligible: true, score, reason: reasons[0] || warnings[0] || null, warnings };
 }
 
-// 예전 코드 호환용
-function matchesDiagnosis(p, diag) {
-  if (!diag) return true;
-  return diagnoseProgram(p, diag).eligible;
-}
 
 // 시/도별 구·시·군 목록 (2026년 기준 행정구역 전체)
 const DISTRICTS = {
@@ -3486,11 +3477,11 @@ export default function App() {
         </div>
         {/* 안내용 표시 — 목록은 아래 '소상공인 지원금' 카드로 들어가요 */}
         <div
-          className="relative z-10 mt-3.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+          className="relative z-10 mt-3.5 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full"
           style={{ background: "rgba(255,255,255,0.18)" }}
         >
           <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#81F5BE" }} />
-          <span className="text-[12px] font-semibold text-white">지금 신청할 수 있는 지원금 {ALL_PROGRAMS.filter((p) => !isExpired(p)).length}건</span>
+          <span className="text-[12px] font-semibold text-white" style={{ lineHeight: 1.5 }}>지금 신청할 수 있는 지원금 {ALL_PROGRAMS.filter((p) => !isExpired(p)).length}건</span>
         </div>
       </div>
 
