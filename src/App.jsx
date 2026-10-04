@@ -2149,89 +2149,34 @@ function FolderBellArt() {
   );
 }
 
-// 실시간 검색어 스타일 상위 3개 랭킹 (주기적으로 순위가 흔들리는 느낌을 연출)
-const ROW_H = 36; // px, 한 행의 높이 (인기 지원금을 작게 보이도록 축소)
-function LiveTopRanking({ onSelect }) {
-  const pool = useMemo(
-    () => ALL_PROGRAMS.filter((p) => !isExpired(p)).sort((a, b) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 5),
-    []
-  );
-  const scoresRef = useRef(
-    pool.reduce((acc, p) => ({ ...acc, [p.id]: p.popularity || 0 }), {})
-  );
-  const initialOrder = useMemo(() => pool.map((p) => p.id), [pool]);
-  const rankOrderRef = useRef(initialOrder);
-  const [rankOrder, setRankOrder] = useState(initialOrder);
-  const [prevRankOrder, setPrevRankOrder] = useState(initialOrder);
-  // 순위가 바뀔 때 글자가 겹쳐 보이지 않도록, 잠깐 흐려졌다가 새 순서로 다시 나타나요
-  const [visible, setVisible] = useState(true);
+// 마감이 가까운 지원금 3개 (상시 접수 사업은 마감일이 없어서 제외)
+function DeadlineSoonList({ onSelect }) {
+  const items = ALL_PROGRAMS.filter((p) => !isExpired(p) && p.deadline !== "2099-12-31")
+    .sort((a, b) => getDday(a.deadline) - getDday(b.deadline))
+    .slice(0, 3);
 
-  useEffect(() => {
-    let fadeTimer;
-    const id = setInterval(() => {
-      pool.forEach((p) => {
-        scoresRef.current[p.id] = Math.max(10, scoresRef.current[p.id] + (Math.random() - 0.5) * 70);
-      });
-      const newOrder = pool.map((p) => p.id).sort((a, b) => scoresRef.current[b] - scoresRef.current[a]);
-      if (newOrder.slice(0, 3).join() === rankOrderRef.current.slice(0, 3).join()) return;
-      setVisible(false);
-      fadeTimer = setTimeout(() => {
-        setPrevRankOrder(rankOrderRef.current);
-        rankOrderRef.current = newOrder;
-        setRankOrder(newOrder);
-        setVisible(true);
-      }, 250);
-    }, 3500);
-    return () => {
-      clearInterval(id);
-      clearTimeout(fadeTimer);
-    };
-  }, [pool]);
+  if (items.length === 0) {
+    return <p className="text-[12px] py-3 text-center" style={{ color: MUTED }}>지금 마감이 임박한 지원금이 없어요</p>;
+  }
 
   return (
-    <div
-      className="relative overflow-hidden"
-      style={{ height: ROW_H * 3, opacity: visible ? 1 : 0, transition: "opacity 0.25s ease" }}
-    >
-      {rankOrder.slice(0, 3).map((id, index) => {
-        const program = pool.find((p) => p.id === id);
-        const rank = index + 1;
-        const prevIndex = prevRankOrder.indexOf(id);
-        const prevRank = prevIndex === -1 ? rank : prevIndex + 1;
-        const diff = prevRank - rank; // 양수면 순위 상승
+    <div>
+      {items.map((p, index) => {
+        const d = getDday(p.deadline);
+        const urgent = d <= 7;
         return (
-          <button
-            key={id}
-            onClick={() => onSelect(program.id)}
-            className="absolute left-0 right-0 flex items-center gap-2.5 px-1"
-            style={{
-              top: index * ROW_H,
-              height: ROW_H,
-            }}
-          >
-            <span
-              className="text-[13px] font-extrabold w-4 shrink-0 text-center tabular-nums"
-              style={{ color: rank <= 3 ? RED : MUTED }}
-            >
-              {rank}
+          <button key={p.id} onClick={() => onSelect(p.id)} className="w-full flex items-center gap-2.5 px-1" style={{ height: 36 }}>
+            <span className="text-[13px] font-extrabold w-4 shrink-0 text-center tabular-nums" style={{ color: RED }}>
+              {index + 1}
             </span>
             <span className="text-[12px] font-semibold truncate flex-1 text-left" style={{ color: TEXT }}>
-              {program.name}
+              {p.name}
             </span>
-            <span className="flex items-center gap-0.5 shrink-0 w-7 justify-end">
-              {diff > 0 && (
-                <>
-                  <ChevronUp size={10} color={GREEN} strokeWidth={3} />
-                  <span className="text-[9.5px] font-bold tabular-nums" style={{ color: GREEN }}>{diff}</span>
-                </>
-              )}
-              {diff < 0 && (
-                <>
-                  <ChevronDown size={10} color={BLUE} strokeWidth={3} />
-                  <span className="text-[9.5px] font-bold tabular-nums" style={{ color: BLUE }}>{-diff}</span>
-                </>
-              )}
-              {diff === 0 && <Minus size={9} color={MUTED} strokeWidth={3} />}
+            <span
+              className="text-[10.5px] font-bold px-1.5 py-0.5 rounded-md shrink-0 tabular-nums"
+              style={urgent ? { background: RED_SOFT, color: RED } : { background: "#EEF0F4", color: MUTED }}
+            >
+              {d === 0 ? "오늘 마감" : `D-${d}`}
             </span>
           </button>
         );
@@ -3279,7 +3224,7 @@ export default function App() {
 
         <div className="relative z-10 mt-4 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.16)" }}>
           <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#6FDBA6" }} />
-          <span className="text-[12px] font-semibold text-white">이번 주 새로 등록된 지원금 4건</span>
+          <span className="text-[12px] font-semibold text-white">지금 신청할 수 있는 지원금 {ALL_PROGRAMS.filter((p) => !isExpired(p)).length}건</span>
         </div>
       </div>
 
@@ -3339,21 +3284,18 @@ export default function App() {
       </button>
 
 
-      {/* 이번 주 인기 지원금 (실시간 검색어 스타일) */}
+      {/* 마감 임박 지원금 */}
       <div className="flex items-center justify-between mt-4 mb-2.5">
         <div className="flex items-center gap-1.5">
-          <p className="text-[13.5px] font-bold" style={{ color: TEXT }}>이번 주 인기 지원금</p>
-          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9.5px] font-bold" style={{ background: RED_SOFT, color: RED }}>
-            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: RED }} />
-            LIVE
-          </span>
+          <p className="text-[13.5px] font-bold" style={{ color: TEXT }}>마감 임박 지원금</p>
+          <Clock size={13} color={RED} />
         </div>
         <button onClick={() => setHomeScreen("list")} className="text-[11px] font-medium flex items-center gap-0.5" style={{ color: MUTED }}>
           전체보기 <ChevronRight size={12} />
         </button>
       </div>
       <div className="rounded-2xl mb-6 px-3 py-1.5" style={{ background: "#FAFAFB" }}>
-        <LiveTopRanking key={dayKey} onSelect={(id) => setScreen({ view: "detail", id })} />
+        <DeadlineSoonList key={dayKey} onSelect={(id) => setScreen({ view: "detail", id })} />
       </div>
 
       {/* 많이 찾는 서비스 */}
