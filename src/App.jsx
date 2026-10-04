@@ -3274,14 +3274,9 @@ export default function App() {
         </div>
 
         <div className="relative z-10">
-          <span
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold text-white"
-            style={{ background: "rgba(30,70,200,0.28)", border: "1px solid rgba(255,255,255,0.18)" }}
-          >
-            <Bell size={12} color="white" fill="white" /> 사장님, 안녕하세요 👋
-          </span>
-          <h1 className="font-black text-white mt-2.5 whitespace-nowrap" style={{ fontSize: 21, lineHeight: 1.25, letterSpacing: "-0.03em" }}>
-            소상공인 정책자금 <span style={{ color: "#A9F2FF" }}>알리미</span>
+          <p className="text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.95)" }}>사장님, 안녕하세요 👋</p>
+          <h1 className="font-black text-white mt-1 whitespace-nowrap" style={{ fontSize: 21, lineHeight: 1.25, letterSpacing: "-0.03em" }}>
+            소상공인 정책자금 알리미
           </h1>
         </div>
         <button
