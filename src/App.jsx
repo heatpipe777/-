@@ -40,6 +40,9 @@ import {
   Calculator,
   RefreshCw,
   ArrowUpDown,
+  Lightbulb,
+  BarChart3,
+  ShieldCheck,
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
@@ -48,6 +51,11 @@ import tileAllImg from "./assets/home-tiles/all.webp";
 import tileCenterImg from "./assets/home-tiles/center.webp";
 import tileExchangeImg from "./assets/home-tiles/exchange.webp";
 import tileNewsImg from "./assets/home-tiles/news.webp";
+import toolTaxImg from "./assets/home-tiles/tool-tax.webp";
+import toolFaqImg from "./assets/home-tiles/tool-faq.webp";
+import toolDocsImg from "./assets/home-tiles/tool-docs.webp";
+import calcArtImg from "./assets/home-tiles/calc-art.webp";
+import noticeImg from "./assets/home-tiles/notice.webp";
 
 const BLUE = "#3D63DD";
 const BLUE_SOFT = "#EEF2FE";
@@ -2102,53 +2110,6 @@ function TrendChartIcon({ size = 24, color = "currentColor", strokeWidth = 2, cl
   );
 }
 
-function CalculatorTileArt() {
-  return (
-    <svg viewBox="0 0 100 100" className="w-20 h-20">
-      <defs>
-        <linearGradient id="calcBody" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#8FA6F5" />
-          <stop offset="100%" stopColor="#3D63DD" />
-        </linearGradient>
-      </defs>
-      <rect x="22" y="10" width="56" height="80" rx="12" fill="url(#calcBody)" />
-      <rect x="30" y="20" width="40" height="16" rx="4" fill="rgba(255,255,255,0.92)" />
-      <text x="66" y="32" textAnchor="end" fontSize="11" fontWeight="800" fill="#3D63DD">1,250</text>
-      <g fill="rgba(255,255,255,0.55)">
-        <rect x="30" y="44" width="10" height="8" rx="2" />
-        <rect x="45" y="44" width="10" height="8" rx="2" />
-        <rect x="60" y="44" width="10" height="8" rx="2" />
-        <rect x="30" y="56" width="10" height="8" rx="2" />
-        <rect x="45" y="56" width="10" height="8" rx="2" />
-        <rect x="60" y="56" width="10" height="8" rx="2" />
-        <rect x="30" y="68" width="10" height="8" rx="2" />
-        <rect x="45" y="68" width="10" height="8" rx="2" />
-      </g>
-      <rect x="60" y="68" width="10" height="8" rx="2" fill="#FBC15B" />
-      <path d="M78 18 l2.5 6 l6 2.5 l-6 2.5 l-2.5 6 l-2.5 -6 l-6 -2.5 l6 -2.5 Z" fill="#C9D6FF" />
-    </svg>
-  );
-}
-
-function FolderBellArt() {
-  return (
-    <svg viewBox="0 0 100 100" className="w-16 h-16 shrink-0">
-      <defs>
-        <linearGradient id="folderBody" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#6B8AF5" />
-          <stop offset="100%" stopColor="#3D63DD" />
-        </linearGradient>
-      </defs>
-      <path d="M10 34 h30 l8 10 h42 v42 a6 6 0 0 1 -6 6 h-68 a6 6 0 0 1 -6 -6 z" fill="url(#folderBody)" />
-      <rect x="18" y="50" width="50" height="6" rx="3" fill="rgba(255,255,255,0.55)" />
-      <rect x="18" y="62" width="36" height="6" rx="3" fill="rgba(255,255,255,0.4)" />
-      <circle cx="78" cy="26" r="14" fill="#E5484D" />
-      <path d="M78 18 a7 7 0 0 1 7 7 v4 l3 4 h-20 l3 -4 v-4 a7 7 0 0 1 7 -7z" fill="white" />
-      <path d="M75 33 a3 3 0 0 0 6 0" fill="white" />
-    </svg>
-  );
-}
-
 // 마감이 가까운 지원금 3개 (상시 접수 사업은 마감일이 없어서 제외)
 function DeadlineSoonList({ onSelect }) {
   const items = ALL_PROGRAMS.filter((p) => !isExpired(p) && p.deadline !== "2099-12-31")
@@ -3321,22 +3282,20 @@ export default function App() {
       </div>
 
       {/* 자주 쓰는 도구 */}
-      <div className="grid grid-cols-3 gap-2.5 mb-6">
+      <div className="grid grid-cols-3 gap-2.5 mb-4">
         {[
-          { key: "tax", label: "세금·마감\n일정", bg: "#E7F7EF", color: "#2C9F6B", Icon: CalendarCheck, onClick: () => setScreen({ view: "taxSchedule" }) },
-          { key: "faq", label: "도움말\nQ&A", bg: "#F1ECFC", color: "#7A46D6", Icon: HelpCircle, onClick: () => setScreen({ view: "faq" }) },
-          { key: "docs", label: "서류·양식\n자료실", bg: "#FFF0E6", color: "#C2410C", Icon: ClipboardCheck, onClick: () => setScreen({ view: "documents" }) },
+          { key: "tax", label: "세금·마감 일정", bg: "#E7F7EF", img: toolTaxImg, onClick: () => setScreen({ view: "taxSchedule" }) },
+          { key: "faq", label: "도움말 Q&A", bg: "#F1ECFC", img: toolFaqImg, onClick: () => setScreen({ view: "faq" }) },
+          { key: "docs", label: "서류·양식 자료실", bg: "#FFF0E6", img: toolDocsImg, onClick: () => setScreen({ view: "documents" }) },
         ].map((tile) => (
           <button
             key={tile.key}
             onClick={tile.onClick}
-            className="flex flex-col items-center gap-2 py-4 rounded-2xl"
-            style={{ background: tile.bg }}
+            aria-label={tile.label}
+            className="relative overflow-hidden rounded-[20px] active:scale-[0.97] transition-transform"
+            style={{ background: tile.bg, aspectRatio: "298 / 305" }}
           >
-            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "white" }}>
-              <tile.Icon size={18} color={tile.color} />
-            </div>
-            <p className="text-[12px] font-bold leading-snug whitespace-pre-line text-center" style={{ color: TEXT }}>{tile.label}</p>
+            <img src={tile.img} alt="" draggable={false} className="absolute inset-0 w-full h-full object-cover" />
           </button>
         ))}
       </div>
@@ -3344,37 +3303,72 @@ export default function App() {
       {/* 사장님 필수 계산기 툴킷 */}
       <button
         onClick={() => setScreen({ view: "calculator" })}
-        className="w-full text-left rounded-2xl pt-5 pl-5 pb-4 pr-4 mb-6 relative overflow-hidden"
-        style={{ background: "#E9EEFC" }}
+        className="w-full text-left rounded-[24px] pt-4 pl-4 pb-4 pr-3 mb-6 relative overflow-hidden active:scale-[0.99] transition-transform"
+        style={{ background: "linear-gradient(135deg, #EAF1FE 0%, #E3EEFE 55%, #C9DCFE 100%)" }}
       >
-        <p className="text-[12px] font-bold relative z-10" style={{ color: BLUE }}>부가세, 대출이자 즉시 계산</p>
-        <p className="text-[17px] font-extrabold mt-0.5 mb-3 relative z-10" style={{ color: TEXT }}>사장님 필수 계산기 툴킷</p>
-        <div className="flex flex-wrap gap-1.5 relative z-10 max-w-[62%]">
-          {["마진율·판매가", "부가세 쪼개기", "주휴수당", "대출이자", "4대보험료", "카드수수료", "최저임금 체크"].map((label) => (
-            <span key={label} className="px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: "rgba(61,99,221,0.1)", color: BLUE }}>
+        <img
+          src={calcArtImg}
+          alt=""
+          draggable={false}
+          className="absolute right-0 bottom-0 h-full"
+          style={{
+            WebkitMaskImage: "radial-gradient(ellipse 70% 70% at 55% 55%, #000 62%, transparent 100%)",
+            maskImage: "radial-gradient(ellipse 70% 70% at 55% 55%, #000 62%, transparent 100%)",
+          }}
+        />
+        <span
+          className="relative z-10 inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold text-white"
+          style={{ background: "linear-gradient(90deg, #94BDFD, #6DA6FC)" }}
+        >
+          부가세, 대출이자 즉시 계산
+        </span>
+        <p className="relative z-10 text-[19px] font-extrabold mt-1.5 mb-3" style={{ color: TEXT }}>사장님 필수 계산기 툴킷</p>
+        <div className="relative z-10 flex flex-wrap gap-1.5 max-w-[68%]">
+          {[
+            { label: "마진율·판매가", Icon: BarChart3 },
+            { label: "부가세 쪼개기", Icon: Calculator },
+            { label: "주휴수당", Icon: User },
+            { label: "대출이자", Icon: Coins },
+            { label: "4대보험료", Icon: ShieldCheck },
+            { label: "카드수수료", Icon: CreditCard },
+            { label: "최저임금 체크", Icon: CheckCircle2 },
+          ].map(({ label, Icon }) => (
+            <span
+              key={label}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold"
+              style={{ background: "rgba(255,255,255,0.7)", color: "#4F6FE0", boxShadow: "0 1px 3px rgba(61,99,221,0.08)" }}
+            >
+              <Icon size={11} strokeWidth={2.4} />
               {label}
             </span>
           ))}
         </div>
-        <div className="absolute -right-3 -bottom-3 rotate-[8deg] scale-125">
-          <CalculatorTileArt />
-        </div>
       </button>
 
       {/* 안내사항 */}
-      <p className="text-[15px] font-bold mb-2.5" style={{ color: TEXT }}>안내사항</p>
-      <div className="rounded-2xl pl-4 py-3.5 flex items-center justify-between gap-2 mb-2 overflow-hidden" style={{ background: "#EEF2FE" }}>
-        <div>
-          <p className="text-sm font-semibold" style={{ color: TEXT }}>안전하고 정확한 정보 확인 안내</p>
-          <p className="text-[12px] mt-0.5" style={{ color: MUTED }}>신청 전 꼭 공식 사이트에서 최종 확인하세요</p>
-        </div>
-        <div className="-mr-1">
-          <FolderBellArt />
-        </div>
+      <div className="flex items-center gap-2 mb-2.5">
+        <span className="w-1 h-4 rounded-full" style={{ background: "#7298FE" }} />
+        <p className="text-[15px] font-bold" style={{ color: TEXT }}>안내사항</p>
       </div>
-      <p className="text-[11.5px] leading-relaxed px-1 mt-3" style={{ color: MUTED }}>
-        이 앱은 정부·지자체·공공기관의 공식 앱이 아니며, 어떤 기관도 대표하거나 대행하지 않아요. 소상공인시장진흥공단·기업마당·각 지자체 등이 공개한 정보를 모아 안내하는 민간 정보 서비스예요.
-      </p>
+      {/* 누르면 정부 지원사업 통합 공식 사이트(기업마당)로 이동해요 */}
+      <a
+        href="https://www.bizinfo.go.kr"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="안전하고 정확한 정보 확인 안내 — 기업마당 공식 사이트 열기"
+        className="block relative overflow-hidden rounded-[20px] active:scale-[0.99] transition-transform"
+        style={{ background: "#EEF2FE", aspectRatio: "953 / 188" }}
+      >
+        <img src={noticeImg} alt="" draggable={false} className="absolute inset-0 w-full h-full object-cover" />
+      </a>
+      <div className="flex items-start gap-2.5 px-1 mt-3.5">
+        <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "#E5EEFE" }}>
+          <Lightbulb size={15} color="#5B7FE8" />
+        </span>
+        <p className="text-[11.5px] leading-relaxed" style={{ color: MUTED }}>
+          이 앱은 정부·지자체·공공기관의 공식 앱이 아니며, 어떤 기관도 대표하거나 대행하지 않아요. 소상공인시장진흥공단·기업마당·각 지자체 등이 공개한 정보를 모아 안내하는 민간 정보 서비스예요.
+        </p>
+      </div>
         </>
       ) : (
         <>
@@ -3864,8 +3858,8 @@ export default function App() {
           >
             <div className="w-full max-w-md">
               <div
-                className="flex rounded-2xl px-1.5 py-1.5"
-                style={{ background: "#FDEAF0", boxShadow: "0 8px 24px rgba(232,116,154,0.35)" }}
+                className="flex rounded-[22px] px-1.5 py-1.5"
+                style={{ background: "#FFF9FB", border: "1px solid #F6E6EC", boxShadow: "0 8px 24px rgba(232,116,154,0.18)" }}
               >
                 {[
                   { key: "home", label: "홈", icon: Home },
@@ -3878,16 +3872,16 @@ export default function App() {
                     <button
                       key={t.key}
                       onClick={() => setMainTab(t.key)}
-                      className="flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl"
-                      style={active ? { background: "#E8749A" } : {}}
+                      className="flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[18px]"
+                      style={active ? { background: "linear-gradient(135deg, #FB7EA8, #F2629A)", boxShadow: "0 4px 12px rgba(242,98,154,0.35)" } : {}}
                     >
                       <t.icon
                         size={18}
-                        color={active ? "white" : "#C99AA6"}
+                        color={active ? "white" : "#8E94A3"}
                         strokeWidth={active ? 2.2 : 1.75}
                         fill={t.key === "favorites" && active ? "white" : "none"}
                       />
-                      <span className="text-[10.5px]" style={{ color: active ? "white" : "#C99AA6", fontWeight: active ? 700 : 400 }}>
+                      <span className="text-[10.5px]" style={{ color: active ? "white" : "#8E94A3", fontWeight: active ? 700 : 400 }}>
                         {t.label}
                       </span>
                     </button>
