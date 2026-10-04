@@ -2052,26 +2052,37 @@ function LiveTopRanking({ onSelect }) {
   const rankOrderRef = useRef(initialOrder);
   const [rankOrder, setRankOrder] = useState(initialOrder);
   const [prevRankOrder, setPrevRankOrder] = useState(initialOrder);
+  // 순위가 바뀔 때 글자가 겹쳐 보이지 않도록, 잠깐 흐려졌다가 새 순서로 다시 나타나요
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
+    let fadeTimer;
     const id = setInterval(() => {
       pool.forEach((p) => {
         scoresRef.current[p.id] = Math.max(10, scoresRef.current[p.id] + (Math.random() - 0.5) * 70);
       });
       const newOrder = pool.map((p) => p.id).sort((a, b) => scoresRef.current[b] - scoresRef.current[a]);
-      setPrevRankOrder(rankOrderRef.current);
-      rankOrderRef.current = newOrder;
-      setRankOrder(newOrder);
+      if (newOrder.slice(0, 3).join() === rankOrderRef.current.slice(0, 3).join()) return;
+      setVisible(false);
+      fadeTimer = setTimeout(() => {
+        setPrevRankOrder(rankOrderRef.current);
+        rankOrderRef.current = newOrder;
+        setRankOrder(newOrder);
+        setVisible(true);
+      }, 250);
     }, 3500);
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      clearTimeout(fadeTimer);
+    };
   }, [pool]);
 
   return (
     <div
       className="relative overflow-hidden"
-      style={{ height: ROW_H * 3 }}
+      style={{ height: ROW_H * 3, opacity: visible ? 1 : 0, transition: "opacity 0.25s ease" }}
     >
-      {rankOrder.map((id, index) => {
+      {rankOrder.slice(0, 3).map((id, index) => {
         const program = pool.find((p) => p.id === id);
         const rank = index + 1;
         const prevIndex = prevRankOrder.indexOf(id);
@@ -2085,7 +2096,6 @@ function LiveTopRanking({ onSelect }) {
             style={{
               top: index * ROW_H,
               height: ROW_H,
-              transition: "top 0.7s cubic-bezier(0.4, 0, 0.2, 1)",
             }}
           >
             <span
@@ -3775,8 +3785,12 @@ export default function App() {
       {/* Bottom tab bar */}
       {screen.view !== "detail" && (
         <>
-          <div style={{ height: 76 }} />
-          <div className="fixed bottom-3 inset-x-0 flex justify-center px-4" style={{ zIndex: 50, display: typing ? "none" : undefined }}>
+          <div style={{ height: 100 }} />
+          {/* 하단 바 뒤를 흰 배경으로 채워서, 스크롤된 내용이 바 주변으로 비치거나 가려 보이지 않게 해요 */}
+          <div
+            className="fixed bottom-0 inset-x-0 flex justify-center px-4 pt-3 pb-3"
+            style={{ zIndex: 50, display: typing ? "none" : undefined, background: "linear-gradient(to bottom, rgba(255,255,255,0) 0, #fff 14px)" }}
+          >
             <div className="w-full max-w-md">
               <div
                 className="flex rounded-2xl px-1.5 py-1.5"
@@ -3818,10 +3832,10 @@ export default function App() {
 }
 
 // 개인정보처리방침 — 1인 개발, 로그인/회원가입 없는 서비스 기준
-// TODO(출시 전): [문의 이메일을 입력해주세요] 부분을 실제 이메일로 교체하고, 시행일자를 실제 배포일로 맞추기
+// 웹 버전(public/privacy.html)과 내용·이메일·시행일을 맞춰 둘 것
 function PrivacyPolicyScreen({ onBack }) {
-  const CONTACT_EMAIL = "[문의 이메일을 입력해주세요]";
-  const EFFECTIVE_DATE = "[시행일자를 입력해주세요 (예: 2026-10-01)]";
+  const CONTACT_EMAIL = "heatpipe777@gmail.com";
+  const EFFECTIVE_DATE = "2026-10-04";
   const sections = [
     {
       title: "1. 수집하는 개인정보 항목",
@@ -3873,7 +3887,7 @@ function PrivacyPolicyScreen({ onBack }) {
 
 // 이용약관 — 정보 제공 목적의 앱, 법적 효력 없는 참고 정보임을 명시
 function TermsOfServiceScreen({ onBack }) {
-  const EFFECTIVE_DATE = "[시행일자를 입력해주세요 (예: 2026-10-01)]";
+  const EFFECTIVE_DATE = "2026-10-04";
   const sections = [
     {
       title: "제1조 (목적)",
