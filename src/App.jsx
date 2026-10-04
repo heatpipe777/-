@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
+import { LocalNotifications } from "@capacitor/local-notifications";
 
 const BLUE = "#3D63DD";
 const BLUE_SOFT = "#EEF2FE";
@@ -141,10 +142,55 @@ const NEWS = [
   },
 ];
 
-const TODAY = new Date("2026-09-02");
+// "YYYY-MM-DD"를 한국(기기) 시간 기준 그날 0시로 해석해요 (new Date("YYYY-MM-DD")는 UTC 기준이라 하루 어긋날 수 있어요)
+function parseLocalDate(str) {
+  const [y, m, d] = str.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+function formatLocalDate(d) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+function startOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+// 앱을 며칠씩 켜둔 채 쓰다가 다시 열어도 D-day가 맞도록, 화면에 돌아올 때마다 refreshToday()로 갱신해요
+let TODAY = startOfToday();
+function refreshToday() {
+  const next = startOfToday();
+  if (next.getTime() === TODAY.getTime()) return false;
+  TODAY = next;
+  TAX_SCHEDULE = buildTaxSchedule();
+  return true;
+}
 function getDday(deadlineStr) {
-  const d = new Date(deadlineStr);
-  return Math.ceil((d - TODAY) / (1000 * 60 * 60 * 24));
+  return Math.round((parseLocalDate(deadlineStr) - TODAY) / (1000 * 60 * 60 * 24));
+}
+function isExpired(p) {
+  return getDday(p.deadline) < 0;
+}
+// 마감 알림을 걸 수 있는 항목인지 (상시접수·이미 마감된 항목은 알릴 마감일이 없어요)
+function canNotify(p) {
+  return !p.recurring && !isExpired(p);
+}
+// 마감 3일 전 오전 9시에 알려요. 이미 지났으면 마감 전날 → 마감 당일 오전 9시 순으로 당겨요
+function notifyTimeFor(p) {
+  const now = new Date();
+  for (const daysBefore of [3, 1, 0]) {
+    const at = parseLocalDate(p.deadline);
+    at.setDate(at.getDate() - daysBefore);
+    at.setHours(9, 0, 0, 0);
+    if (at > now) return { at, daysBefore };
+  }
+  return null;
+}
+// 마감임박순 정렬 — 이미 마감된 항목은 맨 뒤로 보내요
+function byDeadline(a, b) {
+  const da = getDday(a.deadline);
+  const db = getDday(b.deadline);
+  if ((da < 0) !== (db < 0)) return da < 0 ? 1 : -1;
+  return da - db;
 }
 function urgencyColor(dday) {
   if (dday <= 7) return RED;
@@ -175,11 +221,14 @@ const TAX_SCHEDULE_BASE = [
 ];
 function nextOccurrenceDate(monthDay) {
   const year = TODAY.getFullYear();
-  let d = new Date(`${year}-${monthDay}`);
-  if (d < TODAY) d = new Date(`${year + 1}-${monthDay}`);
-  return d.toISOString().slice(0, 10);
+  let d = parseLocalDate(`${year}-${monthDay}`);
+  if (d < TODAY) d = parseLocalDate(`${year + 1}-${monthDay}`);
+  return formatLocalDate(d);
 }
-const TAX_SCHEDULE = TAX_SCHEDULE_BASE.map((t) => ({ ...t, deadline: nextOccurrenceDate(t.monthDay) }));
+function buildTaxSchedule() {
+  return TAX_SCHEDULE_BASE.map((t) => ({ ...t, deadline: nextOccurrenceDate(t.monthDay) }));
+}
+let TAX_SCHEDULE = buildTaxSchedule();
 
 const REGIONS = ["전체", "전국", "서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
 
@@ -313,7 +362,7 @@ const NATIONAL_LOANS = [
   },
 ];
 
-// 예시 데이터 (실제 정보로 추후 교체 필요) — verified: true인 항목은 검색으로 실제 확인한 정보
+// 지역·분야별 지원사업 — verified: true인 항목은 검색으로 실제 확인한 정보
 const SAMPLE_PROGRAMS = [
   { id: 1, name: "소상공인 고효율기기 지원사업", region: "전국", category: "에너지", target: "비주거용 전기 사용 소상공인, 고효율가전 교체 희망자", amountLabel: "품목별 구매비 일부 지원", deadline: "2026-12-31", verified: true, note: "한국전력공사가 운영해요. 예산이 소진되면 연중 조기 마감될 수 있어요.", popularity: 640 },
   { id: 2, name: "서울시 중소기업육성자금 (경영안정자금)", region: "서울", category: "보증", target: "서울특별시 소재 사업자등록을 마친 소상공인·중소기업 (융자제한업종 제외)", amountLabel: "자금 종류별 상이 (서울신용보증재단 보증부대출)", deadline: "2099-12-31", recurring: true, recurringNote: "서울신용보증재단 통해 연중 상시 접수, 예산 소진 시 조기 마감", verified: true, note: "경제활성화자금·희망동행자금(대환대출)·서울배달상생자금 등 여러 세부 자금 중 상황에 맞는 걸 골라 신청해요. 정확한 한도·금리는 서울신용보증재단 공고를 확인하세요.", popularity: 810 },
@@ -1082,7 +1131,7 @@ function CenterMapPreview({ center }) {
 const FAQ_DATA = [
   { category: "앱 이용", q: "회원가입이 필요한가요?", a: "아니요. 로그인 없이 바로 사용할 수 있어요." },
   { category: "앱 이용", q: "즐겨찾기는 어디에 저장되나요?", a: "이 기기에만 저장돼요. 다른 기기에서는 안 보이니, 중요한 지원금은 따로 메모해두시는 게 안전해요." },
-  { category: "앱 이용", q: "마감 임박 알림은 실제로 휴대폰에 오나요?", a: "아직은 화면 동작만 만들어둔 상태예요. 실제 알림이 오려면 개발 단계에서 추가로 연결해야 해요." },
+  { category: "앱 이용", q: "마감 임박 알림은 실제로 휴대폰에 오나요?", a: "네, 안드로이드 앱에서 받을 수 있어요. MY 탭에서 '마감 임박 알림'을 켜고, 즐겨찾기 탭에서 원하는 지원금의 🔔를 누르면 마감 3일 전 오전 9시에 알려드려요. 상시접수 지원금은 정해진 마감일이 없어서 알림 대상이 아니에요. (웹 버전에서는 알림이 오지 않아요)" },
   { category: "앱 이용", q: "개인정보를 수집하나요?", a: "로그인이 없어서 개인을 식별할 수 있는 정보를 서버에 저장하지 않아요. 자세한 내용은 MY 탭의 개인정보처리방침에서 확인할 수 있어요." },
   { category: "지원금", q: "신청은 앱에서 바로 되나요?", a: "아니요. 이 앱은 정보를 모아서 보여주는 역할이에요. 실제 신청은 각 지원금의 '신청하러 가기' 버튼을 눌러 이동한 공식 사이트에서 진행해요." },
   { category: "지원금", q: "지원금 여러 개를 동시에 받을 수 있나요?", a: "지원사업마다 달라요. 일부는 중복 지원이 제한되니, 신청 전에 각 지원금 상세화면의 지원대상을 꼭 확인하세요." },
@@ -1115,7 +1164,7 @@ function FaqSearchScreen({ onBack }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="궁금한 내용을 검색해보세요"
-          className="flex-1 outline-none text-sm bg-transparent"
+          className="flex-1 min-w-0 outline-none text-sm bg-transparent"
           style={{ color: TEXT }}
         />
         {query && (
@@ -1270,7 +1319,7 @@ function TaxScheduleScreen({ onBack, favorites }) {
     type: "subsidy",
   }));
   const taxItems = TAX_SCHEDULE.map((t) => ({ name: t.name, deadline: t.deadline, note: t.note, type: "tax" }));
-  const all = [...taxItems, ...favoritePrograms].sort((a, b) => getDday(a.deadline) - getDday(b.deadline));
+  const all = [...taxItems, ...favoritePrograms].sort(byDeadline);
 
   return (
     <div>
@@ -1655,7 +1704,7 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
     const d = getDday(p.deadline);
     return d <= 7 && d >= 0;
   }).length;
-  const available = matched.length - urgent;
+  const available = matched.filter((p) => getDday(p.deadline) > 7).length;
 
   const filtered = matched
     .filter((p) => {
@@ -1664,7 +1713,7 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
       if (statusFilter === "available") return d > 7;
       return true;
     })
-    .sort((a, b) => getDday(a.deadline) - getDday(b.deadline));
+    .sort(byDeadline);
 
   return (
     <div>
@@ -1981,7 +2030,7 @@ function FolderBellArt() {
 const ROW_H = 36; // px, 한 행의 높이 (인기 지원금을 작게 보이도록 축소)
 function LiveTopRanking({ onSelect }) {
   const pool = useMemo(
-    () => [...ALL_PROGRAMS].sort((a, b) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 5),
+    () => ALL_PROGRAMS.filter((p) => !isExpired(p)).sort((a, b) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 5),
     []
   );
   const scoresRef = useRef(
@@ -2077,7 +2126,7 @@ function CalcNumberField({ label, value, onChange, suffix, placeholder }) {
           value={value}
           onChange={onChange}
           placeholder={placeholder}
-          className="flex-1 bg-transparent outline-none text-[16px] font-semibold"
+          className="flex-1 min-w-0 bg-transparent outline-none text-[16px] font-semibold"
           style={{ color: TEXT }}
         />
         {suffix && <span className="text-[13px] font-medium ml-2" style={{ color: MUTED }}>{suffix}</span>}
@@ -2698,6 +2747,16 @@ export default function App() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
 
+  // 날짜가 바뀐 뒤 앱으로 돌아오면 D-day·마감 여부·알림 예약을 새 날짜로 다시 계산해요
+  const [dayKey, setDayKey] = useState(() => TODAY.getTime());
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && refreshToday()) setDayKey(TODAY.getTime());
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+
   // 저장된 즐겨찾기·알림 설정 불러오기 (처음 화면이 열릴 때 한 번)
   useEffect(() => {
     (async () => {
@@ -2741,13 +2800,81 @@ export default function App() {
     })();
   }, [favorites, notifyIds, notifyEnabled, region, diagnosis, prefsLoaded]);
 
+  // 실제 휴대폰 알림 예약: 알림이 켜져 있고, 즐겨찾기 + 🔔 표시한 항목만 마감 전에 알려요
+  // 설정이 바뀔 때마다 기존 예약을 모두 지우고 다시 예약해요
+  useEffect(() => {
+    if (!prefsLoaded || !Capacitor.isNativePlatform()) return;
+    (async () => {
+      try {
+        const pending = await LocalNotifications.getPending();
+        if (pending.notifications.length) {
+          await LocalNotifications.cancel({ notifications: pending.notifications.map((n) => ({ id: n.id })) });
+        }
+        if (!notifyEnabled) return;
+        const notifications = ALL_PROGRAMS.filter((p) => favorites.has(p.id) && notifyIds.has(p.id) && canNotify(p))
+          .map((p) => {
+            const t = notifyTimeFor(p);
+            if (!t) return null;
+            const when = t.daysBefore === 0 ? "오늘" : `${t.daysBefore}일 뒤`;
+            return {
+              id: p.id,
+              title: `마감 ${t.daysBefore === 0 ? "당일" : `D-${t.daysBefore}`} · ${p.name}`,
+              body: `${when}(${p.deadline}) 신청이 마감돼요. 눌러서 신청 방법을 확인하세요.`,
+              schedule: { at: t.at, allowWhileIdle: true },
+              // 정확한 시각 알람은 별도 권한 화면이 떠서, 몇 분 오차가 있어도 되는 일반 알람으로 예약해요
+              isExactNotification: false,
+              smallIcon: "ic_stat_notify",
+              iconColor: BLUE,
+              extra: { programId: p.id },
+            };
+          })
+          .filter(Boolean);
+        if (notifications.length) await LocalNotifications.schedule({ notifications });
+      } catch (e) {
+        // 알림 예약에 실패해도 앱 사용에는 지장 없도록 조용히 넘어가요
+      }
+    })();
+  }, [notifyEnabled, notifyIds, favorites, prefsLoaded, dayKey]);
+
+  // 알림을 누르면 해당 지원금 상세 화면으로 바로 이동해요
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const handle = LocalNotifications.addListener("localNotificationActionPerformed", (action) => {
+      const id = action.notification?.extra?.programId;
+      if (id != null && ALL_PROGRAMS.some((p) => p.id === id)) setScreen({ view: "detail", id });
+    });
+    return () => {
+      handle.then((h) => h.remove());
+    };
+  }, []);
+
+  // 전체 알림 스위치: 켤 때 휴대폰 알림 권한을 요청하고, 거부되면 다시 꺼요
+  const toggleNotifyEnabled = async () => {
+    if (notifyEnabled || !Capacitor.isNativePlatform()) {
+      setNotifyEnabled(!notifyEnabled);
+      return;
+    }
+    try {
+      let perm = await LocalNotifications.checkPermissions();
+      if (perm.display !== "granted") perm = await LocalNotifications.requestPermissions();
+      if (perm.display === "granted") setNotifyEnabled(true);
+      else alert("알림 권한이 꺼져 있어요. 휴대폰 설정 → 애플리케이션 → 지원금알리미 → 알림에서 허용해 주세요.");
+    } catch (e) {
+      setNotifyEnabled(true);
+    }
+  };
+
   const toggleFavoriteId = (id) => {
+    const adding = !favorites.has(id);
     setFavorites((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+    // 새로 즐겨찾기하면 🔔 알림도 기본으로 켜줘요 (즐겨찾기 탭에서 개별로 끌 수 있어요)
+    const program = ALL_PROGRAMS.find((p) => p.id === id);
+    if (adding && program && canNotify(program)) setNotifyIds((prev) => new Set(prev).add(id));
   };
   const [regionOpen, setRegionOpen] = useState(false);
   const [pickerStep, setPickerStep] = useState("province");
@@ -2792,9 +2919,9 @@ export default function App() {
     }).sort((a, b) =>
       sortBy === "amount"
         ? parseAmount(b.amountLabel) - parseAmount(a.amountLabel)
-        : getDday(a.deadline) - getDday(b.deadline)
+        : byDeadline(a, b)
     );
-  }, [query, region, category, showFavoritesOnly, favorites, sortBy, statusFilter]);
+  }, [query, region, category, showFavoritesOnly, favorites, sortBy, statusFilter, dayKey]);
 
   // 안드로이드 뒤로가기 버튼: 열린 창 닫기 → 이전 화면 → 홈 탭 → 그래도 홈이면 앱 종료
   const backRef = useRef(null);
@@ -2813,8 +2940,22 @@ export default function App() {
     };
   }, []);
 
+  // 입력창에 포커스(키보드 올라옴) 중에는 하단 탭바를 숨겨서 키보드 위로 떠오르지 않게 해요
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const isField = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA");
+    const onIn = (e) => isField(e.target) && setTyping(true);
+    const onOut = () => setTimeout(() => setTyping(isField(document.activeElement)), 0);
+    document.addEventListener("focusin", onIn);
+    document.addEventListener("focusout", onOut);
+    return () => {
+      document.removeEventListener("focusin", onIn);
+      document.removeEventListener("focusout", onOut);
+    };
+  }, []);
+
   const urgentCount = ALL_PROGRAMS.filter((p) => getDday(p.deadline) <= 7 && getDday(p.deadline) >= 0).length;
-  const availableCount = ALL_PROGRAMS.length - urgentCount;
+  const availableCount = ALL_PROGRAMS.filter((p) => getDday(p.deadline) > 7).length;
   const categories = ["전체", ...Array.from(new Set(ALL_PROGRAMS.map((p) => p.category)))];
 
   if (screen.view === "detail") {
@@ -3060,7 +3201,7 @@ export default function App() {
         </button>
       </div>
       <div className="rounded-2xl mb-6 px-3 py-1.5" style={{ background: "#FAFAFB" }}>
-        <LiveTopRanking onSelect={(id) => setScreen({ view: "detail", id })} />
+        <LiveTopRanking key={dayKey} onSelect={(id) => setScreen({ view: "detail", id })} />
       </div>
 
       {/* 많이 찾는 서비스 */}
@@ -3138,6 +3279,9 @@ export default function App() {
           <FolderBellArt />
         </div>
       </div>
+      <p className="text-[11.5px] leading-relaxed px-1 mt-3" style={{ color: MUTED }}>
+        이 앱은 정부·지자체·공공기관의 공식 앱이 아니며, 어떤 기관도 대표하거나 대행하지 않아요. 소상공인시장진흥공단·기업마당·각 지자체 등이 공개한 정보를 모아 안내하는 민간 정보 서비스예요.
+      </p>
         </>
       ) : (
         <>
@@ -3166,13 +3310,13 @@ export default function App() {
 
       {/* Search + region */}
       <div className="flex items-center gap-2 mb-3">
-        <div className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: "#F5F6F9" }}>
+        <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: "#F5F6F9" }}>
           <Search size={16} color={MUTED} />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="이름·대상·카테고리로 검색"
-            className="flex-1 outline-none text-sm bg-transparent"
+            className="flex-1 min-w-0 outline-none text-sm bg-transparent"
             style={{ color: TEXT }}
           />
           {query && <button onClick={() => setQuery("")}><X size={14} color={MUTED} /></button>}
@@ -3358,8 +3502,8 @@ export default function App() {
           <h1 className="text-[19px] font-bold mb-1" style={{ color: TEXT }}>즐겨찾기</h1>
           {favorites.size > 0 && (
             <p className="text-[11.5px] mb-4" style={{ color: MUTED }}>
-              <Bell size={11} className="inline -mt-0.5 mr-0.5" /> 항목을 눌러서 마감 3일 전 알림을 켤 수 있어요
-              {!notifyEnabled && " (MY 탭에서 전체 알림을 먼저 켜주세요)"}
+              <Bell size={11} className="inline -mt-0.5 mr-0.5" /> 종 아이콘을 눌러 마감 3일 전 알림을 켜고 끌 수 있어요
+              {!notifyEnabled && " (MY 탭에서 '마감 임박 알림'을 먼저 켜주세요)"}
             </p>
           )}
           {favorites.size === 0 ? (
@@ -3406,9 +3550,11 @@ export default function App() {
                       <p className="text-[12px] font-normal mt-1" style={{ color: MUTED }}>{p.region} · {p.amountLabel}</p>
                     </div>
                     <p className="text-[13px] font-bold shrink-0" style={{ color: p.recurring ? GREEN : color }}>{p.recurring ? "상시접수" : dday >= 0 ? `D-${dday}` : "마감"}</p>
-                    <button onClick={(e) => { e.stopPropagation(); toggleNotifyId(p.id); }} className="shrink-0 p-0.5">
-                      <Bell size={16} fill={notifyIds.has(p.id) ? GOLD : "none"} color={notifyIds.has(p.id) ? GOLD : "#C7CBD6"} />
-                    </button>
+                    {canNotify(p) && (
+                      <button onClick={(e) => { e.stopPropagation(); toggleNotifyId(p.id); }} className="shrink-0 p-0.5">
+                        <Bell size={16} fill={notifyIds.has(p.id) ? GOLD : "none"} color={notifyIds.has(p.id) ? GOLD : "#C7CBD6"} />
+                      </button>
+                    )}
                     <button onClick={(e) => { e.stopPropagation(); toggleFavoriteId(p.id); }} className="shrink-0 p-0.5">
                       <Heart size={16} fill={RED} color={RED} />
                     </button>
@@ -3583,10 +3729,12 @@ export default function App() {
                 <p className="text-[12px]" style={{ color: MUTED }}>즐겨찾기한 항목 마감 3일 전 알림</p>
               </div>
             </div>
-            <Switch checked={notifyEnabled} onChange={() => setNotifyEnabled(!notifyEnabled)} />
+            <Switch checked={notifyEnabled} onChange={toggleNotifyEnabled} />
           </div>
-          <p className="text-[11px] mb-5 px-1" style={{ color: MUTED }}>
-            화면 동작만 만들어둔 상태예요. 실제 알림이 휴대폰으로 전송되려면 개발 단계에서 별도로 연결해야 해요.
+          <p className="text-[11px] mb-5 px-1 leading-relaxed" style={{ color: MUTED }}>
+            {Capacitor.isNativePlatform()
+              ? "즐겨찾기 탭에서 🔔를 켠 항목만 마감 3일 전 오전 9시에 알려드려요."
+              : "알림은 지원금알리미 앱(안드로이드)에서만 받을 수 있어요."}
           </p>
 
           <p className="text-[12px] font-bold mb-2 px-1 mt-4" style={{ color: MUTED }}>약관·정보</p>
@@ -3607,7 +3755,8 @@ export default function App() {
             ))}
           </div>
 
-          <p className="text-[11.5px] text-center mt-8" style={{ color: MUTED }}>소상공인 지원금 모아보기 · 프로토타입 v3</p>
+          <p className="text-[11.5px] text-center mt-8" style={{ color: MUTED }}>지원금알리미 v1.0</p>
+          <p className="text-[11px] text-center mt-1 leading-relaxed" style={{ color: MUTED }}>정부·공공기관의 공식 앱이 아닌 민간 정보 서비스예요</p>
         </>
       )}
 
@@ -3615,7 +3764,7 @@ export default function App() {
       {screen.view !== "detail" && (
         <>
           <div style={{ height: 76 }} />
-          <div className="fixed bottom-3 inset-x-0 flex justify-center px-4" style={{ zIndex: 50 }}>
+          <div className="fixed bottom-3 inset-x-0 flex justify-center px-4" style={{ zIndex: 50, display: typing ? "none" : undefined }}>
             <div className="w-full max-w-md">
               <div
                 className="flex rounded-2xl px-1.5 py-1.5"
