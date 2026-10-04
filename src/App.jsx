@@ -58,6 +58,11 @@ import calcArtImg from "./assets/home-tiles/calc-art.webp";
 import noticeImg from "./assets/home-tiles/notice.webp";
 import heroMegaImg from "./assets/home-tiles/hero-mega.webp";
 import ctaCoinImg from "./assets/home-tiles/cta-coin.webp";
+import newsFundImg from "./assets/news/fund.webp";
+import newsFixedImg from "./assets/news/fixed.webp";
+import newsTaxImg from "./assets/news/tax.webp";
+import newsRegionImg from "./assets/news/region.webp";
+import newsDigitalImg from "./assets/news/digital.webp";
 
 const BLUE = "#3D63DD";
 const BLUE_SOFT = "#EEF2FE";
@@ -86,6 +91,14 @@ const NEWS_CATEGORY_STYLE = {
   세제: { bg: GOLD_SOFT, color: GOLD },
   지역: { bg: "#FDEEE9", color: "#E5674D" },
   디지털: { bg: "#F1ECFC", color: "#7A3FE0" },
+};
+// 뉴스 카테고리별 대표 그림 (기사 사진은 저작권 문제가 있어서 앱 자체 일러스트를 써요)
+const NEWS_THUMBS = {
+  정책자금: newsFundImg,
+  고정비: newsFixedImg,
+  세제: newsTaxImg,
+  지역: newsRegionImg,
+  디지털: newsDigitalImg,
 };
 const NEWS = [
   {
@@ -2699,6 +2712,10 @@ function NewsDetailScreen({ news, allNews, onBack, onSelectNews }) {
     <div>
       <SectionHeader title="기사 보기" onBack={onBack} />
 
+      <div className="relative h-[140px] rounded-[24px] overflow-hidden mb-4" style={{ background: "linear-gradient(135deg, #F3F5FB 0%, #FFFFFF 100%)", border: "1px solid #EEF0F6" }}>
+        <img src={NEWS_THUMBS[news.category]} alt="" draggable={false} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[124px] w-[124px] rounded-[20px] object-cover" />
+      </div>
+
       <div className="flex items-center gap-1.5 mb-2.5">
         <span className="text-[10.5px] font-bold px-1.5 py-0.5 rounded" style={{ background: style.bg, color: style.color }}>{news.category}</span>
         <span className="text-[11px]" style={{ color: MUTED }}>{news.date}</span>
@@ -3733,6 +3750,7 @@ export default function App() {
                   }
                 >
                   {c}
+                  <span className="ml-1 opacity-70">{c === "전체" ? NEWS.length : NEWS.filter((n) => n.category === c).length}</span>
                 </button>
               ))}
             </div>
@@ -3741,44 +3759,58 @@ export default function App() {
               <p className="text-[12.5px] text-center py-10" style={{ color: MUTED }}>이 카테고리엔 아직 뉴스가 없어요</p>
             )}
 
-            {featured && (
-              <button
-                onClick={() => setScreen({ view: "newsDetail", id: featured.id })}
-                className="block w-full text-left p-5 mb-3"
-                style={{
-                  background: "linear-gradient(135deg, #3D63DD 0%, #6B8AFB 100%)",
-                  borderRadius: 24,
-                  overflow: "hidden",
-                  border: "none",
-                  outline: "none",
-                  WebkitAppearance: "none",
-                  MozAppearance: "none",
-                  cursor: "pointer",
-                }}
-              >
-                <div className="flex items-center gap-1.5 mb-3">
-                  <span
-                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                    style={{ background: "rgba(255,255,255,0.22)", color: "white" }}
-                  >
-                    {featured.category}
-                  </span>
-                  <span className="text-[10.5px]" style={{ color: "rgba(255,255,255,0.8)" }}>{featured.date}</span>
-                  <span className="flex items-center gap-0.5 text-[10.5px]" style={{ color: "rgba(255,255,255,0.8)" }}>
-                    <Clock size={10} /> {featured.readTime}
-                  </span>
-                </div>
-                <p className="text-[16.5px] font-extrabold leading-snug mb-2" style={{ color: "white" }}>{featured.title}</p>
-                <p className="text-[12.5px] leading-relaxed mb-3" style={{ color: "rgba(255,255,255,0.88)" }}>{featured.summary}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>{featured.source}</span>
-                  <span className="text-[11px] font-bold flex items-center gap-1 px-2.5 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.22)", color: "white" }}>
-                    자세히 보기 <ChevronRight size={12} />
-                  </span>
-                </div>
-              </button>
-            )}
+            {/* 주요 소식: 큰 그림 + 제목 카드 */}
+            {featured && (() => {
+              const fStyle = NEWS_CATEGORY_STYLE[featured.category] || { bg: "#F2F3F7", color: MUTED };
+              return (
+                <button
+                  onClick={() => setScreen({ view: "newsDetail", id: featured.id })}
+                  className="block w-full text-left rounded-[24px] overflow-hidden mb-5 active:scale-[0.99] transition-transform"
+                  style={CARD}
+                >
+                  <div className="relative h-[150px] overflow-hidden" style={{ background: `linear-gradient(135deg, ${fStyle.bg} 0%, #FFFFFF 100%)` }}>
+                    <img
+                      src={NEWS_THUMBS[featured.category]}
+                      alt=""
+                      draggable={false}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 h-[136px] w-[136px] rounded-[22px] object-cover"
+                    />
+                    <span
+                      className="absolute left-4 top-4 flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold text-white"
+                      style={{ background: "linear-gradient(135deg, #FF7A9C, #F0567A)", boxShadow: "0 4px 10px rgba(240,86,122,0.3)" }}
+                    >
+                      <Zap size={11} fill="white" /> 주요 소식
+                    </span>
+                    <div className="absolute left-4 bottom-4 flex items-center gap-1.5">
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: "white", color: fStyle.color }}>{featured.category}</span>
+                      <span className="text-[11px] font-medium" style={{ color: "#5E6577" }}>{featured.date}</span>
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <p className="text-[17px] font-extrabold leading-snug break-keep" style={{ color: TEXT }}>{featured.title}</p>
+                    <p className="text-[12.5px] leading-relaxed mt-1.5 line-clamp-2" style={{ color: MUTED }}>{featured.summary}</p>
+                    <div className="flex items-center justify-between mt-3">
+                      <span className="text-[11.5px] font-semibold flex items-center gap-1.5" style={{ color: "#5E6577" }}>
+                        {featured.source}
+                        <span className="flex items-center gap-0.5 font-normal" style={{ color: MUTED }}>
+                          · <Clock size={10} /> {featured.readTime}
+                        </span>
+                      </span>
+                      <span className="text-[11.5px] font-bold flex items-center gap-0.5 px-3 py-1.5 rounded-full" style={BTN_PRIMARY}>
+                        자세히 보기 <ChevronRight size={12} />
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })()}
 
+            {rest.length > 0 && (
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="w-1 h-4 rounded-full" style={{ background: "#7A46D6" }} />
+                <p className="text-[15px] font-bold" style={{ color: TEXT }}>최신 소식</p>
+              </div>
+            )}
             <div className="space-y-2.5">
               {rest.map((n) => {
                 const style = NEWS_CATEGORY_STYLE[n.category] || { bg: "#F2F3F7", color: MUTED };
@@ -3786,24 +3818,25 @@ export default function App() {
                   <button
                     key={n.id}
                     onClick={() => setScreen({ view: "newsDetail", id: n.id })}
-                    className="block w-full text-left rounded-[20px] p-4"
+                    className="w-full text-left rounded-[20px] p-3.5 flex items-center gap-3 active:scale-[0.99] transition-transform"
                     style={CARD}
                   >
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: style.bg, color: style.color }}>{n.category}</span>
-                      <span className="text-[10.5px]" style={{ color: MUTED }}>{n.date}</span>
-                      <span className="flex items-center gap-0.5 text-[10.5px]" style={{ color: MUTED }}>
-                        <Clock size={10} /> {n.readTime}
-                      </span>
+                    <div className="flex-1 min-w-0">
+                      <span className="inline-block text-[10.5px] font-bold px-2 py-0.5 rounded-full mb-1.5" style={{ background: style.bg, color: style.color }}>{n.category}</span>
+                      <p className="text-[14px] font-bold leading-snug line-clamp-2 break-keep" style={{ color: TEXT }}>{n.title}</p>
+                      <p className="text-[11px] mt-1.5 flex items-center gap-1 truncate" style={{ color: MUTED }}>
+                        <span className="truncate">{n.source}</span>
+                        <span className="shrink-0">· {n.date}</span>
+                        <span className="shrink-0 flex items-center gap-0.5">· <Clock size={10} /> {n.readTime}</span>
+                      </p>
                     </div>
-                    <p className="text-sm font-semibold leading-snug" style={{ color: TEXT }}>{n.title}</p>
-                    <p className="text-[12px] mt-1 leading-relaxed" style={{ color: MUTED }}>{n.summary}</p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-[11px]" style={{ color: MUTED }}>{n.source}</span>
-                      <span className="text-[11px] font-semibold flex items-center gap-1" style={{ color: BLUE }}>
-                        자세히 보기 <ChevronRight size={12} />
-                      </span>
-                    </div>
+                    <img
+                      src={NEWS_THUMBS[n.category]}
+                      alt=""
+                      draggable={false}
+                      className="w-[76px] h-[76px] rounded-2xl object-cover shrink-0"
+                      style={{ background: style.bg }}
+                    />
                   </button>
                 );
               })}
@@ -3813,8 +3846,8 @@ export default function App() {
               href="https://www.korea.kr/"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-1 py-3 mt-4 rounded-xl text-xs font-semibold border"
-              style={{ borderColor: BORDER, color: TEXT }}
+              className="w-full flex items-center justify-center gap-1 py-3.5 mt-4 rounded-2xl text-[12.5px] font-bold"
+              style={{ ...CARD, color: "#7A46D6" }}
             >
               더 많은 정책 뉴스 보기 (정책브리핑) <ExternalLink size={12} />
             </a>
