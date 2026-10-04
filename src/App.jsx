@@ -3252,37 +3252,36 @@ export default function App() {
         {/* 배경 장식 원 */}
         <div className="absolute -right-12 -top-16 w-48 h-48 rounded-full" style={{ background: "rgba(255,255,255,0.07)" }} />
         <div className="absolute -left-10 -bottom-16 w-40 h-40 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }} />
-        {/* 확성기 + 알림 말풍선 그림 */}
-        <img
-          src={heroMegaImg}
-          alt=""
-          draggable={false}
-          className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none"
-          style={{
-            width: "40%",
-            WebkitMaskImage: "radial-gradient(ellipse 72% 72% at 55% 50%, #000 60%, transparent 100%)",
-            maskImage: "radial-gradient(ellipse 72% 72% at 55% 50%, #000 60%, transparent 100%)",
-          }}
-        />
-        {/* 그림 속 종 말풍선을 누르면 알림 설정(MY)으로 */}
-        <button
-          onClick={() => setMainTab("my")}
-          aria-label="알림 설정"
-          className="absolute z-10 rounded-full"
-          style={{ right: "3%", top: "10%", width: "14%", aspectRatio: "1 / 1" }}
-        />
+        {/* 확성기 + 알림 말풍선 그림 (오른쪽 아래) */}
+        <div className="absolute right-0 bottom-0" style={{ width: "36%" }}>
+          <img
+            src={heroMegaImg}
+            alt=""
+            draggable={false}
+            className="w-full pointer-events-none"
+            style={{
+              WebkitMaskImage: "radial-gradient(ellipse 72% 72% at 55% 50%, #000 60%, transparent 100%)",
+              maskImage: "radial-gradient(ellipse 72% 72% at 55% 50%, #000 60%, transparent 100%)",
+            }}
+          />
+          {/* 그림 속 종 말풍선을 누르면 알림 설정(MY)으로 */}
+          <button
+            onClick={() => setMainTab("my")}
+            aria-label="알림 설정"
+            className="absolute z-10 rounded-full"
+            style={{ right: "4%", top: "2%", width: "36%", aspectRatio: "1 / 1" }}
+          />
+        </div>
 
-        <div className="relative z-10" style={{ maxWidth: "64%" }}>
+        <div className="relative z-10">
           <span
             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold text-white"
             style={{ background: "rgba(30,70,200,0.28)", border: "1px solid rgba(255,255,255,0.18)" }}
           >
             <Bell size={12} color="white" fill="white" /> 사장님, 안녕하세요 👋
           </span>
-          <h1 className="font-black tracking-tight text-white mt-2.5" style={{ fontSize: 25, lineHeight: 1.22, letterSpacing: "-0.02em" }}>
-            소상공인 정책자금
-            <br />
-            <span style={{ color: "#A9F2FF" }}>알리미</span>
+          <h1 className="font-black text-white mt-2.5 whitespace-nowrap" style={{ fontSize: 21, lineHeight: 1.25, letterSpacing: "-0.03em" }}>
+            소상공인 정책자금 <span style={{ color: "#A9F2FF" }}>알리미</span>
           </h1>
         </div>
         <button
