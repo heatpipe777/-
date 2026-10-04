@@ -849,9 +849,18 @@ function SimpleDetail({ program, onBack }) {
   const color = urgencyColor(dday);
   const catStyle = CATEGORY_COLORS[program.category] || { color: BLUE, bg: BLUE_SOFT, bg2: BLUE_SOFT };
   const CatIcon = CATEGORY_ICON[program.category] || Wallet;
+  const closed = dday < 0 && !program.recurring;
   return (
     <div>
       <SectionHeader title="지원금 상세" onBack={onBack} />
+      {closed && (
+        <div className="rounded-[20px] p-4 mb-3 flex items-start gap-2.5" style={{ background: "#F4F5F8" }}>
+          <Clock size={15} color={MUTED} className="shrink-0 mt-0.5" />
+          <p className="text-[12.5px] leading-relaxed break-keep" style={{ color: "#5E6577" }}>
+            <b style={{ color: TEXT }}>올해 접수가 끝났어요.</b> 아래 내용은 지난 공고 기준이에요. 다음 공고가 나오면 새 정보로 바꿔드릴게요.
+          </p>
+        </div>
+      )}
       <div
         className="relative overflow-hidden rounded-[24px] p-4 mb-3 flex items-center gap-3.5"
         style={{ background: `linear-gradient(135deg, ${catStyle.bg}55 0%, #FFFFFF 85%)`, border: "1px solid #EEF0F6" }}
@@ -908,10 +917,10 @@ function SimpleDetail({ program, onBack }) {
         href="https://www.sbiz24.kr"
         target="_blank"
         rel="noopener noreferrer"
-        className="w-full mt-5 py-4 rounded-2xl text-white text-[14.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] transition-transform"
-        style={BTN_PRIMARY}
+        className="w-full mt-5 py-4 rounded-2xl text-[14.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] transition-transform"
+        style={closed ? { background: "#EEF0F5", color: "#5E6577" } : BTN_PRIMARY}
       >
-        신청하러 가기 <ExternalLink size={15} />
+        {closed ? "다음 공고 확인하기" : "신청하러 가기"} <ExternalLink size={15} />
       </a>
       <p className="text-[11px] text-center mt-2" style={{ color: MUTED }}>
         소상공인24(sbiz24.kr)에서 실제 정보를 확인해보세요
@@ -2148,8 +2157,8 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
     .filter((x) => {
       const d = getDday(x.p.deadline);
       if (statusFilter === "urgent") return d <= 7 && d >= 0;
-      if (statusFilter === "available") return d >= 0;
-      return true;
+      if (statusFilter === "closed") return d < 0;
+      return d >= 0;
     })
     .sort((a, b) => {
       const ea = isExpired(a.p) ? 1 : 0;
@@ -2231,7 +2240,7 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
       )}
 
       {/* 추천 지원금 */}
-      {top.length > 0 && statusFilter !== "urgent" && (
+      {top.length > 0 && statusFilter === "available" && (
         <>
           <div className="flex items-center gap-2 mt-5 mb-2.5">
             <span className="w-1 h-4 rounded-full" style={{ background: BLUE }} />
@@ -2247,13 +2256,13 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
 
       <div className="flex items-center gap-2 mt-2 mb-2.5">
         <span className="w-1 h-4 rounded-full" style={{ background: "#C3C8D4" }} />
-        <p className="text-[15px] font-bold" style={{ color: TEXT }}>{top.length > 0 && statusFilter !== "urgent" ? "함께 볼 만한 지원금" : "받을 수 있는 지원금"}</p>
+        <p className="text-[15px] font-bold" style={{ color: TEXT }}>{top.length > 0 && statusFilter === "available" ? "함께 볼 만한 지원금" : "받을 수 있는 지원금"}</p>
       </div>
       <div className="flex gap-1.5 mb-3">
         {[
-          { key: "all", label: "전체", count: results.length },
           { key: "available", label: "신청가능", count: open.length },
           { key: "urgent", label: "마감임박", count: urgentCount },
+          { key: "closed", label: "접수마감", count: results.length - open.length },
         ].map((s) => (
           <button
             key={s.key}
@@ -2266,13 +2275,14 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
         ))}
       </div>
 
-      {(statusFilter === "urgent" ? sorted : rest).length === 0 ? (
+      {statusFilter === "closed" && <ClosedNotice />}
+      {(statusFilter === "available" ? rest : sorted).length === 0 ? (
         <div className="text-center py-12 text-sm" style={{ color: MUTED }}>
-          {statusFilter === "urgent" ? "마감이 7일 이내로 남은 지원금은 없어요." : "더 보여드릴 지원금이 없어요."}
+          {statusFilter === "urgent" ? "마감이 7일 이내로 남은 지원금은 없어요." : statusFilter === "closed" ? "접수가 끝난 지원금은 없어요." : "더 보여드릴 지원금이 없어요."}
         </div>
       ) : (
         <div className="space-y-2">
-          {(statusFilter === "urgent" ? sorted : rest).map(({ p, r }) => (
+          {(statusFilter === "available" ? rest : sorted).map(({ p, r }) => (
             <ProgramRow key={p.id} p={p} reason={isExpired(p) ? null : r.reason} onClick={() => onSelectProgram(p.id)} />
           ))}
         </div>
@@ -2357,6 +2367,18 @@ function TrendChartIcon({ size = 24, color = "currentColor", strokeWidth = 2, cl
   );
 }
 
+// 접수가 끝난 지원금 안내 — 목록·진단 결과의 '접수마감' 탭 위에 보여줘요
+function ClosedNotice() {
+  return (
+    <div className="rounded-[20px] p-4 mb-3 flex items-start gap-2.5" style={{ background: "#F4F5F8" }}>
+      <Info size={15} color={MUTED} className="shrink-0 mt-0.5" />
+      <p className="text-[12px] leading-relaxed break-keep" style={{ color: "#5E6577" }}>
+        올해 접수가 끝난 지원금이에요. 대부분 <b>매년 비슷한 시기에 다시 공고</b>가 나와요. 관심 있는 지원금은 ♡ 즐겨찾기 해두시면, 새 공고로 정보가 바뀔 때 바로 확인할 수 있어요.
+      </p>
+    </div>
+  );
+}
+
 // 지원금 목록 카드 — 목록·즐겨찾기·맞춤진단 결과에서 같이 써요
 function ProgramRow({ p, onClick, actions, reason, highlight }) {
   const dday = getDday(p.deadline);
@@ -2369,7 +2391,10 @@ function ProgramRow({ p, onClick, actions, reason, highlight }) {
       tabIndex={0}
       onClick={onClick}
       className="w-full text-left rounded-[20px] px-4 py-3.5 active:scale-[0.99] transition-transform cursor-pointer"
-      style={highlight ? { ...CARD, border: `1.5px solid ${BLUE}55`, boxShadow: "0 6px 18px rgba(61,99,221,0.12)" } : CARD}
+      style={{
+        ...(highlight ? { ...CARD, border: `1.5px solid ${BLUE}55`, boxShadow: "0 6px 18px rgba(61,99,221,0.12)" } : CARD),
+        ...(dday < 0 && !p.recurring ? { opacity: 0.6 } : {}),
+      }}
     >
       <div className="flex items-center gap-1.5 mb-1.5">
         <span className="text-[11px] font-bold px-2 py-0.5 rounded-md shrink-0" style={{ background: `${cat.bg}1A`, color: cat.bg }}>
@@ -3055,7 +3080,7 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [region, setRegion] = useState("전체");
   const [category, setCategory] = useState("전체");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("available");
   const [sortBy, setSortBy] = useState("deadline");
   const [newsCategory, setNewsCategory] = useState("전체");
   const [notifyEnabled, setNotifyEnabled] = useState(false);
@@ -3260,8 +3285,8 @@ export default function App() {
       const matchesFavorite = !showFavoritesOnly || favorites.has(p.id);
       const dday = getDday(p.deadline);
       const matchesStatus =
-        statusFilter === "all" ||
         (statusFilter === "urgent" && dday <= 7 && dday >= 0) ||
+        (statusFilter === "closed" && dday < 0) ||
         (statusFilter === "available" && dday >= 0);
       return matchesRegion && matchesQuery && matchesCategory && matchesFavorite && matchesStatus;
     }).sort((a, b) =>
@@ -3304,6 +3329,7 @@ export default function App() {
 
   const urgentCount = ALL_PROGRAMS.filter((p) => getDday(p.deadline) <= 7 && getDday(p.deadline) >= 0).length;
   const availableCount = ALL_PROGRAMS.filter((p) => getDday(p.deadline) >= 0).length; // 마감 임박(7일 이내)도 신청 가능에 포함
+  const closedCount = ALL_PROGRAMS.length - availableCount;
   const categories = ["전체", ...Array.from(new Set(ALL_PROGRAMS.map((p) => p.category)))];
 
   if (screen.view === "detail") {
@@ -3391,7 +3417,7 @@ export default function App() {
           onBack={() => setScreen({ view: "home" })}
           onComplete={(answers) => {
             setDiagnosis(answers);
-            setStatusFilter("all");
+            setStatusFilter("available");
             setScreen({ view: "diagnosisResult" });
           }}
         />
@@ -3408,11 +3434,11 @@ export default function App() {
           onRedo={() => setScreen({ view: "diagnosis" })}
           onClear={() => {
             setDiagnosis(null);
-            setStatusFilter("all");
+            setStatusFilter("available");
             setScreen({ view: "home" });
           }}
           onViewAll={() => {
-            setStatusFilter("all");
+            setStatusFilter("available");
             setScreen({ view: "home" });
             setHomeScreen("list");
           }}
@@ -3572,7 +3598,7 @@ export default function App() {
       <p className="text-[16px] font-bold mb-2.5" style={{ color: TEXT }}>많이 찾는 서비스</p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {[
-          { key: "all", label: "소상공인\n지원금", bg: "#FDEEDC", img: tileAllImg, onClick: () => { setStatusFilter("all"); setHomeScreen("list"); } },
+          { key: "all", label: "소상공인\n지원금", bg: "#FDEEDC", img: tileAllImg, onClick: () => { setStatusFilter("available"); setHomeScreen("list"); } },
           { key: "center", label: "지역센터\n찾기", bg: "#FCEAF3", img: tileCenterImg, onClick: () => setScreen({ view: "centers" }) },
           { key: "exchange", label: "금리·환율\n정보", bg: "#E7F7EF", img: tileExchangeImg, onClick: () => setScreen({ view: "exchange" }) },
           { key: "news", label: "정책뉴스\n확인", bg: "#F1ECFC", img: tileNewsImg, onClick: () => setMainTab("news") },
@@ -3686,9 +3712,9 @@ export default function App() {
       {/* Status filter */}
       <div className="flex gap-1.5 mb-4">
         {[
-          { key: "all", label: "전체", count: ALL_PROGRAMS.length },
           { key: "available", label: "신청가능", count: availableCount },
           { key: "urgent", label: "마감임박", count: urgentCount },
+          { key: "closed", label: "접수마감", count: closedCount },
         ].map((s) => {
           const active = statusFilter === s.key;
           return (
@@ -3775,6 +3801,7 @@ export default function App() {
           즐겨찾기 {favorites.size > 0 && `(${favorites.size})`}
         </button>
       </div>
+      {statusFilter === "closed" && <ClosedNotice />}
       <p className="text-xs mb-2.5" style={{ color: MUTED }}>총 {filtered.length}건</p>
 
       <div className="space-y-2">
@@ -4121,7 +4148,7 @@ export default function App() {
               >
                 {[
                   { key: "home", label: "홈", icon: Home, active: mainTab === "home" && homeScreen === "hub", go: () => { setMainTab("home"); setHomeScreen("hub"); } },
-                  { key: "list", label: "지원금", icon: List, active: mainTab === "home" && homeScreen === "list", go: () => { setMainTab("home"); setStatusFilter("all"); setHomeScreen("list"); } },
+                  { key: "list", label: "지원금", icon: List, active: mainTab === "home" && homeScreen === "list", go: () => { setMainTab("home"); setStatusFilter("available"); setHomeScreen("list"); } },
                   { key: "favorites", label: "즐겨찾기", icon: Heart, badge: favorites.size, active: mainTab === "favorites", go: () => setMainTab("favorites") },
                   { key: "news", label: "뉴스", icon: Newspaper, active: mainTab === "news", go: () => setMainTab("news") },
                   { key: "my", label: "MY", icon: User, active: mainTab === "my", go: () => setMainTab("my") },
