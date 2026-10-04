@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useLayoutEffect, useRef } from "react";
 import {
   Search,
   MapPin,
@@ -38,6 +38,8 @@ import {
   ClipboardCheck,
   Check,
   Calculator,
+  RefreshCw,
+  ArrowUpDown,
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
@@ -708,107 +710,267 @@ function SimpleDetail({ program, onBack }) {
 // 환율정보 화면 — 공개 환율 API(open.er-api.com)에서 실시간 데이터를 받아와요
 // TODO(출시 전 보완): 무료 API라 호출 제한·SLA가 없음. 정식 출시 전 한국수출입은행
 // 공공 환율 API 또는 유료 API로 교체 검토.
+// unit: 화면에 "몇 단위당 원화"로 보여줄지 (엔·동·루피아는 1단위가 너무 작아 100단위 기준)
+// sample: 계산기에서 그 통화를 고르면 처음 넣어줄 금액 (자주 쓰는 단위)
+const FX_CURRENCIES = [
+  { code: "USD", label: "미국 달러", flag: "🇺🇸", unit: 1, major: true, sample: 100 },
+  { code: "JPY", label: "일본 엔", flag: "🇯🇵", unit: 100, major: true, sample: 10000 },
+  { code: "EUR", label: "유럽 유로", flag: "🇪🇺", unit: 1, major: true, sample: 100 },
+  { code: "CNY", label: "중국 위안", flag: "🇨🇳", unit: 1, major: true, sample: 1000 },
+  { code: "GBP", label: "영국 파운드", flag: "🇬🇧", unit: 1, sample: 100 },
+  { code: "HKD", label: "홍콩 달러", flag: "🇭🇰", unit: 1, sample: 1000 },
+  { code: "TWD", label: "대만 달러", flag: "🇹🇼", unit: 1, sample: 1000 },
+  { code: "VND", label: "베트남 동", flag: "🇻🇳", unit: 100, sample: 1000000 },
+  { code: "THB", label: "태국 바트", flag: "🇹🇭", unit: 1, sample: 1000 },
+  { code: "PHP", label: "필리핀 페소", flag: "🇵🇭", unit: 1, sample: 1000 },
+  { code: "IDR", label: "인도네시아 루피아", flag: "🇮🇩", unit: 100, sample: 1000000 },
+  { code: "MYR", label: "말레이시아 링깃", flag: "🇲🇾", unit: 1, sample: 100 },
+  { code: "SGD", label: "싱가포르 달러", flag: "🇸🇬", unit: 1, sample: 100 },
+  { code: "AUD", label: "호주 달러", flag: "🇦🇺", unit: 1, sample: 100 },
+  { code: "CAD", label: "캐나다 달러", flag: "🇨🇦", unit: 1, sample: 100 },
+  { code: "CHF", label: "스위스 프랑", flag: "🇨🇭", unit: 1, sample: 100 },
+];
+const FX_CACHE_KEY = "fxCache";
+const FX_CACHE_TTL = 3 * 60 * 60 * 1000; // 3시간 — API가 하루 1회 갱신이라 그 안에는 다시 받을 필요가 없어요
+
+function readFxCache() {
+  try {
+    const c = JSON.parse(localStorage.getItem(FX_CACHE_KEY));
+    return c && c.rates ? c : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// 100원 미만은 소수점 둘째 자리까지 보여줘야 차이가 보여요
+function formatKrw(v) {
+  return v >= 100 ? Math.round(v).toLocaleString() : v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatFx(v) {
+  return v.toLocaleString(undefined, { maximumFractionDigits: v >= 100 ? 0 : 2 });
+}
+
+// 입력값에 천 단위 쉼표를 넣어 보여줘요 (소수점 입력도 유지)
+function withCommas(raw) {
+  if (!raw) return "";
+  const [i, d] = raw.split(".");
+  const intPart = i ? Number(i).toLocaleString() : "0";
+  return d !== undefined ? `${intPart}.${d}` : intPart;
+}
+
 function ExchangeRateContent() {
-  const [state, setState] = useState({ status: "loading", rates: null, updatedAt: null });
+  const cached = useMemo(readFxCache, []);
+  const [rates, setRates] = useState(cached ? cached.rates : null);
+  const [updatedAt, setUpdatedAt] = useState(cached ? cached.updatedAt : null);
+  const [status, setStatus] = useState(cached ? "ready" : "loading");
+  const [refreshing, setRefreshing] = useState(false);
+  const [offline, setOffline] = useState(false);
+
+  const [code, setCode] = useState("USD");
+  const [toKrw, setToKrw] = useState(true); // true: 외화 → 원화, false: 원화 → 외화
+  const [amount, setAmount] = useState("100");
+
+  const load = async () => {
+    setRefreshing(true);
+    try {
+      const res = await fetch("https://open.er-api.com/v6/latest/KRW");
+      if (!res.ok) throw new Error("network");
+      const data = await res.json();
+      if (data.result !== "success") throw new Error("api");
+      setRates(data.rates);
+      setUpdatedAt(data.time_last_update_utc);
+      setStatus("ready");
+      setOffline(false);
+      try {
+        localStorage.setItem(FX_CACHE_KEY, JSON.stringify({ rates: data.rates, updatedAt: data.time_last_update_utc, savedAt: Date.now() }));
+      } catch (e) {
+        // 저장 실패해도 화면 표시는 그대로 돼요
+      }
+    } catch (e) {
+      // 저장된 환율이 있으면 그걸 계속 보여주고, 없을 때만 오류 화면
+      if (rates || cached) setOffline(true);
+      else setStatus("error");
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("https://open.er-api.com/v6/latest/KRW");
-        if (!res.ok) throw new Error("network");
-        const data = await res.json();
-        if (cancelled) return;
-        if (data.result !== "success") throw new Error("api");
-        setState({ status: "ready", rates: data.rates, updatedAt: data.time_last_update_utc });
-      } catch (e) {
-        if (!cancelled) setState({ status: "error", rates: null, updatedAt: null });
-      }
-    })();
-    return () => { cancelled = true; };
+    if (!cached || Date.now() - (cached.savedAt || 0) > FX_CACHE_TTL) load();
   }, []);
 
-  // data.rates는 "1원 = X 외화" 형태라서, 화면엔 "외화 1(또는 100) 단위당 원화"로 뒤집어 보여줘요
-  const CURRENCIES = [
-    { code: "USD", label: "미국 달러", flag: "🇺🇸", unit: 1 },
-    { code: "JPY", label: "일본 엔 (100엔)", flag: "🇯🇵", unit: 100 },
-    { code: "EUR", label: "유럽 유로", flag: "🇪🇺", unit: 1 },
-    { code: "CNY", label: "중국 위안", flag: "🇨🇳", unit: 1 },
-    { code: "GBP", label: "영국 파운드", flag: "🇬🇧", unit: 1 },
-    { code: "HKD", label: "홍콩 달러", flag: "🇭🇰", unit: 1 },
-    { code: "TWD", label: "대만 달러", flag: "🇹🇼", unit: 1 },
-    { code: "VND", label: "베트남 동 (100동)", flag: "🇻🇳", unit: 100 },
-    { code: "THB", label: "태국 바트", flag: "🇹🇭", unit: 1 },
-    { code: "PHP", label: "필리핀 페소", flag: "🇵🇭", unit: 1 },
-    { code: "IDR", label: "인도네시아 루피아 (100루피아)", flag: "🇮🇩", unit: 100 },
-    { code: "MYR", label: "말레이시아 링깃", flag: "🇲🇾", unit: 1 },
-    { code: "SGD", label: "싱가포르 달러", flag: "🇸🇬", unit: 1 },
-    { code: "AUD", label: "호주 달러", flag: "🇦🇺", unit: 1 },
-    { code: "CAD", label: "캐나다 달러", flag: "🇨🇦", unit: 1 },
-    { code: "CHF", label: "스위스 프랑", flag: "🇨🇭", unit: 1 },
-  ];
-  // 100원 미만 통화(바트·페소 등)는 소수점 둘째 자리까지 보여줘야 차이가 보여요
-  const formatKrw = (v) =>
-    v >= 100 ? Math.round(v).toLocaleString() : v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // rates[code]는 "1원당 외화 몇 개"라서, 역수가 "외화 1단위당 원화"
+  const krwPer = (c) => (rates && rates[c] ? 1 / rates[c] : null);
+
   const updatedLabel = (() => {
-    const d = state.updatedAt ? new Date(state.updatedAt) : null;
-    if (!d || isNaN(d)) return state.updatedAt || "-";
+    const d = updatedAt ? new Date(updatedAt) : null;
+    if (!d || isNaN(d)) return updatedAt || "-";
     return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   })();
+
+  const selected = FX_CURRENCIES.find((c) => c.code === code);
+  const rate = krwPer(code);
+  const num = Number(amount) || 0;
+  const result = rate ? (toKrw ? num * rate : num / rate) : null;
+
+  const onAmountChange = (e) => {
+    let v = e.target.value.replace(/[^0-9.]/g, "");
+    const firstDot = v.indexOf(".");
+    if (firstDot !== -1) v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, "").slice(0, 2);
+    if (v.replace(".", "").length > 13) return;
+    setAmount(v.replace(/^0+(?=\d)/, ""));
+  };
+
+  const selectCurrency = (c) => {
+    setCode(c);
+    setToKrw(true);
+    setAmount(String(FX_CURRENCIES.find((x) => x.code === c).sample));
+  };
+
+  const pickCurrency = (c) => {
+    selectCurrency(c);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const renderGroup = (title, list) => (
+    <div className="mb-4">
+      <p className="text-[12px] font-bold mb-2 px-1" style={{ color: MUTED }}>{title}</p>
+      <div className="rounded-2xl border overflow-hidden" style={{ borderColor: BORDER }}>
+        {list.map((c, i) => {
+          const v = krwPer(c.code);
+          const active = c.code === code;
+          return (
+            <button
+              key={c.code}
+              onClick={() => pickCurrency(c.code)}
+              className="w-full flex items-center justify-between px-4 py-3 text-left"
+              style={{ borderTop: i > 0 ? `1px solid ${BORDER}` : "none", background: active ? BLUE_SOFT : "white" }}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="text-[20px] leading-none">{c.flag}</span>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-bold truncate" style={{ color: TEXT }}>{c.label}</p>
+                  <p className="text-[10.5px]" style={{ color: MUTED }}>{c.code}{c.unit > 1 ? ` · ${c.unit}단위` : ""}</p>
+                </div>
+              </div>
+              <p className="text-[15px] font-extrabold tabular-nums shrink-0 ml-2" style={{ color: TEXT }}>
+                {v ? `${formatKrw(v * c.unit)}원` : "-"}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   return (
     <div>
       <div className="rounded-2xl border p-3.5 flex items-start gap-2 mb-4" style={{ borderColor: BORDER, background: GREEN_SOFT }}>
         <Info size={14} color={GREEN} className="shrink-0 mt-0.5" />
         <p className="text-[12px]" style={{ color: GREEN }}>
-          실시간 공개 환율 API로 받아온 참고용 정보예요. 실제 송금·환전 시엔 은행 고시 환율과 차이가 있을 수 있어요.
+          공개 환율 API로 받아온 참고용 정보예요. 실제 송금·환전 시엔 은행 고시 환율과 차이가 있을 수 있어요.
         </p>
       </div>
 
-      {state.status === "loading" && (
+      {status === "loading" && (
         <div className="py-16 text-center">
           <p className="text-[13px]" style={{ color: MUTED }}>환율 정보를 불러오는 중이에요...</p>
         </div>
       )}
 
-      {state.status === "error" && (
+      {status === "error" && (
         <div className="py-10 text-center">
           <p className="text-[13px] mb-3" style={{ color: MUTED }}>환율 정보를 불러오지 못했어요. 네트워크 상태를 확인하고 다시 시도해주세요.</p>
-          <a
-            href="https://finance.naver.com/marketindex/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-[12.5px] font-semibold px-3 py-2 rounded-full"
-            style={{ background: BLUE_SOFT, color: BLUE }}
-          >
-            네이버 환율에서 확인하기 <ExternalLink size={12} />
-          </a>
+          <div className="flex items-center justify-center gap-2">
+            <button
+              onClick={load}
+              className="inline-flex items-center gap-1 text-[12.5px] font-semibold px-3 py-2 rounded-full"
+              style={{ background: BLUE, color: "white" }}
+            >
+              <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} /> 다시 시도
+            </button>
+            <a
+              href="https://finance.naver.com/marketindex/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[12.5px] font-semibold px-3 py-2 rounded-full"
+              style={{ background: BLUE_SOFT, color: BLUE }}
+            >
+              네이버 환율 <ExternalLink size={12} />
+            </a>
+          </div>
         </div>
       )}
 
-      {state.status === "ready" && (
+      {status === "ready" && (
         <>
-          <div className="space-y-2.5">
-            {CURRENCIES.map((c) => {
-              // rates[c.code]는 "1원당 c.code 몇 개"이므로, 역수*unit이 "unit c.code당 원화"
-              const krwPerUnit = state.rates && state.rates[c.code] ? (1 / state.rates[c.code]) * c.unit : null;
-              return (
-                <div key={c.code} className="flex items-center justify-between rounded-2xl border p-4" style={{ borderColor: BORDER }}>
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-[22px]">{c.flag}</span>
-                    <div>
-                      <p className="text-[13.5px] font-bold" style={{ color: TEXT }}>{c.label}</p>
-                      <p className="text-[11px]" style={{ color: MUTED }}>{c.code}</p>
-                    </div>
-                  </div>
-                  <p className="text-[16px] font-extrabold tabular-nums" style={{ color: TEXT }}>
-                    {krwPerUnit ? `${formatKrw(krwPerUnit)}원` : "-"}
-                  </p>
-                </div>
-              );
-            })}
+          {/* 환율 계산기 */}
+          <div className="rounded-2xl p-4 mb-5" style={{ background: BLUE_SOFT }}>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <p className="text-[13.5px] font-bold shrink-0" style={{ color: TEXT }}>환율 계산기</p>
+              <select
+                value={code}
+                onChange={(e) => selectCurrency(e.target.value)}
+                className="min-w-0 text-[12.5px] font-semibold rounded-lg px-2 py-1.5 bg-white border outline-none"
+                style={{ borderColor: BORDER, color: TEXT }}
+              >
+                {FX_CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>{c.flag} {c.label} ({c.code})</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="rounded-xl bg-white px-3.5 py-3 flex items-center gap-2">
+              <input
+                type="text"
+                inputMode="decimal"
+                value={withCommas(amount)}
+                onChange={onAmountChange}
+                placeholder="금액 입력"
+                className="flex-1 min-w-0 text-[18px] font-extrabold tabular-nums outline-none bg-transparent"
+                style={{ color: TEXT }}
+              />
+              <span className="text-[13px] font-bold shrink-0" style={{ color: MUTED }}>{toKrw ? selected.code : "원"}</span>
+            </div>
+
+            <div className="flex justify-center my-1.5">
+              <button
+                onClick={() => setToKrw(!toKrw)}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-white border"
+                style={{ borderColor: BORDER }}
+                aria-label="계산 방향 바꾸기"
+              >
+                <ArrowUpDown size={14} color={BLUE} />
+              </button>
+            </div>
+
+            <div className="rounded-xl bg-white px-3.5 py-3 flex items-center justify-between gap-2">
+              <p className="text-[18px] font-extrabold tabular-nums truncate" style={{ color: BLUE }}>
+                {result !== null ? (toKrw ? formatKrw(result) : formatFx(result)) : "-"}
+              </p>
+              <span className="text-[13px] font-bold shrink-0" style={{ color: MUTED }}>{toKrw ? "원" : selected.code}</span>
+            </div>
+            {rate && (
+              <p className="text-[11px] mt-2 text-center" style={{ color: MUTED }}>
+                {selected.unit} {selected.code} = {formatKrw(rate * selected.unit)}원
+              </p>
+            )}
           </div>
-          <p className="text-[11px] text-center mt-4" style={{ color: MUTED }}>
+
+          <div className="flex items-center justify-between gap-2 mb-2 px-1">
+            <p className="text-[11px]" style={{ color: offline ? RED : MUTED }}>
+              {offline ? "인터넷 연결이 없어 저장된 환율을 보여드려요" : "통화를 누르면 계산기에 바로 넣어드려요"}
+            </p>
+            <button onClick={load} disabled={refreshing} className="flex items-center gap-1 text-[11.5px] font-semibold shrink-0" style={{ color: BLUE }}>
+              <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} /> 새로고침
+            </button>
+          </div>
+
+          {renderGroup("주요 통화", FX_CURRENCIES.filter((c) => c.major))}
+          {renderGroup("그 외 통화", FX_CURRENCIES.filter((c) => !c.major))}
+
+          <p className="text-[11px] text-center mt-2" style={{ color: MUTED }}>
             기준시각: {updatedLabel} (하루 1회 갱신) · 출처: open.er-api.com
           </p>
         </>
@@ -2776,6 +2938,25 @@ export default function App() {
   const [diagnosis, setDiagnosis] = useState(null); // { region, revenueBand, yearsBand } | null
   const [diagStep, setDiagStep] = useState(0);
   const [diagAnswers, setDiagAnswers] = useState({ region: null, revenueBand: null, yearsBand: null });
+
+  // 화면을 옮길 때 스크롤 위치 관리: 새 화면은 맨 위에서 시작하고,
+  // 하단 탭 화면(홈·즐겨찾기·뉴스·MY)으로 돌아오면 보던 위치를 이어서 보여줘요
+  const scrollKey = screen.view === "home" ? `tab:${mainTab}:${homeScreen}` : `screen:${screen.view}`;
+  const scrollKeyRef = useRef(scrollKey);
+  const savedScrollRef = useRef({});
+  useEffect(() => {
+    const onScroll = () => {
+      savedScrollRef.current[scrollKeyRef.current] = window.scrollY;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  useLayoutEffect(() => {
+    if (scrollKeyRef.current === scrollKey) return;
+    scrollKeyRef.current = scrollKey;
+    const restore = scrollKey.startsWith("tab:") ? savedScrollRef.current[scrollKey] || 0 : 0;
+    window.scrollTo(0, restore);
+  }, [scrollKey]);
 
   const toggleNotifyId = (id) => {
     setNotifyIds((prev) => {
