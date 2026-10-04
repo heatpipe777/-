@@ -747,6 +747,11 @@ function formatKrw(v) {
   return v >= 100 ? Math.round(v).toLocaleString() : v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// 환율 자체는 은행 고시처럼 소수점 둘째 자리까지 보여줘요 (반올림해서 보여주면 계산기 결과와 안 맞아 보여요)
+function formatRate(v) {
+  return v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function formatFx(v) {
   return v.toLocaleString(undefined, { maximumFractionDigits: v >= 100 ? 0 : 2 });
 }
@@ -855,7 +860,7 @@ function ExchangeRateContent() {
                 </div>
               </div>
               <p className="text-[15px] font-extrabold tabular-nums shrink-0 ml-2" style={{ color: TEXT }}>
-                {v ? `${formatKrw(v * c.unit)}원` : "-"}
+                {v ? `${formatRate(v * c.unit)}원` : "-"}
               </p>
             </button>
           );
@@ -953,7 +958,7 @@ function ExchangeRateContent() {
             </div>
             {rate && (
               <p className="text-[11px] mt-2 text-center" style={{ color: MUTED }}>
-                {selected.unit} {selected.code} = {formatKrw(rate * selected.unit)}원
+                {selected.unit} {selected.code} = {formatRate(rate * selected.unit)}원
               </p>
             )}
           </div>
