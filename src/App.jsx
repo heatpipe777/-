@@ -71,6 +71,13 @@ const RED_SOFT = "#FDEDED";
 const GOLD = "#B8862A";
 const GOLD_SOFT = "#FBF3E1";
 
+// 앱 전체 공통 스타일 — 홈 화면 시안과 같은 느낌으로 맞춰요
+const CARD = { background: "#FFFFFF", border: "1px solid #EEF0F6", boxShadow: "0 4px 16px rgba(40,60,120,0.05)" };
+const CHIP_ON = { background: "linear-gradient(135deg, #5B8DF7, #3D63DD)", color: "white", boxShadow: "0 4px 10px rgba(61,99,221,0.22)" };
+const CHIP_OFF = { background: "#F3F5FA", color: MUTED };
+const INPUT_BG = "#F3F5FA";
+const BTN_PRIMARY = { background: "linear-gradient(135deg, #5B8DF7, #3D63DD)", color: "white", boxShadow: "0 8px 18px rgba(61,99,221,0.28)" };
+
 // 실제 확인한 소상공인 관련 정책 뉴스 (출처: 대한민국 정책브리핑, 한국시사경제)
 const NEWS_CATEGORIES = ["전체", "정책자금", "고정비", "세제", "지역", "디지털"];
 const NEWS_CATEGORY_STYLE = {
@@ -467,27 +474,32 @@ function SectionHeader({ title, onBack, right }) {
 // 목록형 화면 상단용 — 그라디언트 배너 + 아이콘으로 심심한 뒤로가기 헤더를 꾸며줘요
 function HeroHeader({ icon: Icon, color, subtitle, title, onBack, right }) {
   return (
-    <div
-      className="relative overflow-hidden rounded-2xl -mx-5 px-5 pt-4 pb-5 mb-5"
-      style={{ background: `linear-gradient(135deg, ${color}12, white)` }}
-    >
-      <div className="absolute -right-8 -top-10 w-32 h-32 rounded-full" style={{ background: `${color}14` }} />
-      <div className="absolute -left-10 -bottom-14 w-28 h-28 rounded-full" style={{ background: `${color}0D` }} />
-      <div className="relative flex items-center gap-2 mb-4">
-        <button onClick={onBack} className="navArrowBtn w-8 h-8 -ml-1.5 rounded-full flex items-center justify-center">
-          <ChevronLeft size={20} color={TEXT} />
+    <div className="mb-5">
+      <div className="flex items-center gap-2 mb-3">
+        <button onClick={onBack} className="navArrowBtn w-9 h-9 -ml-2 rounded-full flex items-center justify-center" aria-label="뒤로가기">
+          <ChevronLeft size={22} color={TEXT} />
         </button>
-        <h2 className="text-base font-bold flex-1" style={{ color: TEXT }}>{title}</h2>
+        <h2 className="text-[17px] font-bold flex-1" style={{ color: TEXT }}>{title}</h2>
         {right}
       </div>
-      <div className="relative flex items-center gap-3">
+      <div
+        className="relative overflow-hidden rounded-[24px] px-4 py-4 flex items-center gap-3.5"
+        style={{ background: `linear-gradient(135deg, ${color}1F 0%, ${color}0A 60%, #FFFFFF 100%)`, border: `1px solid ${color}14` }}
+      >
+        <div className="absolute -right-8 -top-10 w-32 h-32 rounded-full" style={{ background: `${color}12` }} />
+        <div className="absolute right-10 -bottom-12 w-24 h-24 rounded-full" style={{ background: `${color}0C` }} />
+        {/* 광택 있는 입체 느낌 아이콘 */}
         <div
-          className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
-          style={{ background: color, boxShadow: `0 6px 14px ${color}55` }}
+          className="relative w-[52px] h-[52px] rounded-[18px] flex items-center justify-center shrink-0 overflow-hidden"
+          style={{
+            background: `linear-gradient(145deg, ${color}B3 0%, ${color} 70%)`,
+            boxShadow: `0 8px 16px ${color}45, inset 0 -3px 6px rgba(0,0,0,0.12)`,
+          }}
         >
-          <Icon size={22} color="white" strokeWidth={2} />
+          <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full" style={{ background: "rgba(255,255,255,0.28)" }} />
+          <Icon size={24} color="white" strokeWidth={2.2} className="relative" />
         </div>
-        {subtitle && <p className="text-[12.5px] leading-relaxed" style={{ color: MUTED }}>{subtitle}</p>}
+        {subtitle && <p className="relative text-[13px] leading-relaxed font-medium break-keep" style={{ color: "#5E6577" }}>{subtitle}</p>}
       </div>
     </div>
   );
@@ -635,8 +647,8 @@ function DetailedGuide({ program, onBack, favorites, onToggleFavorite }) {
         href="https://www.sbiz24.kr"
         target="_blank"
         rel="noopener noreferrer"
-        className="w-full mt-5 py-3.5 rounded-xl text-white text-sm font-bold flex items-center justify-center gap-1.5"
-        style={{ background: BLUE }}
+        className="w-full mt-5 py-4 rounded-2xl text-white text-[14.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] transition-transform"
+        style={BTN_PRIMARY}
       >
         신청하러 가기 <ExternalLink size={15} />
       </a>
@@ -671,14 +683,40 @@ function FaqList({ items }) {
 function SimpleDetail({ program, onBack }) {
   const dday = getDday(program.deadline);
   const color = urgencyColor(dday);
+  const catStyle = CATEGORY_COLORS[program.category] || { color: BLUE, bg: BLUE_SOFT, bg2: BLUE_SOFT };
+  const CatIcon = CATEGORY_ICON[program.category] || Wallet;
   return (
     <div>
-      <SectionHeader title={program.name} onBack={onBack} />
-      <div className="rounded-xl border p-4 mb-3" style={{ borderColor: BORDER }}>
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: BLUE_SOFT, color: BLUE }}>{program.category}</span>
-          <span className="text-[11px]" style={{ color: MUTED }}><MapPin size={10} className="inline -mt-0.5" /> {program.region}</span>
+      <SectionHeader title="지원금 상세" onBack={onBack} />
+      <div
+        className="relative overflow-hidden rounded-[24px] p-4 mb-3 flex items-center gap-3.5"
+        style={{ background: `linear-gradient(135deg, ${catStyle.bg}55 0%, #FFFFFF 85%)`, border: "1px solid #EEF0F6" }}
+      >
+        <div
+          className="w-14 h-14 rounded-full flex items-center justify-center shrink-0 relative overflow-hidden"
+          style={{
+            background: `linear-gradient(135deg, ${catStyle.bg2}, ${catStyle.bg})`,
+            boxShadow: `0 6px 14px ${catStyle.bg}55, inset 0 -3px 6px rgba(0,0,0,0.12)`,
+          }}
+        >
+          <div className="absolute -top-2 -left-2 w-7 h-7 rounded-full" style={{ background: "rgba(255,255,255,0.25)" }} />
+          <CatIcon size={24} color={catStyle.color} strokeWidth={2.3} className="relative" />
         </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.8)", color: BLUE }}>{program.category}</span>
+            <span className="text-[11px]" style={{ color: MUTED }}><MapPin size={10} className="inline -mt-0.5" /> {program.region}</span>
+          </div>
+          <p className="text-[16.5px] font-bold leading-snug break-keep" style={{ color: TEXT }}>{program.name}</p>
+        </div>
+        <span
+          className="text-[11.5px] font-bold px-2 py-1 rounded-lg shrink-0 self-start tabular-nums"
+          style={program.recurring ? { background: GREEN_SOFT, color: GREEN } : dday < 0 ? { background: "#F1F2F5", color: MUTED } : { background: `${color}1A`, color }}
+        >
+          {program.recurring ? "상시" : dday >= 0 ? `D-${dday}` : "마감"}
+        </span>
+      </div>
+      <div className="rounded-[20px] p-4 mb-3" style={CARD}>
         <ConditionRow ok text={`지원대상: ${program.target}`} />
         <ConditionRow ok text={`지원금액: ${program.amountLabel}`} />
         <div className="flex items-start gap-2 py-1.5">
@@ -691,8 +729,8 @@ function SimpleDetail({ program, onBack }) {
         </div>
       </div>
       <div
-        className="rounded-xl border p-3.5 flex items-start gap-2"
-        style={program.verified ? { borderColor: BORDER, background: GREEN_SOFT } : { borderColor: BORDER, background: "#FAFAFA" }}
+        className="rounded-[20px] p-4 flex items-start gap-2"
+        style={program.verified ? { background: GREEN_SOFT } : { background: "#F6F7FA" }}
       >
         <Info size={14} color={program.verified ? GREEN : MUTED} className="shrink-0 mt-0.5" />
         <p className="text-[12px]" style={{ color: program.verified ? GREEN : MUTED }}>
@@ -706,8 +744,8 @@ function SimpleDetail({ program, onBack }) {
         href="https://www.sbiz24.kr"
         target="_blank"
         rel="noopener noreferrer"
-        className="w-full mt-4 py-3.5 rounded-xl text-white text-sm font-bold flex items-center justify-center gap-1.5"
-        style={{ background: BLUE }}
+        className="w-full mt-5 py-4 rounded-2xl text-white text-[14.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] transition-transform"
+        style={BTN_PRIMARY}
       >
         신청하러 가기 <ExternalLink size={15} />
       </a>
@@ -905,7 +943,7 @@ function ExchangeRateContent() {
             <button
               onClick={load}
               className="inline-flex items-center gap-1 text-[12.5px] font-semibold px-3 py-2 rounded-full"
-              style={{ background: BLUE, color: "white" }}
+              style={CHIP_ON}
             >
               <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} /> 다시 시도
             </button>
@@ -1058,7 +1096,7 @@ function InterestRateContent({ onOpenCalculator }) {
       </div>
 
       <p className="font-bold mb-2.5" style={{ color: TEXT, fontSize: 15 }}>소상공인 정책자금 평균 금리</p>
-      <div className="rounded-2xl p-4 mb-5" style={{ background: "#FAFAFB" }}>
+      <div className="rounded-[20px] p-4 mb-5" style={CARD}>
         {policyRates.map((r, i) => (
           <div key={r.label} className="py-2.5" style={i > 0 ? { borderTop: `1px solid ${BORDER}` } : {}}>
             <p className="mb-1 leading-snug font-semibold" style={{ color: TEXT, fontSize: 15 }}>{r.label}</p>
@@ -1068,7 +1106,7 @@ function InterestRateContent({ onOpenCalculator }) {
       </div>
 
       <p className="font-bold mb-2.5" style={{ color: TEXT, fontSize: 15 }}>은행별 대출금리 비교</p>
-      <div className="rounded-2xl p-4 mb-5" style={{ background: "#FAFAFB" }}>
+      <div className="rounded-[20px] p-4 mb-5" style={CARD}>
         <p className="text-[12px] leading-relaxed mb-3" style={{ color: MUTED }}>
           은행마다 신용등급·산정 방식이 달라서, 은행별 정확한 금리는 은행연합회가 매달 공시하는 공식 자료에서 바로 비교하는 게 가장 정확해요.
         </p>
@@ -1121,7 +1159,7 @@ function InterestRateContent({ onOpenCalculator }) {
         <button
           onClick={onOpenCalculator}
           className="w-full py-3.5 rounded-2xl mb-5 flex items-center justify-center gap-2 font-bold"
-          style={{ background: BLUE, color: "white", fontSize: 13.5 }}
+          style={{ ...BTN_PRIMARY, fontSize: 13.5 }}
         >
           지금 금리로 내 대출이자 계산해보기 <ChevronRight size={15} />
         </button>
@@ -1152,7 +1190,7 @@ function RateAndExchangeScreen({ onBack, onOpenCalculator }) {
             key={t.key}
             onClick={() => setTab(t.key)}
             className="px-3 py-2.5 rounded-xl text-[13px] font-semibold text-center"
-            style={tab === t.key ? { background: BLUE, color: "white" } : { background: "#F2F3F7", color: MUTED }}
+            style={tab === t.key ? CHIP_ON : CHIP_OFF}
           >
             {t.label}
           </button>
@@ -1359,7 +1397,7 @@ function FaqSearchScreen({ onBack }) {
     <div>
       <HeroHeader icon={HelpCircle} color="#7A46D6" title="도움말 · Q&A" subtitle="자주 묻는 질문을 검색해서 바로 확인해요" onBack={onBack} />
 
-      <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl mb-3" style={{ background: "#F5F6F9" }}>
+      <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl mb-3" style={{ background: INPUT_BG }}>
         <Search size={16} color={MUTED} />
         <input
           value={query}
@@ -1375,7 +1413,7 @@ function FaqSearchScreen({ onBack }) {
         )}
       </div>
 
-      <div className="flex gap-1.5 overflow-x-auto pb-1 mb-4 -mx-5 px-5" style={{ scrollbarWidth: "none" }}>
+      <div className="flex gap-1.5 overflow-x-auto pt-1 pb-3 -mt-1 mb-2 -mx-5 px-5" style={{ scrollbarWidth: "none" }}>
         {categories.map((c) => {
           const active = category === c;
           return (
@@ -1383,7 +1421,7 @@ function FaqSearchScreen({ onBack }) {
               key={c}
               onClick={() => setCategory(c)}
               className="px-3 py-1.5 rounded-full text-xs whitespace-nowrap shrink-0"
-              style={active ? { background: "#F3E7D3", color: "#7A5A2E" } : { background: "#F5F6F9", color: MUTED }}
+              style={active ? CHIP_ON : CHIP_OFF}
             >
               {c}
             </button>
@@ -1416,7 +1454,7 @@ function FaqSearchScreen({ onBack }) {
         </div>
       )}
 
-      <div className="rounded-xl p-4 mt-6 flex items-center gap-3" style={{ background: "#FAFAFB" }}>
+      <div className="rounded-[20px] p-4 mt-6 flex items-center gap-3" style={CARD}>
         <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: GREEN_SOFT }}>
           <Phone size={17} color={GREEN} />
         </div>
@@ -1473,7 +1511,7 @@ function DocumentsScreen({ onBack }) {
         {COMMON_DOCUMENTS.map((doc) => {
           const isChecked = checked.has(doc.name);
           return (
-            <div key={doc.name} className="rounded-xl p-3.5 flex items-start gap-3" style={{ background: "#FAFAFB" }}>
+            <div key={doc.name} className="rounded-[20px] p-3.5 flex items-start gap-3" style={CARD}>
               <button
                 onClick={() => toggle(doc.name)}
                 className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 border"
@@ -1531,7 +1569,7 @@ function TaxScheduleScreen({ onBack, favorites }) {
           const dday = getDday(item.deadline);
           const color = urgencyColor(dday);
           return (
-            <div key={i} className="rounded-xl p-3.5 flex items-center gap-3" style={{ background: "#FAFAFB" }}>
+            <div key={i} className="rounded-[20px] p-3.5 flex items-center gap-3" style={CARD}>
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
                 style={{ background: item.type === "tax" ? "#E7F7EF" : BLUE_SOFT }}
@@ -1635,11 +1673,11 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
       <div className="-mx-5 px-5 mb-3.5">
         <div
           ref={provinceScrollRef}
-          className="flex gap-1.5 overflow-x-auto pb-1"
+          className="flex gap-1.5 overflow-x-auto pt-1 pb-3 -mt-1 -mb-2"
           style={{
             scrollbarWidth: "none",
-            WebkitMaskImage: "linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%)",
-            maskImage: "linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%)",
+            WebkitMaskImage: "linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%)",
+            maskImage: "linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%)",
           }}
         >
           {provinces.map((p) => (
@@ -1650,8 +1688,8 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
               className="shrink-0 px-3 py-1.5 rounded-full text-[12.5px] font-semibold"
               style={
                 activeProvince === p
-                  ? { background: BLUE, color: "white" }
-                  : { background: "#F2F3F7", color: MUTED }
+                  ? CHIP_ON
+                  : CHIP_OFF
               }
             >
               {p}
@@ -1738,7 +1776,7 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
                   className="flex-1 py-2.5 rounded-xl text-center text-[12.5px] font-bold flex items-center justify-center gap-1"
                   style={
                     expandedMap === c.name
-                      ? { background: BLUE, color: "white" }
+                      ? CHIP_ON
                       : { background: "#F2F3F7", color: TEXT }
                   }
                 >
@@ -1782,7 +1820,7 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
               key={n}
               onClick={() => setPage(n)}
               className="w-8 h-8 rounded-full text-[13px] font-bold"
-              style={n === page ? { background: BLUE, color: "white" } : { color: MUTED }}
+              style={n === page ? CHIP_ON : { color: MUTED }}
             >
               {n}
             </button>
@@ -1882,8 +1920,8 @@ function DiagnosisWizard({ onBack, onComplete }) {
             <button
               key={opt.key}
               onClick={() => pick(opt.key)}
-              className="py-2.5 rounded-lg border text-sm"
-              style={{ borderColor: BORDER, color: TEXT }}
+              className="py-3.5 rounded-2xl text-[14px] font-semibold active:scale-[0.97] transition-transform"
+              style={{ ...CARD, color: TEXT }}
             >
               {opt.label}
             </button>
@@ -1895,10 +1933,11 @@ function DiagnosisWizard({ onBack, onComplete }) {
             <button
               key={opt.key}
               onClick={() => pick(opt.key)}
-              className="w-full text-left px-4 py-3.5 rounded-xl border text-sm font-medium"
-              style={{ borderColor: BORDER, color: TEXT }}
+              className="w-full text-left px-4 py-4 rounded-2xl text-[14px] font-semibold flex items-center justify-between active:scale-[0.99] transition-transform"
+              style={{ ...CARD, color: TEXT }}
             >
               {opt.label}
+              <ChevronRight size={16} color="#C3C8D4" />
             </button>
           ))}
         </div>
@@ -1958,7 +1997,7 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
       <button
         onClick={onViewAll}
         className="w-full flex items-center justify-center gap-1 py-2.5 mb-4 rounded-xl text-[12px] font-semibold"
-        style={{ background: "#F5F6F9", color: MUTED }}
+        style={CHIP_OFF}
       >
         진단 조건과 상관없이 전체 지원금 보기 <ChevronRight size={13} />
       </button>
@@ -1975,7 +2014,7 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
               key={s.key}
               onClick={() => setStatusFilter(s.key)}
               className="flex-1 py-2 rounded-xl text-xs font-semibold"
-              style={active ? { background: "#F3E7D3", color: "#7A5A2E" } : { background: "#F5F6F9", color: MUTED }}
+              style={active ? CHIP_ON : CHIP_OFF}
             >
               {s.label} <span style={{ opacity: 0.75 }}>({s.count})</span>
             </button>
@@ -2000,8 +2039,8 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
               <button
                 key={p.id}
                 onClick={() => onSelectProgram(p.id)}
-                className="w-full text-left rounded-xl p-3.5 flex items-center gap-3"
-                style={{ background: "#FAFAFB" }}
+                className="w-full text-left rounded-[20px] p-3.5 flex items-center gap-3"
+                style={CARD}
               >
                 <div
                   className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
@@ -2159,7 +2198,7 @@ function CalcNumberField({ label, value, onChange, suffix, placeholder }) {
   return (
     <div className="mb-4">
       <p className="text-[13px] font-semibold mb-1.5" style={{ color: TEXT }}>{label}</p>
-      <div className="flex items-center rounded-xl px-3.5 py-3" style={{ background: "#F5F6F9" }}>
+      <div className="flex items-center rounded-xl px-3.5 py-3" style={{ background: INPUT_BG }}>
         <input
           type="text"
           inputMode="decimal"
@@ -2314,8 +2353,8 @@ function LoanInterestCalc() {
             className="px-3 py-2.5 rounded-xl text-[12.5px] font-semibold text-center whitespace-pre-line leading-snug"
             style={
               method === m.key
-                ? { background: BLUE, color: "white" }
-                : { background: "#F2F3F7", color: MUTED }
+                ? CHIP_ON
+                : CHIP_OFF
             }
           >
             {m.label}
@@ -2381,7 +2420,7 @@ function InsuranceCalc() {
 
       <p className="text-[13px] font-bold mb-2" style={{ color: TEXT }}>항목별 내역</p>
       <div className="rounded-2xl overflow-hidden mb-4" style={{ border: `1px solid ${BORDER}` }}>
-        <div className="grid grid-cols-3 px-3.5 py-2" style={{ background: "#F5F6F9" }}>
+        <div className="grid grid-cols-3 px-3.5 py-2" style={{ background: INPUT_BG }}>
           <span className="text-[11.5px] font-semibold" style={{ color: MUTED }}>항목</span>
           <span className="text-[11.5px] font-semibold text-right" style={{ color: MUTED }}>근로자 부담</span>
           <span className="text-[11.5px] font-semibold text-right" style={{ color: MUTED }}>사업주 부담</span>
@@ -2563,11 +2602,11 @@ function CalculatorToolkit({ onBack }) {
       <div className="-mx-5 px-5 mb-4">
         <div
           ref={tabScrollRef}
-          className="flex gap-1.5 overflow-x-auto pb-1"
+          className="flex gap-1.5 overflow-x-auto pt-1 pb-3 -mt-1 -mb-2"
           style={{
             scrollbarWidth: "none",
-            WebkitMaskImage: "linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%)",
-            maskImage: "linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%)",
+            WebkitMaskImage: "linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%)",
+            maskImage: "linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%)",
           }}
         >
           {TABS.map((t) => (
@@ -2578,8 +2617,8 @@ function CalculatorToolkit({ onBack }) {
               className="shrink-0 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap"
               style={
                 tab === t.key
-                  ? { background: BLUE, color: "white" }
-                  : { background: "#F2F3F7", color: MUTED }
+                  ? CHIP_ON
+                  : CHIP_OFF
               }
             >
               {t.label}
@@ -2697,7 +2736,7 @@ function NewsDetailScreen({ news, allNews, onBack, onSelectNews }) {
       </div>
 
       <div className="rounded-2xl overflow-hidden mb-2" style={{ border: `1px solid ${BORDER}` }}>
-        <div className="flex items-center justify-between px-3 py-2" style={{ background: "#F5F6F9" }}>
+        <div className="flex items-center justify-between px-3 py-2" style={{ background: INPUT_BG }}>
           <span className="text-[11.5px] font-medium truncate" style={{ color: MUTED }}>{domain}</span>
         </div>
         {!iframeFailed ? (
@@ -2737,8 +2776,8 @@ function NewsDetailScreen({ news, allNews, onBack, onSelectNews }) {
               <button
                 key={n.id}
                 onClick={() => onSelectNews(n)}
-                className="w-full text-left rounded-xl p-3 flex items-center justify-between gap-2"
-                style={{ background: "#FAFAFB" }}
+                className="w-full text-left rounded-[20px] p-3 flex items-center justify-between gap-2"
+                style={CARD}
               >
                 <span className="text-[12.5px] font-semibold leading-snug flex-1" style={{ color: TEXT }}>{n.title}</span>
                 <ChevronRight size={15} color={MUTED} className="shrink-0" />
@@ -3424,7 +3463,7 @@ export default function App() {
               key={s.key}
               onClick={() => setStatusFilter(s.key)}
               className="flex-1 py-2 rounded-xl text-xs font-semibold"
-              style={active ? { background: "#F3E7D3", color: "#7A5A2E" } : { background: "#F5F6F9", color: MUTED }}
+              style={active ? CHIP_ON : CHIP_OFF}
             >
               {s.label} <span style={{ opacity: 0.75 }}>({s.count})</span>
             </button>
@@ -3434,7 +3473,7 @@ export default function App() {
 
       {/* Search + region */}
       <div className="flex items-center gap-2 mb-3">
-        <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: "#F5F6F9" }}>
+        <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: INPUT_BG }}>
           <Search size={16} color={MUTED} />
           <input
             value={query}
@@ -3448,7 +3487,7 @@ export default function App() {
         <button
           onClick={openPicker}
           className="flex items-center gap-1 px-3 py-2.5 rounded-xl shrink-0"
-          style={{ background: "#F5F6F9" }}
+          style={{ background: INPUT_BG }}
         >
           <MapPin size={15} color={TEXT} />
           <span className="text-[13px] font-medium" style={{ color: TEXT }}>{region}</span>
@@ -3456,7 +3495,7 @@ export default function App() {
       </div>
 
       {/* Category chips */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 mb-4 -mx-5 px-5">
+      <div className="flex gap-1.5 overflow-x-auto pt-1 pb-3 -mt-1 mb-2 -mx-5 px-5">
         {categories.map((c) => {
           const active = category === c;
           return (
@@ -3464,7 +3503,7 @@ export default function App() {
               key={c}
               onClick={() => setCategory(c)}
               className="px-3 py-1.5 rounded-full text-xs whitespace-nowrap shrink-0"
-              style={active ? { background: "#F3E7D3", color: "#7A5A2E" } : { background: "#F5F6F9", color: MUTED }}
+              style={active ? CHIP_ON : CHIP_OFF}
             >
               {c}
             </button>
@@ -3497,7 +3536,7 @@ export default function App() {
         <button
           onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
           className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11.5px] font-medium"
-          style={showFavoritesOnly ? { background: "#FDEDED", color: RED } : { background: "#F5F6F9", color: MUTED }}
+          style={showFavoritesOnly ? { background: "#FDEDED", color: RED } : CHIP_OFF}
         >
           <Heart size={12} fill={showFavoritesOnly ? RED : "none"} color={showFavoritesOnly ? RED : MUTED} />
           즐겨찾기 {favorites.size > 0 && `(${favorites.size})`}
@@ -3520,8 +3559,8 @@ export default function App() {
             <button
               key={p.id}
               onClick={() => setScreen({ view: "detail", id: p.id })}
-              className="w-full text-left rounded-xl p-3.5 flex items-center gap-3"
-              style={{ background: "#FAFAFB" }}
+              className="w-full text-left rounded-[20px] p-3.5 flex items-center gap-3"
+              style={CARD}
             >
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center shrink-0 relative overflow-hidden"
@@ -3542,12 +3581,21 @@ export default function App() {
                   )}
                   {(p.detailed || p.verified) && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: GREEN }} />}
                 </div>
-                <p className="text-[18px] font-extrabold truncate" style={{ color: TEXT }}>{p.name}</p>
-                <p className="text-[12px] font-normal mt-1" style={{ color: MUTED }}>{p.region} · {p.amountLabel}</p>
+                <p className="text-[15px] font-bold leading-snug line-clamp-2 break-keep" style={{ color: TEXT }}>{p.name}</p>
+                <p className="text-[12px] mt-1 truncate" style={{ color: MUTED }}>{p.region} · {p.amountLabel}</p>
               </div>
-              <div className="text-right shrink-0">
-                <p className="text-[13px] font-bold" style={{ color: p.recurring ? GREEN : color }}>{p.recurring ? "상시접수" : dday >= 0 ? `D-${dday}` : "마감"}</p>
-              </div>
+              <span
+                className="text-[11px] font-bold px-2 py-1 rounded-lg shrink-0 tabular-nums"
+                style={
+                  p.recurring
+                    ? { background: GREEN_SOFT, color: GREEN }
+                    : dday < 0
+                    ? { background: "#F1F2F5", color: MUTED }
+                    : { background: `${color}1A`, color }
+                }
+              >
+                {p.recurring ? "상시" : dday >= 0 ? `D-${dday}` : "마감"}
+              </span>
               <button onClick={(e) => { e.stopPropagation(); toggleFavoriteId(p.id); }} className="shrink-0 p-0.5">
                 <Heart size={16} fill={favorites.has(p.id) ? RED : "none"} color={favorites.has(p.id) ? RED : "#C7CBD6"} />
               </button>
@@ -3648,8 +3696,8 @@ export default function App() {
                   <button
                     key={p.id}
                     onClick={() => setScreen({ view: "detail", id: p.id })}
-                    className="w-full text-left rounded-xl p-3.5 flex items-center gap-3"
-                    style={{ background: "#FAFAFB" }}
+                    className="w-full text-left rounded-[20px] p-3.5 flex items-center gap-3"
+                    style={CARD}
                   >
                     <div
                       className="w-14 h-14 rounded-full flex items-center justify-center shrink-0 relative overflow-hidden"
@@ -3698,7 +3746,7 @@ export default function App() {
           <>
             <HeroHeader icon={Newspaper} color="#7A46D6" title="소상공인 정책 뉴스" subtitle="공식 출처와 주요 매체 기사만 엄선해서 모았어요" onBack={() => setMainTab("home")} />
 
-            <div className="flex gap-1.5 overflow-x-auto pb-1 mb-4 -mx-4 px-4" style={{ scrollbarWidth: "none" }}>
+            <div className="flex gap-1.5 overflow-x-auto pt-1 pb-3 -mt-1 mb-2 -mx-4 px-4" style={{ scrollbarWidth: "none" }}>
               {NEWS_CATEGORIES.map((c) => (
                 <button
                   key={c}
@@ -3706,8 +3754,8 @@ export default function App() {
                   className="shrink-0 px-3 py-1.5 rounded-full text-[12.5px] font-semibold"
                   style={
                     newsCategory === c
-                      ? { background: BLUE, color: "white" }
-                      : { background: "#F2F3F7", color: MUTED }
+                      ? CHIP_ON
+                      : CHIP_OFF
                   }
                 >
                   {c}
@@ -3764,8 +3812,8 @@ export default function App() {
                   <button
                     key={n.id}
                     onClick={() => setScreen({ view: "newsDetail", id: n.id })}
-                    className="block w-full text-left rounded-2xl p-4"
-                    style={{ background: "#FAFAFB" }}
+                    className="block w-full text-left rounded-[20px] p-4"
+                    style={CARD}
                   >
                     <div className="flex items-center gap-1.5 mb-1.5">
                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: style.bg, color: style.color }}>{n.category}</span>
@@ -3816,7 +3864,7 @@ export default function App() {
           </div>
 
           <p className="text-[12px] font-bold mb-2 px-1" style={{ color: MUTED }}>내 정보</p>
-          <div className="rounded-xl p-4 mb-3 flex items-center gap-3" style={{ background: "#FAFAFB" }}>
+          <div className="rounded-[20px] p-4 mb-3 flex items-center gap-3" style={CARD}>
             <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: BLUE_SOFT }}>
               <MapPin size={17} color={BLUE} />
             </div>
@@ -3827,8 +3875,8 @@ export default function App() {
           </div>
           <button
             onClick={() => setScreen({ view: "diagnosis" })}
-            className="w-full text-left rounded-xl p-4 mb-3 flex items-center justify-between gap-3"
-            style={{ background: "#FAFAFB" }}
+            className="w-full text-left rounded-[20px] p-4 mb-3 flex items-center justify-between gap-3"
+            style={CARD}
           >
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "#FCEAC7" }}>
@@ -3843,7 +3891,7 @@ export default function App() {
             </div>
             <ChevronRight size={16} color={MUTED} className="shrink-0" />
           </button>
-          <div className="rounded-xl p-4 mb-1 flex items-center justify-between" style={{ background: "#FAFAFB" }}>
+          <div className="rounded-[20px] p-4 mb-1 flex items-center justify-between" style={CARD}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "#FDEEE9" }}>
                 <Bell size={17} color="#E5674D" />
@@ -3862,7 +3910,7 @@ export default function App() {
           </p>
 
           <p className="text-[12px] font-bold mb-2 px-1 mt-4" style={{ color: MUTED }}>약관·정보</p>
-          <div className="rounded-xl overflow-hidden mb-3" style={{ background: "#FAFAFB" }}>
+          <div className="rounded-[20px] overflow-hidden mb-3" style={CARD}>
             {[
               { key: "privacy", label: "개인정보처리방침" },
               { key: "terms", label: "이용약관" },
