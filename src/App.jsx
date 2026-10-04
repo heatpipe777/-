@@ -4114,36 +4114,46 @@ export default function App() {
             style={{ zIndex: 50, display: typing ? "none" : undefined, background: "linear-gradient(to bottom, rgba(255,255,255,0) 0, #fff 14px)" }}
           >
             <div className="w-full max-w-md md:max-w-xl">
+              {/* 하단 탭바 — 앱 전체 파란 톤에 맞춘 흰 바, 선택된 탭은 파란 아이콘 + 연한 파란 배경 */}
               <div
-                className="flex rounded-[22px] px-1.5 py-1.5"
-                style={{ background: "#FFF9FB", border: "1px solid #F6E6EC", boxShadow: "0 8px 24px rgba(232,116,154,0.18)" }}
+                className="flex rounded-[24px] px-1.5 py-1.5"
+                style={{ background: "rgba(255,255,255,0.96)", border: "1px solid #EEF0F6", boxShadow: "0 8px 28px rgba(40,60,120,0.12)" }}
               >
                 {[
-                  { key: "home", label: "홈", icon: Home },
-                  { key: "favorites", label: "즐겨찾기", icon: Heart },
-                  { key: "news", label: "뉴스", icon: Newspaper },
-                  { key: "my", label: "MY", icon: User },
-                ].map((t) => {
-                  const active = mainTab === t.key;
-                  return (
-                    <button
-                      key={t.key}
-                      onClick={() => setMainTab(t.key)}
-                      className="flex-1 flex flex-col items-center gap-0.5 py-2 rounded-[18px]"
-                      style={active ? { background: "linear-gradient(135deg, #FB7EA8, #F2629A)", boxShadow: "0 4px 12px rgba(242,98,154,0.35)" } : {}}
-                    >
+                  { key: "home", label: "홈", icon: Home, active: mainTab === "home" && homeScreen === "hub", go: () => { setMainTab("home"); setHomeScreen("hub"); } },
+                  { key: "list", label: "지원금", icon: List, active: mainTab === "home" && homeScreen === "list", go: () => { setMainTab("home"); setStatusFilter("all"); setHomeScreen("list"); } },
+                  { key: "favorites", label: "즐겨찾기", icon: Heart, badge: favorites.size, active: mainTab === "favorites", go: () => setMainTab("favorites") },
+                  { key: "news", label: "뉴스", icon: Newspaper, active: mainTab === "news", go: () => setMainTab("news") },
+                  { key: "my", label: "MY", icon: User, active: mainTab === "my", go: () => setMainTab("my") },
+                ].map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={t.go}
+                    aria-label={t.label}
+                    className="flex-1 flex flex-col items-center gap-0.5 py-1.5 rounded-[18px] transition-colors"
+                    style={t.active ? { background: BLUE_SOFT } : {}}
+                  >
+                    <span className="relative">
                       <t.icon
-                        size={18}
-                        color={active ? "white" : "#8E94A3"}
-                        strokeWidth={active ? 2.2 : 1.75}
-                        fill={t.key === "favorites" && active ? "white" : "none"}
+                        size={20}
+                        color={t.active ? BLUE : "#9AA1B2"}
+                        strokeWidth={t.active ? 2.3 : 1.8}
+                        fill={t.key === "favorites" && t.active ? BLUE : "none"}
                       />
-                      <span className="text-[10.5px]" style={{ color: active ? "white" : "#8E94A3", fontWeight: active ? 700 : 400 }}>
-                        {t.label}
-                      </span>
-                    </button>
-                  );
-                })}
+                      {t.badge > 0 && (
+                        <span
+                          className="absolute -top-2 -right-3.5 min-w-[16px] h-4 px-1 rounded-full text-[9.5px] font-bold text-white flex items-center justify-center tabular-nums"
+                          style={{ background: RED, boxShadow: "0 0 0 2px white" }}
+                        >
+                          {t.badge > 99 ? "99+" : t.badge}
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-[10.5px]" style={{ color: t.active ? BLUE : "#9AA1B2", fontWeight: t.active ? 700 : 500 }}>
+                      {t.label}
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
