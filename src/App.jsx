@@ -303,22 +303,48 @@ function parseAmount(label) {
 }
 
 // 세금 신고 일정 — 개인 일반과세자 기준 대략적인 날짜 (간이과세자·법인·성실신고확인대상자는 기한이 달라요)
+// 소상공인이 챙겨야 할 세금·보험 일정 (개인사업자 기준)
+// monthDay: 매년 같은 날 / monthly: 매월 그 날짜 / who: 누구에게 해당하는지
 const TAX_SCHEDULE_BASE = [
-  { name: "부가가치세 예정고지·납부", monthDay: "04-25", note: "1기 예정고지분 (고지서로 납부, 별도 신고 없음)" },
-  { name: "부가가치세 확정신고·납부", monthDay: "07-25", note: "1기 확정신고 (1~6월분)" },
-  { name: "부가가치세 예정고지·납부", monthDay: "10-25", note: "2기 예정고지분 (고지서로 납부, 별도 신고 없음)" },
-  { name: "부가가치세 확정신고·납부", monthDay: "01-25", note: "2기 확정신고 (7~12월분)" },
-  { name: "종합소득세 신고·납부", monthDay: "05-31", note: "전년도 사업소득 등 종합소득 신고" },
-  { name: "사업장현황신고", monthDay: "02-10", note: "면세사업자만 해당" },
+  { name: "원천세 신고·납부", monthly: 10, who: "직원 있음", note: "전달에 준 월급에서 뗀 세금 (반기 납부 승인 사업자는 1·7월)" },
+  { name: "4대보험료 납부", monthly: 10, who: "직원 있음", note: "국민연금·건강·고용·산재보험료 (자동이체 권장)" },
+  { name: "부가가치세 확정신고·납부", monthDay: "01-25", who: "모든 사업자", note: "2기 확정 (7~12월분) · 간이과세자는 1년분을 이때 한 번에" },
+  { name: "사업장현황신고", monthDay: "02-10", who: "면세사업자", note: "병의원·학원 등 부가세 면세사업자만 해당" },
+  { name: "근로소득 지급명세서 제출", monthDay: "03-10", who: "직원 있음", note: "작년에 지급한 근로소득 내역 제출" },
+  { name: "부가가치세 예정고지·납부", monthDay: "04-25", who: "일반과세자", note: "1기 예정고지분 (고지서로 납부, 별도 신고 없음)" },
+  { name: "종합소득세 신고·납부", monthDay: "05-31", who: "모든 사업자", note: "작년 소득 신고 · 지방소득세도 함께 신고" },
+  { name: "근로·자녀장려금 정기 신청", monthDay: "05-31", who: "해당자", note: "소득·재산 요건을 충족하면 5월 한 달간 신청" },
+  { name: "종합소득세 신고 (성실신고 대상)", monthDay: "06-30", who: "성실신고 대상", note: "매출이 업종별 기준 이상인 성실신고확인 대상자" },
+  { name: "자동차세 (1기분)", monthDay: "06-30", who: "차량 보유", note: "1~6월분 · 1월에 연납하면 할인돼요" },
+  { name: "부가가치세 확정신고·납부", monthDay: "07-25", who: "일반과세자", note: "1기 확정 (1~6월분)" },
+  { name: "재산세 (건물분)", monthDay: "07-31", who: "사업장 소유", note: "건물·주택 1기분" },
+  { name: "재산세 (토지분)", monthDay: "09-30", who: "사업장 소유", note: "토지·주택 2기분" },
+  { name: "부가가치세 예정고지·납부", monthDay: "10-25", who: "일반과세자", note: "2기 예정고지분 (고지서로 납부, 별도 신고 없음)" },
+  { name: "종합소득세 중간예납", monthDay: "11-30", who: "모든 사업자", note: "올해 소득세 일부를 미리 냄 (고지서로 납부)" },
+  { name: "자동차세 (2기분)", monthDay: "12-31", who: "차량 보유", note: "7~12월분" },
 ];
-function nextOccurrenceDate(monthDay) {
+function nextOccurrenceDate(item) {
   const year = TODAY.getFullYear();
-  let d = parseLocalDate(`${year}-${monthDay}`);
-  if (d < TODAY) d = parseLocalDate(`${year + 1}-${monthDay}`);
+  if (item.monthly) {
+    const m = TODAY.getMonth();
+    let d = new Date(year, m, item.monthly);
+    if (d < TODAY) d = new Date(year, m + 1, item.monthly);
+    return formatLocalDate(d);
+  }
+  let d = parseLocalDate(`${year}-${item.monthDay}`);
+  if (d < TODAY) d = parseLocalDate(`${year + 1}-${item.monthDay}`);
   return formatLocalDate(d);
 }
+// 마감일이 토·일요일이면 다음 월요일까지 미뤄져요 (공휴일은 홈택스에서 확인)
+function shiftWeekend(dateStr) {
+  const d = parseLocalDate(dateStr);
+  const add = d.getDay() === 6 ? 2 : d.getDay() === 0 ? 1 : 0;
+  if (!add) return { deadline: dateStr, shifted: false };
+  d.setDate(d.getDate() + add);
+  return { deadline: formatLocalDate(d), shifted: true };
+}
 function buildTaxSchedule() {
-  return TAX_SCHEDULE_BASE.map((t) => ({ ...t, deadline: nextOccurrenceDate(t.monthDay) }));
+  return TAX_SCHEDULE_BASE.map((t) => ({ ...t, ...shiftWeekend(nextOccurrenceDate(t)) }));
 }
 let TAX_SCHEDULE = buildTaxSchedule();
 
@@ -1680,48 +1706,89 @@ function CenterMapPreview({ center }) {
     </div>
   );
 }
-// 자주 묻는 질문 (앱 사용법 + 지원금 관련)
+// 자주 묻는 질문 (지원금 기본 상식 + 세금 + 앱 사용법)
+// top: true 는 "많이 묻는 질문"으로 맨 위에 보여줘요
 const FAQ_DATA = [
-  { category: "앱 이용", q: "회원가입이 필요한가요?", a: "아니요. 로그인 없이 바로 사용할 수 있어요." },
-  { category: "앱 이용", q: "즐겨찾기는 어디에 저장되나요?", a: "이 기기에만 저장돼요. 다른 기기에서는 안 보이니, 중요한 지원금은 따로 메모해두시는 게 안전해요." },
-  { category: "앱 이용", q: "마감 임박 알림은 실제로 휴대폰에 오나요?", a: "네, 안드로이드 앱에서 받을 수 있어요. MY 탭에서 '마감 임박 알림'을 켜고, 즐겨찾기 탭에서 원하는 지원금의 🔔를 누르면 마감 3일 전 오전 9시에 알려드려요. 상시접수 지원금은 정해진 마감일이 없어서 알림 대상이 아니에요. (웹 버전에서는 알림이 오지 않아요)" },
-  { category: "앱 이용", q: "개인정보를 수집하나요?", a: "로그인이 없어서 개인을 식별할 수 있는 정보를 서버에 저장하지 않아요. 자세한 내용은 MY 탭의 개인정보처리방침에서 확인할 수 있어요." },
-  { category: "지원금", q: "신청은 앱에서 바로 되나요?", a: "아니요. 이 앱은 정보를 모아서 보여주는 역할이에요. 실제 신청은 각 지원금의 '신청하러 가기' 버튼을 눌러 이동한 공식 사이트에서 진행해요." },
-  { category: "지원금", q: "지원금 여러 개를 동시에 받을 수 있나요?", a: "지원사업마다 달라요. 일부는 중복 지원이 제한되니, 신청 전에 각 지원금 상세화면의 지원대상을 꼭 확인하세요." },
-  { category: "지원금", q: "여기 없는 지원금도 있나요?", a: "네. 전국에는 이 앱에 담긴 것보다 훨씬 많은 지원사업이 있어요. 지역센터나 소상공인24 공식 사이트에서 추가로 찾아보시는 것도 추천해요." },
-  { category: "지원금", q: "정보가 예전 거 아닌가요?", a: "지원사업은 예산 상황에 따라 자주 바뀌어요. 앱에 나온 마감일·금액이 실제와 다를 수 있으니, 신청 전에는 반드시 공식 사이트에서 최종 확인하세요." },
-  { category: "진단", q: "맞춤 진단은 얼마나 정확한가요?", a: "지역 조건은 정확히 반영되지만, 매출·업력 조건은 데이터가 구조화된 일부 지원금에만 정확히 적용돼요. 최종 확인은 상세화면에서 꼭 다시 하세요." },
-  { category: "진단", q: "진단 결과를 다시 받고 싶어요", a: "MY 탭 > 맞춤 진단에서 언제든 다시 진행할 수 있어요." },
+  { category: "지원금 기본", top: true, q: "저도 '소상공인'에 해당하나요?", a: "상시근로자(사장님 제외) 수로 판단해요. 음식점·도소매·서비스업 등은 5명 미만, 제조·건설·운수·광업은 10명 미만이면 소상공인이에요. 여기에 업종별 매출 기준(소기업 기준) 이하여야 해요. 정확한 확인은 '중소기업현황정보시스템(sminfo.mss.go.kr)'에서 소상공인 확인서를 발급받아 보시면 돼요." },
+  { category: "지원금 기본", top: true, q: "지원금과 정책자금(대출)은 뭐가 달라요?", a: "지원금·바우처는 갚지 않아도 되는 돈이에요. 정책자금은 시중은행보다 낮은 금리로 빌려주는 '대출'이라 나중에 갚아야 해요. 앱에서 '경영·보증·신용' 분야는 대부분 대출이고, '고정비·에너지·고용' 분야는 대부분 갚지 않는 지원이에요." },
+  { category: "지원금 기본", top: true, q: "사업자등록 전(예비 창업)에도 받을 수 있나요?", a: "대부분의 소상공인 지원금은 사업자등록 후 운영 중인 분이 대상이에요. 창업 준비 단계라면 'K-스타트업(k-startup.go.kr)'의 예비창업 지원사업을 찾아보세요. 폐업 후 재창업을 준비 중이라면 재기 분야 지원금을 확인해 보세요." },
+  { category: "지원금 기본", q: "지원금 여러 개를 동시에 받을 수 있나요?", a: "지원사업마다 달라요. 같은 목적(예: 같은 기간의 인건비)으로 중복 지원은 대부분 막혀 있지만, 목적이 다르면 함께 받을 수 있는 경우가 많아요. 신청 전 공고문의 '중복 지원 제한' 항목을 꼭 확인하세요." },
+  { category: "지원금 기본", q: "세금을 밀린 게 있으면 못 받나요?", a: "국세·지방세 체납이 있으면 대부분의 지원금과 정책자금에서 제외돼요. 신청 전에 홈택스와 위택스에서 체납 여부를 확인하고, 있다면 먼저 납부하거나 분납 승인을 받아두세요." },
+  { category: "신청 방법", top: true, q: "신청은 앱에서 바로 되나요?", a: "아니요. 이 앱은 정보를 모아서 보여주는 역할이에요. 실제 신청은 각 지원금의 '신청하러 가기' 버튼을 눌러 이동한 공식 사이트(소상공인24, 신용보증재단 등)에서 진행해요." },
+  { category: "신청 방법", q: "신청할 때 어떤 서류가 필요해요?", a: "지원금마다 다르지만 사업자등록증명, 부가세 과세표준증명, 국세·지방세 완납증명서, 통장사본이 자주 쓰여요. 홈 화면의 '서류·양식 자료실'에서 체크리스트로 미리 챙겨두세요. 요즘은 국세청 자료를 자동으로 확인해서 서류 없이 신청되는 경우도 많아요." },
+  { category: "신청 방법", q: "온라인 신청이 어려워요. 직접 방문해도 되나요?", a: "네. 가까운 소상공인시장진흥공단 지역센터를 방문하면 신청을 도와드려요. 홈 화면의 '지역센터 찾기'에서 주소와 전화번호를 확인할 수 있어요. 일부 지자체 지원금은 시·군·구청이나 신용보증재단 지점에서 접수해요." },
+  { category: "신청 방법", q: "예산 소진 시 마감이라는 게 무슨 뜻이에요?", a: "정해진 예산이 다 쓰이면 마감일 전이라도 접수가 끝난다는 뜻이에요. 선착순인 경우가 많으니, 관심 있는 지원금은 공고가 나오면 빨리 신청하는 게 좋아요." },
+  { category: "신청 방법", q: "신청했는데 떨어졌어요. 다시 신청할 수 있나요?", a: "탈락 사유(서류 미비, 요건 미충족, 예산 소진 등)에 따라 달라요. 서류 문제라면 보완 후 다음 회차에 다시 신청할 수 있는 경우가 많아요. 운영 기관 콜센터에 탈락 사유를 문의해 보세요." },
+  { category: "세금", q: "간이과세자와 일반과세자는 뭐가 달라요?", a: "연 매출 1억 400만원 미만이면 간이과세자가 될 수 있고, 부가세를 1년에 한 번(1월) 신고해요. 일반과세자는 1월·7월 두 번 확정신고해요. 홈의 '세금·마감 일정'에서 날짜를 확인할 수 있어요." },
+  { category: "세금", q: "세금 신고 날짜를 놓치면 어떻게 돼요?", a: "가산세가 붙어요. 늦었더라도 빨리 신고할수록 가산세가 줄어드니 바로 홈택스에서 '기한 후 신고'를 하세요. 국세청 상담센터(국번 없이 126)에서 도움을 받을 수 있어요." },
+  { category: "앱 이용", q: "지원금 정보는 얼마나 자주 바뀌어요?", a: "공식 공고를 확인해서 주기적으로 업데이트해요. 지원사업은 예산 상황에 따라 자주 바뀌니, 신청 전에는 반드시 공식 사이트에서 최종 확인하세요. 접수가 끝난 지원금은 '접수마감' 탭에 따로 모아둬요." },
+  { category: "앱 이용", q: "내 지역은 어떻게 바꾸나요?", a: "MY 탭 > '내 지역'을 누르면 시·도와 시·군·구를 고를 수 있어요. 한 번 정하면 지원금 목록이 내 지역 기준으로 열리고, 전국 지원금도 함께 보여요." },
+  { category: "앱 이용", q: "마감 임박 알림은 실제로 휴대폰에 오나요?", a: "네. MY 탭에서 '마감 임박 알림'을 켜고, 즐겨찾기 탭에서 원하는 지원금의 🔔를 누르면 마감 3일 전·1일 전·당일 오전 9시에 알려드려요. 상시접수 지원금은 마감일이 없어서 알림 대상이 아니에요." },
+  { category: "앱 이용", q: "즐겨찾기는 어디에 저장되나요?", a: "이 휴대폰에만 저장돼요. 앱을 지우거나 휴대폰을 바꾸면 사라지니, 중요한 지원금은 '공유하기'로 나에게 보내두시면 안전해요." },
+  { category: "앱 이용", q: "다른 사장님께 지원금을 알려주고 싶어요", a: "지원금 상세 화면에서 '다른 사장님께 공유하기'를 누르면 카카오톡·문자 등으로 지원금 정보를 보낼 수 있어요." },
+  { category: "앱 이용", q: "회원가입이나 개인정보가 필요한가요?", a: "아니요. 로그인 없이 바로 쓸 수 있고, 개인을 알아볼 수 있는 정보는 수집하지 않아요. 자세한 내용은 MY 탭의 개인정보처리방침에서 확인할 수 있어요." },
+  { category: "앱 이용", q: "맞춤 진단은 얼마나 정확한가요?", a: "지역·업종·직원 수·필요한 지원을 바탕으로 받을 수 있는 지원금을 골라드리지만, 신용점수·고용 기간 같은 세부 조건까지는 알 수 없어요. 참고용으로 보시고 최종 확인은 상세 화면과 공식 공고에서 하세요. MY 탭에서 언제든 다시 진단할 수 있어요." },
 ];
 
-// Q&A 검색 화면 — 자주 묻는 질문을 검색하고, 그래도 궁금하면 콜센터로 연결해요
+// 궁금할 때 전화할 곳
+const HELP_CONTACTS = [
+  { name: "소상공인시장진흥공단", desc: "소상공인 지원금·정책자금", tel: "1533-0100" },
+  { name: "중소기업 통합콜센터", desc: "중소벤처기업부 지원사업 전반", tel: "1357" },
+  { name: "국세청 상담센터", desc: "부가세·종합소득세 등 세금", tel: "126" },
+];
+
+// Q&A 검색 화면 — 자주 묻는 질문을 검색하고, 그래도 궁금하면 상담 전화로 연결해요
+const FAQ_PURPLE = "#7A46D6";
 function FaqSearchScreen({ onBack }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("전체");
-  const [openIndex, setOpenIndex] = useState(null);
+  const [openQ, setOpenQ] = useState(null);
   const categories = ["전체", ...Array.from(new Set(FAQ_DATA.map((f) => f.category)))];
+  const searching = query.trim() !== "";
 
   const filtered = FAQ_DATA.filter((f) => {
     const matchesCategory = category === "전체" || f.category === category;
-    const matchesQuery = query.trim() === "" || f.q.includes(query) || f.a.includes(query);
+    const q = query.trim();
+    const matchesQuery = !q || f.q.includes(q) || f.a.includes(q);
     return matchesCategory && matchesQuery;
   });
+  const topList = !searching && category === "전체" ? filtered.filter((f) => f.top) : [];
+  const restList = filtered.filter((f) => !topList.includes(f));
+
+  const renderItem = (f) => {
+    const open = openQ === f.q;
+    return (
+      <div key={f.q} className="rounded-[18px] mb-2 overflow-hidden" style={open ? { ...CARD, border: `1px solid ${FAQ_PURPLE}33` } : CARD}>
+        <button onClick={() => setOpenQ(open ? null : f.q)} className="w-full flex items-start gap-2.5 px-4 py-3.5 text-left">
+          <span className="text-[13px] font-black shrink-0 leading-[1.45]" style={{ color: FAQ_PURPLE }}>Q</span>
+          <span className="flex-1 text-[13.5px] font-semibold leading-[1.45] break-keep" style={{ color: TEXT }}>{f.q}</span>
+          <ChevronDown size={16} color={MUTED} className="shrink-0 mt-0.5" style={{ transform: open ? "rotate(180deg)" : "rotate(0)", transition: "0.15s" }} />
+        </button>
+        {open && (
+          <div className="flex items-start gap-2.5 px-4 pb-4">
+            <span className="text-[13px] font-black shrink-0 leading-[1.6]" style={{ color: "#B9A2E8" }}>A</span>
+            <p className="flex-1 text-[12.5px] leading-[1.7] break-keep" style={{ color: "#5E6577" }}>{f.a}</p>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div>
-      <HeroHeader icon={HelpCircle} color="#7A46D6" title="도움말 · Q&A" subtitle="자주 묻는 질문을 검색해서 바로 확인해요" onBack={onBack} />
+      <HeroHeader icon={HelpCircle} color={FAQ_PURPLE} title="도움말 · Q&A" subtitle="지원금 기본 상식부터 앱 사용법까지 자주 묻는 질문을 모았어요" onBack={onBack} />
 
       <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl mb-3" style={{ background: INPUT_BG }}>
         <Search size={16} color={MUTED} />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="궁금한 내용을 검색해보세요"
+          placeholder="궁금한 내용을 검색해보세요 (예: 서류, 대출)"
           className="flex-1 min-w-0 outline-none text-sm bg-transparent"
           style={{ color: TEXT }}
         />
         {query && (
-          <button onClick={() => setQuery("")}>
+          <button onClick={() => setQuery("")} aria-label="검색어 지우기">
             <X size={14} color={MUTED} />
           </button>
         )}
@@ -1730,14 +1797,10 @@ function FaqSearchScreen({ onBack }) {
       <div className="flex gap-1.5 overflow-x-auto pt-1 pb-3 -mt-1 mb-2 -mx-5 px-5" style={{ scrollbarWidth: "none" }}>
         {categories.map((c) => {
           const active = category === c;
+          const n = c === "전체" ? FAQ_DATA.length : FAQ_DATA.filter((f) => f.category === c).length;
           return (
-            <button
-              key={c}
-              onClick={() => setCategory(c)}
-              className="px-3 py-1.5 rounded-full text-xs whitespace-nowrap shrink-0"
-              style={active ? CHIP_ON : CHIP_OFF}
-            >
-              {c}
+            <button key={c} onClick={() => setCategory(c)} className="px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0" style={active ? CHIP_ON : CHIP_OFF}>
+              {c} <span className="opacity-70">{n}</span>
             </button>
           );
         })}
@@ -1748,170 +1811,345 @@ function FaqSearchScreen({ onBack }) {
         <div className="text-center py-14 text-sm" style={{ color: MUTED }}>
           검색 결과가 없어요.
           <br />
-          다른 검색어로 다시 찾아보세요.
+          아래 상담 전화로 편하게 물어보세요.
         </div>
       ) : (
-        <div>
-          {filtered.map((f, i) => (
-            <div key={i} className="border-b py-3.5" style={{ borderColor: BORDER }}>
-              <button onClick={() => setOpenIndex(openIndex === i ? null : i)} className="w-full flex items-center justify-between text-left gap-2">
-                <span className="text-sm font-medium" style={{ color: TEXT }}>{f.q}</span>
-                <ChevronDown
-                  size={16}
-                  color={MUTED}
-                  className="shrink-0"
-                  style={{ transform: openIndex === i ? "rotate(180deg)" : "rotate(0)", transition: "0.15s" }}
-                />
-              </button>
-              {openIndex === i && <p className="text-[12.5px] mt-2 leading-relaxed" style={{ color: MUTED }}>{f.a}</p>}
-            </div>
-          ))}
-        </div>
+        <>
+          {topList.length > 0 && (
+            <>
+              <div className="flex items-center gap-2 mb-2.5 px-1">
+                <span className="w-1 h-4 rounded-full" style={{ background: FAQ_PURPLE }} />
+                <p className="text-[14px] font-bold" style={{ color: TEXT }}>많이 묻는 질문</p>
+              </div>
+              <div className="mb-4">{topList.map(renderItem)}</div>
+              <div className="flex items-center gap-2 mb-2.5 px-1">
+                <span className="w-1 h-4 rounded-full" style={{ background: "#C3C8D4" }} />
+                <p className="text-[14px] font-bold" style={{ color: TEXT }}>전체 질문</p>
+              </div>
+            </>
+          )}
+          {restList.map(renderItem)}
+        </>
       )}
 
-      <div className="rounded-[20px] p-4 mt-6 flex items-center gap-3" style={CARD}>
-        <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: GREEN_SOFT }}>
-          <Phone size={17} color={GREEN} />
-        </div>
-        <div className="flex-1">
-          <p className="text-sm font-semibold" style={{ color: TEXT }}>그래도 궁금한 점이 있으신가요?</p>
-          <p className="text-[12px]" style={{ color: MUTED }}>소진공 콜센터 1533-0100로 편하게 물어보세요</p>
-        </div>
+      <p className="text-[13px] font-bold mt-6 mb-2.5 px-1" style={{ color: TEXT }}>그래도 궁금하시면 전화로 물어보세요</p>
+      <div className="rounded-[20px] overflow-hidden" style={CARD}>
+        {HELP_CONTACTS.map((c, i) => (
+          <a key={c.tel} href={`tel:${c.tel}`} className="flex items-center gap-3 px-4 py-3.5" style={{ borderTop: i > 0 ? "1px solid #F1F2F6" : "none" }}>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: GREEN_SOFT }}>
+              <Phone size={15} color={GREEN} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-bold" style={{ color: TEXT }}>{c.name}</p>
+              <p className="text-[11.5px]" style={{ color: MUTED }}>{c.desc}</p>
+            </div>
+            <span className="text-[13px] font-extrabold tabular-nums shrink-0" style={{ color: GREEN }}>{c.tel}</span>
+          </a>
+        ))}
       </div>
+      <p className="text-[11px] mt-2 px-1" style={{ color: MUTED }}>평일 09:00~18:00 운영 (기관마다 조금씩 달라요)</p>
     </div>
   );
 }
 
-// 지원금 신청에 자주 필요한 공통 서류들 (실제 서류마다 발급처가 달라요)
-const COMMON_DOCUMENTS = [
-  { name: "사업자등록증", desc: "사업자 정보가 담긴 기본 서류", source: "정부24 또는 세무서", url: "https://www.gov.kr", online: true },
-  { name: "사업자등록증명원", desc: "사업자등록증과 별도로 증명용으로 요구하는 경우가 많아요", source: "홈택스", url: "https://www.hometax.go.kr", online: true },
-  { name: "소득금액증명원", desc: "매출·소득 확인용 (전년도 기준)", source: "홈택스", url: "https://www.hometax.go.kr", online: true },
-  { name: "부가가치세과세표준증명", desc: "매출액 산정 기준으로 자주 요구돼요", source: "홈택스", url: "https://www.hometax.go.kr", online: true },
-  { name: "지방세 세목별과세증명서", desc: "지방세 완납 여부 확인용", source: "정부24", url: "https://www.gov.kr", online: true },
-  { name: "통장사본", desc: "지원금 입금 계좌 확인용, 사업자 명의 통장을 권장해요", source: "직접 촬영·스캔해서 준비", online: false },
-  { name: "신분증", desc: "대표자 본인 확인용", source: "직접 준비", online: false },
-  { name: "임대차계약서", desc: "사업장을 임차한 경우에만 필요해요", source: "직접 준비", online: false },
+// 지원금 신청에 자주 필요한 서류 — 발급처별로 묶었어요 (when: 언제 필요한지)
+const DOC_GROUPS = [
+  {
+    key: "hometax",
+    title: "홈택스에서 발급",
+    sub: "국세청 · 공동/간편인증 로그인",
+    url: "https://www.hometax.go.kr",
+    color: "#2C6FDB",
+    docs: [
+      { name: "사업자등록증명", desc: "사업자 정보 확인용 기본 서류", when: "거의 모든 지원금" },
+      { name: "부가가치세 과세표준증명", desc: "매출액 확인용 (보통 전년도분)", when: "매출 기준이 있는 지원금" },
+      { name: "소득금액증명원", desc: "종합소득세 신고 기준 소득 확인", when: "정책자금·보증" },
+      { name: "납세증명서 (국세 완납증명)", desc: "국세 체납이 없다는 증명", when: "정책자금·보증·지자체 지원" },
+      { name: "폐업사실증명원", desc: "폐업했다는 증명", when: "재기·폐업 지원" },
+    ],
+  },
+  {
+    key: "gov24",
+    title: "정부24에서 발급",
+    sub: "행정안전부 · 공동/간편인증 로그인",
+    url: "https://www.gov.kr",
+    color: "#7A46D6",
+    docs: [
+      { name: "지방세 납세증명서 (완납증명)", desc: "지방세 체납이 없다는 증명", when: "정책자금·지자체 지원" },
+      { name: "주민등록등본", desc: "대표자 주소·가족 확인", when: "일부 지자체 지원" },
+    ],
+  },
+  {
+    key: "etc",
+    title: "기타 기관에서 발급",
+    sub: "필요한 경우에만 준비하세요",
+    color: "#C2410C",
+    docs: [
+      { name: "소상공인 확인서", desc: "소상공인에 해당한다는 공식 확인서", when: "정책자금·판로 지원", url: "https://sminfo.mss.go.kr", source: "중소기업현황정보시스템" },
+      { name: "4대보험 가입자 명부", desc: "직원 고용 여부 확인", when: "인건비·고용 지원", url: "https://www.4insure.or.kr", source: "4대사회보험 정보연계센터" },
+    ],
+  },
+  {
+    key: "self",
+    title: "직접 준비",
+    sub: "사진 촬영·스캔해서 준비",
+    color: "#2C9F6B",
+    docs: [
+      { name: "신분증", desc: "대표자 본인 확인용", when: "거의 모든 지원금" },
+      { name: "통장사본", desc: "지원금 받을 계좌 · 사업자(대표자) 명의", when: "현금 지원금" },
+      { name: "임대차계약서", desc: "사업장을 빌려 쓰는 경우", when: "임차료 지원·정책자금" },
+    ],
+  },
 ];
+const DOC_TOTAL = DOC_GROUPS.reduce((n, g) => n + g.docs.length, 0);
+const DOC_CHECK_KEY = "docChecklist";
 
-// 서류·양식 자료실 — 자주 필요한 서류를 체크리스트로 정리하고 발급처를 바로 연결해줘요
+// 서류·양식 자료실 — 체크리스트(휴대폰에 저장) + 발급처 바로가기
+const DOC_ORANGE = "#C2410C";
 function DocumentsScreen({ onBack }) {
-  const [checked, setChecked] = useState(new Set());
+  const [checked, setChecked] = useState(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(DOC_CHECK_KEY)) || []);
+    } catch (e) {
+      return new Set();
+    }
+  });
+  const save = (next) => {
+    try {
+      localStorage.setItem(DOC_CHECK_KEY, JSON.stringify([...next]));
+    } catch (e) {
+      // 저장이 안 돼도 화면 체크는 그대로 돼요
+    }
+  };
   const toggle = (name) => {
     setChecked((prev) => {
       const next = new Set(prev);
       if (next.has(name)) next.delete(name);
       else next.add(name);
+      save(next);
       return next;
     });
   };
+  const reset = () => {
+    const next = new Set();
+    save(next);
+    setChecked(next);
+  };
+  const pct = Math.round((checked.size / DOC_TOTAL) * 100);
 
   return (
     <div>
-      <HeroHeader icon={FileText} color="#C2410C" title="서류 · 양식 자료실" subtitle="지원금 신청 전에 자주 필요한 서류를 미리 챙겨두세요" onBack={onBack} />
+      <HeroHeader icon={FileText} color={DOC_ORANGE} title="서류 · 양식 자료실" subtitle="지원금 신청 전에 자주 필요한 서류를 미리 챙겨두세요" onBack={onBack} />
 
-      <div className="rounded-xl p-3.5 mb-4 flex items-start gap-2" style={{ background: "#FFF7ED" }}>
-        <AlertTriangle size={14} color="#C2410C" className="shrink-0 mt-0.5" />
-        <p className="text-[11.5px] leading-relaxed" style={{ color: "#9A3412" }}>
-          지원금마다 요구하는 서류가 달라요. 아래는 대부분의 정책자금에서 공통으로 자주 쓰이는 서류예요. 경영안정바우처처럼 국세청 자료로 자동 확인해서 서류가 필요 없는 경우도 있으니, 신청 전 각 지원금 상세화면을 꼭 확인하세요.
+      {/* 준비 현황 */}
+      <div className="rounded-[24px] p-4 mb-3" style={{ background: "linear-gradient(135deg, #FFF3E8 0%, #FFFFFF 100%)", border: "1px solid #FBE3CF" }}>
+        <div className="flex items-end justify-between mb-2.5">
+          <div>
+            <p className="text-[12px] font-semibold" style={{ color: "#9A3412" }}>서류 준비 현황</p>
+            <p className="text-[20px] font-extrabold mt-0.5 tabular-nums" style={{ color: TEXT }}>
+              {checked.size} <span className="text-[14px] font-bold" style={{ color: MUTED }}>/ {DOC_TOTAL}개</span>
+            </p>
+          </div>
+          {checked.size > 0 && (
+            <button onClick={reset} className="flex items-center gap-1 text-[11.5px] font-semibold px-2.5 py-1.5 rounded-full" style={{ background: "white", color: MUTED }}>
+              <RefreshCw size={11} /> 처음부터
+            </button>
+          )}
+        </div>
+        <div className="h-2 rounded-full overflow-hidden" style={{ background: "#FCE3CF" }}>
+          <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: "linear-gradient(90deg, #FB923C, #EA580C)" }} />
+        </div>
+        <p className="text-[11px] mt-2" style={{ color: "#9A3412" }}>체크한 내용은 이 휴대폰에 저장돼요</p>
+      </div>
+
+      <div className="rounded-[20px] p-3.5 mb-5 flex items-start gap-2" style={{ background: "#FFF7ED" }}>
+        <Lightbulb size={14} color={DOC_ORANGE} className="shrink-0 mt-0.5" />
+        <p className="text-[11.5px] leading-relaxed break-keep" style={{ color: "#9A3412" }}>
+          지원금마다 필요한 서류가 달라요. 아래는 자주 쓰는 서류예요. 증명서는 보통 <b>신청일 기준 1~3개월 이내 발급분</b>을 요구하니 신청 직전에 발급하세요. 요즘은 국세청 자료를 자동으로 확인해 서류 없이 신청되는 지원금도 많아요.
         </p>
       </div>
 
-      <div className="flex items-center justify-between mb-2.5">
-        <p className="text-[13px] font-bold" style={{ color: TEXT }}>공통 서류 체크리스트</p>
-        <p className="text-[11.5px]" style={{ color: MUTED }}>{checked.size} / {COMMON_DOCUMENTS.length} 준비됨</p>
-      </div>
-
-      <div className="space-y-2">
-        {COMMON_DOCUMENTS.map((doc) => {
-          const isChecked = checked.has(doc.name);
-          return (
-            <div key={doc.name} className="rounded-[20px] p-3.5 flex items-start gap-3" style={CARD}>
-              <button
-                onClick={() => toggle(doc.name)}
-                className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 border"
-                style={isChecked ? { background: GREEN, borderColor: GREEN } : { background: "white", borderColor: BORDER }}
-              >
-                {isChecked && <Check size={14} color="white" strokeWidth={3} />}
-              </button>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold" style={{ color: isChecked ? MUTED : TEXT, textDecoration: isChecked ? "line-through" : "none" }}>
-                  {doc.name}
-                </p>
-                <p className="text-[11.5px] mt-0.5 leading-relaxed" style={{ color: MUTED }}>{doc.desc}</p>
-                {doc.online ? (
-                  <a
-                    href={doc.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold mt-1.5"
-                    style={{ color: BLUE }}
-                  >
-                    {doc.source}에서 발급받기 <ExternalLink size={10} />
-                  </a>
-                ) : (
-                  <p className="text-[11px] mt-1.5" style={{ color: "#B7BCC9" }}>{doc.source}</p>
-                )}
+      {DOC_GROUPS.map((g) => {
+        const done = g.docs.filter((d) => checked.has(d.name)).length;
+        return (
+          <div key={g.key} className="mb-5">
+            <div className="flex items-center justify-between gap-2 mb-2 px-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-1 h-4 rounded-full shrink-0" style={{ background: g.color }} />
+                <div className="min-w-0">
+                  <p className="text-[14px] font-bold" style={{ color: TEXT }}>
+                    {g.title} <span className="text-[12px] font-semibold tabular-nums" style={{ color: MUTED }}>{done}/{g.docs.length}</span>
+                  </p>
+                  <p className="text-[11px]" style={{ color: MUTED }}>{g.sub}</p>
+                </div>
               </div>
+              {g.url && (
+                <a href={g.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[11.5px] font-bold px-3 py-1.5 rounded-full shrink-0" style={{ background: `${g.color}14`, color: g.color }}>
+                  바로가기 <ExternalLink size={11} />
+                </a>
+              )}
             </div>
-          );
-        })}
-      </div>
+            <div className="rounded-[20px] overflow-hidden" style={CARD}>
+              {g.docs.map((doc, i) => {
+                const on = checked.has(doc.name);
+                return (
+                  <div key={doc.name} className="flex items-start gap-3 px-3.5 py-3" style={{ borderTop: i > 0 ? "1px solid #F1F2F6" : "none" }}>
+                    <button
+                      onClick={() => toggle(doc.name)}
+                      aria-label={`${doc.name} ${on ? "준비 취소" : "준비 완료"}`}
+                      className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 border-2 transition-colors"
+                      style={on ? { background: GREEN, borderColor: GREEN } : { background: "white", borderColor: "#D5D9E3" }}
+                    >
+                      {on && <Check size={13} color="white" strokeWidth={3} />}
+                    </button>
+                    <button onClick={() => toggle(doc.name)} className="flex-1 min-w-0 text-left">
+                      <p className="text-[13.5px] font-bold" style={{ color: on ? MUTED : TEXT, textDecoration: on ? "line-through" : "none" }}>{doc.name}</p>
+                      <p className="text-[11.5px] mt-0.5 leading-snug" style={{ color: MUTED }}>{doc.desc}</p>
+                      <span className="inline-block text-[10.5px] font-semibold mt-1.5 px-1.5 py-0.5 rounded" style={{ background: "#F3F5FA", color: "#6B7385" }}>
+                        {doc.when}
+                      </span>
+                    </button>
+                    {doc.url && (
+                      <a href={doc.url} target="_blank" rel="noopener noreferrer" aria-label={`${doc.source}에서 발급`} className="flex items-center gap-0.5 text-[11px] font-semibold shrink-0 mt-0.5" style={{ color: g.color }}>
+                        발급 <ExternalLink size={10} />
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
 
-      <p className="text-[11px] mt-5" style={{ color: MUTED }}>
-        * 체크 표시는 이 화면을 벗어나면 초기화돼요. 준비 상태를 계속 기억하려면 나중에 저장 기능을 연결하면 좋아요.
+      <p className="text-[11px] leading-relaxed" style={{ color: MUTED }}>
+        * 홈택스·정부24는 공동인증서나 간편인증(카카오·네이버 등)으로 로그인하면 무료로 바로 발급돼요. 인터넷 발급이 어려우면 가까운 세무서·주민센터 무인발급기를 이용하세요.
       </p>
     </div>
   );
 }
 
-// 세금·마감 일정 화면 — 세금 신고일 + 즐겨찾기한 지원금 마감일을 한 곳에서 보여줘요
+// 세금·마감 일정 화면 — 세금 신고일 + 즐겨찾기한 지원금 마감일을 월별로 보여줘요
+const TAX_GREEN = "#2C9F6B";
 function TaxScheduleScreen({ onBack, favorites }) {
-  const favoritePrograms = ALL_PROGRAMS.filter((p) => favorites.has(p.id)).map((p) => ({
+  const [filter, setFilter] = useState("all"); // all | tax | mine
+  const taxItems = TAX_SCHEDULE.map((t) => ({ ...t, type: "tax" }));
+  // 상시접수(마감일 없음)·이미 끝난 지원금은 일정에서 빼요
+  const favoritePrograms = ALL_PROGRAMS.filter((p) => favorites.has(p.id) && !p.recurring && getDday(p.deadline) >= 0).map((p) => ({
     name: p.name,
     deadline: p.deadline,
+    note: p.amountLabel,
+    who: "내 즐겨찾기",
     type: "subsidy",
   }));
-  const taxItems = TAX_SCHEDULE.map((t) => ({ name: t.name, deadline: t.deadline, note: t.note, type: "tax" }));
-  const all = [...taxItems, ...favoritePrograms].sort(byDeadline);
+  const all = [...(filter !== "mine" ? taxItems : []), ...(filter !== "tax" ? favoritePrograms : [])].sort(byDeadline);
+  const next = all.find((x) => getDday(x.deadline) >= 0);
+
+  // 월별로 묶기
+  const groups = [];
+  for (const item of all) {
+    const d = parseLocalDate(item.deadline);
+    const key = `${d.getFullYear()}년 ${d.getMonth() + 1}월`;
+    let g = groups.find((x) => x.key === key);
+    if (!g) groups.push((g = { key, items: [] }));
+    g.items.push(item);
+  }
 
   return (
     <div>
-      <HeroHeader icon={CalendarCheck} color="#2C9F6B" title="세금·마감 일정" subtitle="세금 신고일과 즐겨찾기한 지원금 마감일을 한눈에 확인해요" onBack={onBack} />
+      <HeroHeader icon={CalendarCheck} color={TAX_GREEN} title="세금·마감 일정" subtitle="세금 신고일과 즐겨찾기한 지원금 마감일을 한눈에 확인해요" onBack={onBack} />
 
-      <div className="space-y-2">
-        {all.map((item, i) => {
-          const dday = getDday(item.deadline);
-          const color = urgencyColor(dday);
-          return (
-            <div key={i} className="rounded-[20px] p-3.5 flex items-center gap-3" style={CARD}>
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                style={{ background: item.type === "tax" ? "#E7F7EF" : BLUE_SOFT }}
-              >
-                {item.type === "tax" ? <Landmark size={17} color="#2C9F6B" /> : <Heart size={16} color={BLUE} fill={BLUE} />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold truncate" style={{ color: TEXT }}>{item.name}</p>
-                <p className="text-[11.5px] mt-0.5 truncate" style={{ color: MUTED }}>
-                  {item.deadline}
-                  {item.note ? ` · ${item.note}` : ""}
-                </p>
-              </div>
-              <p className="text-[13px] font-bold shrink-0" style={{ color }}>{dday >= 0 ? `D-${dday}` : "완료"}</p>
+      {/* 가장 가까운 일정 */}
+      {next && (
+        <div className="relative overflow-hidden rounded-[24px] p-4 mb-4" style={{ background: "linear-gradient(135deg, #3DBB82 0%, #2C9F6B 100%)" }}>
+          <div className="absolute -right-8 -top-10 w-32 h-32 rounded-full" style={{ background: "rgba(255,255,255,0.1)" }} />
+          <p className="relative text-[12px] font-semibold text-white/80">가장 가까운 일정</p>
+          <div className="relative flex items-end justify-between gap-3 mt-1">
+            <div className="min-w-0">
+              <p className="text-[17px] font-extrabold text-white leading-snug break-keep">{next.name}</p>
+              <p className="text-[12px] text-white/85 mt-0.5">
+                {parseLocalDate(next.deadline).getMonth() + 1}월 {parseLocalDate(next.deadline).getDate()}일 ({["일", "월", "화", "수", "목", "금", "토"][parseLocalDate(next.deadline).getDay()]}) · {next.who}
+              </p>
             </div>
-          );
-        })}
-      </div>
-
-      {favoritePrograms.length === 0 && (
-        <p className="text-[11.5px] text-center py-4" style={{ color: MUTED }}>
-          즐겨찾기한 지원금이 없어요. 지원금 목록에서 하트를 눌러보시면 마감일이 여기도 같이 표시돼요.
-        </p>
+            <span className="text-[20px] font-black text-white shrink-0 tabular-nums">
+              {getDday(next.deadline) === 0 ? "오늘" : `D-${getDday(next.deadline)}`}
+            </span>
+          </div>
+        </div>
       )}
 
-      <p className="text-[11px] mt-5" style={{ color: MUTED }}>
-        * 세금 일정은 개인 일반과세자 기준 대략적인 날짜예요. 간이과세자·법인·성실신고확인대상자 등은 신고 기한이 다를 수 있으니 홈택스나 세무사를 통해 정확한 일정을 꼭 확인하세요.
+      <div className="flex gap-1.5 mb-4">
+        {[
+          { key: "all", label: "전체" },
+          { key: "tax", label: "세금·보험" },
+          { key: "mine", label: `내 지원금 ${favoritePrograms.length}` },
+        ].map((t) => (
+          <button key={t.key} onClick={() => setFilter(t.key)} className="flex-1 py-2 rounded-xl text-xs font-semibold" style={filter === t.key ? CHIP_ON : CHIP_OFF}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {groups.map((g) => (
+        <div key={g.key} className="mb-4">
+          <p className="text-[12.5px] font-bold mb-2 px-1" style={{ color: MUTED }}>{g.key}</p>
+          <div className="rounded-[20px] overflow-hidden" style={CARD}>
+            {g.items.map((item, i) => {
+              const d = parseLocalDate(item.deadline);
+              const dday = getDday(item.deadline);
+              const tax = item.type === "tax";
+              const accent = tax ? TAX_GREEN : BLUE;
+              return (
+                <div key={item.name + item.deadline} className="flex items-center gap-3 px-3.5 py-3" style={{ borderTop: i > 0 ? "1px solid #F1F2F6" : "none" }}>
+                  <div className="w-11 shrink-0 rounded-xl py-1.5 text-center" style={{ background: tax ? "#E7F7EF" : BLUE_SOFT }}>
+                    <p className="text-[16px] font-extrabold leading-none tabular-nums" style={{ color: accent }}>{d.getDate()}</p>
+                    <p className="text-[10px] font-semibold mt-1" style={{ color: accent }}>{["일", "월", "화", "수", "목", "금", "토"][d.getDay()]}요일</p>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-[13.5px] font-bold truncate" style={{ color: TEXT }}>{item.name}</p>
+                      {!tax && <Heart size={11} color={BLUE} fill={BLUE} className="shrink-0" />}
+                    </div>
+                    <p className="text-[11.5px] mt-0.5 leading-snug line-clamp-2" style={{ color: MUTED }}>
+                      <span className="font-semibold" style={{ color: accent }}>{item.who}</span> · {item.note}
+                      {item.shifted && <span className="font-semibold" style={{ color: "#B45309" }}> · 원래 날짜가 주말이라 이날까지</span>}
+                    </p>
+                  </div>
+                  <span
+                    className="text-[11px] font-bold px-2 py-1 rounded-lg shrink-0 tabular-nums"
+                    style={dday <= 7 ? { background: RED, color: "white" } : { background: tax ? "#E7F7EF" : BLUE_SOFT, color: accent }}
+                  >
+                    {dday === 0 ? "오늘" : `D-${dday}`}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {filter === "mine" && favoritePrograms.length === 0 && (
+        <div className="rounded-[20px] p-5 text-center" style={{ background: "#F6F7FA" }}>
+          <Heart size={20} color="#C3C8D4" className="mx-auto mb-2" />
+          <p className="text-[12.5px] leading-relaxed" style={{ color: MUTED }}>
+            마감일이 있는 지원금을 ♡ 즐겨찾기 하면
+            <br />
+            여기에 마감일이 함께 표시돼요.
+          </p>
+        </div>
+      )}
+
+      <a
+        href="https://www.hometax.go.kr"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full flex items-center justify-center gap-1.5 py-3.5 mt-2 rounded-2xl text-[13px] font-bold"
+        style={{ background: "#E7F7EF", color: TAX_GREEN }}
+      >
+        홈택스에서 신고·납부하기 <ExternalLink size={13} />
+      </a>
+      <p className="text-[11px] mt-4 leading-relaxed" style={{ color: MUTED }}>
+        * 개인사업자 기준 일정이에요. 마감일이 주말·공휴일이면 다음 평일까지 신고할 수 있어요. 법인이나 특수한 경우는 기한이 다를 수 있으니 홈택스 또는 국세청 상담센터(국번 없이 126)에서 꼭 확인하세요.
       </p>
     </div>
   );
