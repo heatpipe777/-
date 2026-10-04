@@ -734,7 +734,27 @@ function ExchangeRateContent() {
     { code: "JPY", label: "일본 엔 (100엔)", flag: "🇯🇵", unit: 100 },
     { code: "EUR", label: "유럽 유로", flag: "🇪🇺", unit: 1 },
     { code: "CNY", label: "중국 위안", flag: "🇨🇳", unit: 1 },
+    { code: "GBP", label: "영국 파운드", flag: "🇬🇧", unit: 1 },
+    { code: "HKD", label: "홍콩 달러", flag: "🇭🇰", unit: 1 },
+    { code: "TWD", label: "대만 달러", flag: "🇹🇼", unit: 1 },
+    { code: "VND", label: "베트남 동 (100동)", flag: "🇻🇳", unit: 100 },
+    { code: "THB", label: "태국 바트", flag: "🇹🇭", unit: 1 },
+    { code: "PHP", label: "필리핀 페소", flag: "🇵🇭", unit: 1 },
+    { code: "IDR", label: "인도네시아 루피아 (100루피아)", flag: "🇮🇩", unit: 100 },
+    { code: "MYR", label: "말레이시아 링깃", flag: "🇲🇾", unit: 1 },
+    { code: "SGD", label: "싱가포르 달러", flag: "🇸🇬", unit: 1 },
+    { code: "AUD", label: "호주 달러", flag: "🇦🇺", unit: 1 },
+    { code: "CAD", label: "캐나다 달러", flag: "🇨🇦", unit: 1 },
+    { code: "CHF", label: "스위스 프랑", flag: "🇨🇭", unit: 1 },
   ];
+  // 100원 미만 통화(바트·페소 등)는 소수점 둘째 자리까지 보여줘야 차이가 보여요
+  const formatKrw = (v) =>
+    v >= 100 ? Math.round(v).toLocaleString() : v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const updatedLabel = (() => {
+    const d = state.updatedAt ? new Date(state.updatedAt) : null;
+    if (!d || isNaN(d)) return state.updatedAt || "-";
+    return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  })();
 
   return (
     <div>
@@ -782,14 +802,14 @@ function ExchangeRateContent() {
                     </div>
                   </div>
                   <p className="text-[16px] font-extrabold tabular-nums" style={{ color: TEXT }}>
-                    {krwPerUnit ? `${Math.round(krwPerUnit).toLocaleString()}원` : "-"}
+                    {krwPerUnit ? `${formatKrw(krwPerUnit)}원` : "-"}
                   </p>
                 </div>
               );
             })}
           </div>
           <p className="text-[11px] text-center mt-4" style={{ color: MUTED }}>
-            기준시각(UTC): {state.updatedAt || "-"} · 출처: open.er-api.com
+            기준시각: {updatedLabel} (하루 1회 갱신) · 출처: open.er-api.com
           </p>
         </>
       )}
