@@ -100,6 +100,31 @@ const NEWS_THUMBS = {
   지역: newsRegionImg,
   디지털: newsDigitalImg,
 };
+// 기사 대표 사진 — 사진이 없거나(기업마당은 로고뿐) 불러오기 실패하면 주제 그림으로 대신해요
+function NewsImage({ news, className, style }) {
+  const [failed, setFailed] = useState(false);
+  if (news.image && !failed) {
+    return (
+      <img
+        src={news.image}
+        alt=""
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        draggable={false}
+        onError={() => setFailed(true)}
+        className={`${className} object-cover`}
+        style={{ background: "#F1F2F6", ...style }}
+      />
+    );
+  }
+  const cat = NEWS_CATEGORY_STYLE[news.category] || { bg: "#F2F3F7" };
+  return (
+    <div className={`${className} flex items-center justify-center overflow-hidden`} style={{ background: `linear-gradient(135deg, ${cat.bg} 0%, #FFFFFF 100%)`, ...style }}>
+      <img src={NEWS_THUMBS[news.category]} alt="" draggable={false} className="h-full w-auto object-contain" />
+    </div>
+  );
+}
+
 const NEWS = [
   {
     id: "n1",
@@ -119,6 +144,7 @@ const NEWS = [
   },
   {
     id: "n2",
+    image: "https://yamlove77.com/wp-content/uploads/2026/08/Korean_business_support_funds_guide_202608141412-1-2.jpeg",
     title: "2026년 하반기 소상공인 정부지원금 총정리 — 점포철거비 600만원·착한가격업소 지정 확대",
     source: "정책 동향 브리핑",
     date: "2026.08",
@@ -134,6 +160,7 @@ const NEWS = [
   },
   {
     id: "n3",
+    image: "https://kbthink.com/content/dam/tam-dcp-cms/kbcontent/business/business-support-policy/opengraph-pc.png",
     title: "소상공인 부담경감 크레딧, '경영안정 바우처'로 명칭 개편",
     source: "KB국민카드",
     date: "2026.03",
@@ -149,6 +176,7 @@ const NEWS = [
   },
   {
     id: "n4",
+    image: "https://www.korea.kr/newsWeb/resources/attaches/2026.07/01/633cc081876773dfc4caee297fdbc63e.jpg",
     title: "2026년 하반기부터 이렇게 달라져요 — 노란우산공제 소득공제 확대 등",
     source: "대한민국 정책브리핑",
     date: "2026.08.01",
@@ -163,6 +191,7 @@ const NEWS = [
   },
   {
     id: "n5",
+    image: "https://www.hksisaeconomy.com/data/photos/portnews/202609/20260906201504-71428.jpg",
     title: "울산시, 중소기업·소상공인에 760억 원 규모 경영안정자금 지원",
     source: "한국시사경제",
     date: "2026.09.06",
@@ -2712,9 +2741,11 @@ function NewsDetailScreen({ news, allNews, onBack, onSelectNews }) {
     <div>
       <SectionHeader title="기사 보기" onBack={onBack} />
 
-      <div className="relative h-[140px] rounded-[24px] overflow-hidden mb-4" style={{ background: "linear-gradient(135deg, #F3F5FB 0%, #FFFFFF 100%)", border: "1px solid #EEF0F6" }}>
-        <img src={NEWS_THUMBS[news.category]} alt="" draggable={false} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[124px] w-[124px] rounded-[20px] object-cover" />
+      <div className="relative h-[200px] rounded-[24px] overflow-hidden mb-1.5" style={{ border: "1px solid #EEF0F6" }}>
+        <NewsImage news={news} className="absolute inset-0 w-full h-full" />
       </div>
+      {news.image && <p className="text-[10.5px] text-right mb-4" style={{ color: MUTED }}>사진 출처: {news.source}</p>}
+      {!news.image && <div className="mb-4" />}
 
       <div className="flex items-center gap-1.5 mb-2.5">
         <span className="text-[10.5px] font-bold px-1.5 py-0.5 rounded" style={{ background: style.bg, color: style.color }}>{news.category}</span>
@@ -3768,13 +3799,9 @@ export default function App() {
                   className="block w-full text-left rounded-[24px] overflow-hidden mb-5 active:scale-[0.99] transition-transform"
                   style={CARD}
                 >
-                  <div className="relative h-[150px] overflow-hidden" style={{ background: `linear-gradient(135deg, ${fStyle.bg} 0%, #FFFFFF 100%)` }}>
-                    <img
-                      src={NEWS_THUMBS[featured.category]}
-                      alt=""
-                      draggable={false}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 h-[136px] w-[136px] rounded-[22px] object-cover"
-                    />
+                  <div className="relative h-[180px] overflow-hidden">
+                    <NewsImage news={featured} className="absolute inset-0 w-full h-full" />
+                    {featured.image && <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.35) 0%, transparent 45%)" }} />}
                     <span
                       className="absolute left-4 top-4 flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold text-white"
                       style={{ background: "linear-gradient(135deg, #FF7A9C, #F0567A)", boxShadow: "0 4px 10px rgba(240,86,122,0.3)" }}
@@ -3783,7 +3810,7 @@ export default function App() {
                     </span>
                     <div className="absolute left-4 bottom-4 flex items-center gap-1.5">
                       <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: "white", color: fStyle.color }}>{featured.category}</span>
-                      <span className="text-[11px] font-medium" style={{ color: "#5E6577" }}>{featured.date}</span>
+                      <span className="text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.85)", color: "#5E6577" }}>{featured.date}</span>
                     </div>
                   </div>
                   <div className="p-4">
@@ -3830,13 +3857,7 @@ export default function App() {
                         <span className="shrink-0 flex items-center gap-0.5">· <Clock size={10} /> {n.readTime}</span>
                       </p>
                     </div>
-                    <img
-                      src={NEWS_THUMBS[n.category]}
-                      alt=""
-                      draggable={false}
-                      className="w-[76px] h-[76px] rounded-2xl object-cover shrink-0"
-                      style={{ background: style.bg }}
-                    />
+                    <NewsImage news={n} className="w-[88px] h-[88px] rounded-2xl shrink-0" />
                   </button>
                 );
               })}
@@ -4007,7 +4028,7 @@ function PrivacyPolicyScreen({ onBack }) {
     {
       title: "3. 외부 공개 데이터 호출",
       body:
-        "환율 정보 표시를 위해 공개 환율 API(open.er-api.com)를 호출해요. 이 요청에는 개인을 식별할 수 있는 정보가 포함되지 않아요.",
+        "환율 정보 표시를 위해 공개 환율 API(open.er-api.com)를, 지도 표시를 위해 OpenStreetMap을, 뉴스 대표 사진 표시를 위해 각 기사 원문 사이트를 호출해요. 이 요청에는 개인을 식별할 수 있는 정보가 포함되지 않아요.",
     },
     {
       title: "4. 개인정보의 제3자 제공",
