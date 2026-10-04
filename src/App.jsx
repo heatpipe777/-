@@ -3452,12 +3452,12 @@ export default function App() {
         <div className="absolute -right-12 -top-16 w-48 h-48 rounded-full" style={{ background: "rgba(255,255,255,0.07)" }} />
         <div className="absolute -left-10 -bottom-16 w-40 h-40 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }} />
         {/* 확성기 + 알림 말풍선 그림 (오른쪽 아래) */}
-        <div className="absolute right-0 bottom-0" style={{ width: "36%" }}>
+        <div className="absolute right-0 top-0 bottom-0" style={{ aspectRatio: "340 / 350", maxWidth: "34%" }}>
           <img
             src={heroMegaImg}
             alt=""
             draggable={false}
-            className="w-full pointer-events-none"
+            className="w-full h-full object-contain object-right-bottom pointer-events-none"
             style={{
               WebkitMaskImage: "radial-gradient(ellipse 72% 72% at 55% 50%, #000 60%, transparent 100%)",
               maskImage: "radial-gradient(ellipse 72% 72% at 55% 50%, #000 60%, transparent 100%)",
@@ -3543,11 +3543,7 @@ export default function App() {
               {diagnosis ? (
                 `${diagnosis.region}${diagnosis.industry ? ` · ${diagLabel(DIAG_INDUSTRY, diagnosis.industry).split(" (")[0]}` : ""} 기준으로 골라둔 지원금이 있어요`
               ) : (
-                <>
-                  몇 가지만 답하면 사장님 상황에 맞는
-                  <br />
-                  지원금만 보여드려요!
-                </>
+                "몇 가지만 답하면 사장님 상황에 맞는 지원금만 보여드려요!"
               )}
             </p>
           </div>
@@ -3574,7 +3570,7 @@ export default function App() {
 
       {/* 많이 찾는 서비스 */}
       <p className="text-[16px] font-bold mb-2.5" style={{ color: TEXT }}>많이 찾는 서비스</p>
-      <div className="grid grid-cols-2 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {[
           { key: "all", label: "소상공인\n지원금", bg: "#FDEEDC", img: tileAllImg, onClick: () => { setStatusFilter("all"); setHomeScreen("list"); } },
           { key: "center", label: "지역센터\n찾기", bg: "#FCEAF3", img: tileCenterImg, onClick: () => setScreen({ view: "centers" }) },
@@ -3585,8 +3581,8 @@ export default function App() {
             key={tile.key}
             onClick={tile.onClick}
             aria-label={tile.label.replace("\n", " ")}
-            className="relative overflow-hidden h-[232px] active:scale-[0.98] transition-transform"
-            style={{ background: tile.bg, borderRadius: 30 }}
+            className="relative overflow-hidden active:scale-[0.98] transition-transform"
+            style={{ background: tile.bg, borderRadius: 30, aspectRatio: "525 / 672" }}
           >
             {/* 타일 이미지에 제목 글자까지 들어 있어요 */}
             <img src={tile.img} alt="" draggable={false} className="absolute inset-0 w-full h-full object-cover" />
@@ -3803,7 +3799,7 @@ export default function App() {
 
       {regionOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-10" onClick={() => setRegionOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="bg-white w-full max-w-md rounded-t-2xl p-6 pb-8 max-h-[75%] overflow-y-auto">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white w-full max-w-md md:max-w-xl rounded-t-2xl p-6 pb-8 max-h-[75%] overflow-y-auto">
             <div className="w-9 h-1 bg-[#E5E7EE] rounded-full mx-auto mb-5" />
 
             {pickerStep === "province" ? (
@@ -4117,7 +4113,7 @@ export default function App() {
             className="fixed bottom-0 inset-x-0 flex justify-center px-4 pt-3 pb-3"
             style={{ zIndex: 50, display: typing ? "none" : undefined, background: "linear-gradient(to bottom, rgba(255,255,255,0) 0, #fff 14px)" }}
           >
-            <div className="w-full max-w-md">
+            <div className="w-full max-w-md md:max-w-xl">
               <div
                 className="flex rounded-[22px] px-1.5 py-1.5"
                 style={{ background: "#FFF9FB", border: "1px solid #F6E6EC", boxShadow: "0 8px 24px rgba(232,116,154,0.18)" }}
@@ -4282,7 +4278,7 @@ function Shell({ children }) {
         .navArrowBtn { background: transparent; border: 1px solid transparent; box-shadow: none; transition: background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; }
         .navArrowBtn:active { background: #FFFFFF; border-color: ${BORDER}; box-shadow: 0 3px 10px rgba(0,0,0,0.22); }
       `}</style>
-      <div className="w-full max-w-md min-h-screen bg-white px-5 pt-7 pb-10 relative">{children}</div>
+      <div className="w-full max-w-md md:max-w-xl min-h-screen bg-white px-5 pt-7 pb-10 relative">{children}</div>
     </div>
   );
 }
