@@ -100,7 +100,7 @@ const NEWS_THUMBS = {
   지역: newsRegionImg,
   디지털: newsDigitalImg,
 };
-// 기사 대표 사진 — 사진이 없거나(기업마당은 로고뿐) 불러오기 실패하면 주제 그림으로 대신해요
+// 기사 대표 사진 — 사진이 없거나 불러오기 실패하면 주제 그림으로 대신해요
 function NewsImage({ news, className, style }) {
   const [failed, setFailed] = useState(false);
   if (news.image && !failed) {
@@ -113,14 +113,22 @@ function NewsImage({ news, className, style }) {
         draggable={false}
         onError={() => setFailed(true)}
         className={`${className} object-cover`}
-        style={{ background: "#F1F2F6", ...style }}
+        style={{ background: news.imageBg || "#F1F2F6", objectFit: news.imageFit || "cover", objectPosition: news.imagePosition || "center", ...style }}
       />
     );
   }
   const cat = NEWS_CATEGORY_STYLE[news.category] || { bg: "#F2F3F7" };
   return (
-    <div className={`${className} flex items-center justify-center overflow-hidden`} style={{ background: `linear-gradient(135deg, ${cat.bg} 0%, #FFFFFF 100%)`, ...style }}>
-      <img src={NEWS_THUMBS[news.category]} alt="" draggable={false} className="h-full w-auto object-contain" />
+    <div className={`${className} overflow-hidden`} style={{ background: `linear-gradient(135deg, ${cat.bg} 0%, #FFFFFF 100%)`, ...style }}>
+      <div className="relative w-full h-full">
+        <img
+          src={NEWS_THUMBS[news.category]}
+          alt=""
+          draggable={false}
+          className="absolute right-0 top-1/2 -translate-y-1/2 h-full max-w-full object-contain"
+          style={{ WebkitMaskImage: "radial-gradient(circle at 50% 50%, #000 60%, transparent 72%)", maskImage: "radial-gradient(circle at 50% 50%, #000 60%, transparent 72%)" }}
+        />
+      </div>
     </div>
   );
 }
@@ -128,6 +136,10 @@ function NewsImage({ news, className, style }) {
 const NEWS = [
   {
     id: "n1",
+    // 기업마당 공고엔 사진이 없어서, 같은 공고를 소개한 정책브리핑 카드뉴스 대표 이미지를 써요
+    image: "https://www.korea.kr/newsWeb/resources/attaches/2025.12/30/9e6f350d84bd21ffd32562f993267431.jpg",
+    imageSource: "대한민국 정책브리핑",
+    imagePosition: "center top", // 이미지 위쪽 제목 글자가 잘리지 않게
     title: "2026년 중소벤처기업부 소상공인 정책자금 융자사업 공고",
     source: "중소벤처기업부",
     date: "2026 연간 공고",
@@ -144,6 +156,8 @@ const NEWS = [
   },
   {
     id: "n2",
+    imageFit: "contain",
+    imageBg: "#03132C",
     image: "https://yamlove77.com/wp-content/uploads/2026/08/Korean_business_support_funds_guide_202608141412-1-2.jpeg",
     title: "2026년 하반기 소상공인 정부지원금 총정리 — 점포철거비 600만원·착한가격업소 지정 확대",
     source: "정책 동향 브리핑",
@@ -2744,7 +2758,7 @@ function NewsDetailScreen({ news, allNews, onBack, onSelectNews }) {
       <div className="relative h-[200px] rounded-[24px] overflow-hidden mb-1.5" style={{ border: "1px solid #EEF0F6" }}>
         <NewsImage news={news} className="absolute inset-0 w-full h-full" />
       </div>
-      {news.image && <p className="text-[10.5px] text-right mb-4" style={{ color: MUTED }}>사진 출처: {news.source}</p>}
+      {news.image && <p className="text-[10.5px] text-right mb-4" style={{ color: MUTED }}>사진 출처: {news.imageSource || news.source}</p>}
       {!news.image && <div className="mb-4" />}
 
       <div className="flex items-center gap-1.5 mb-2.5">
@@ -3802,13 +3816,13 @@ export default function App() {
                   <div className="relative h-[180px] overflow-hidden">
                     <NewsImage news={featured} className="absolute inset-0 w-full h-full" />
                     {featured.image && <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.35) 0%, transparent 45%)" }} />}
-                    <span
-                      className="absolute left-4 top-4 flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold text-white"
-                      style={{ background: "linear-gradient(135deg, #FF7A9C, #F0567A)", boxShadow: "0 4px 10px rgba(240,86,122,0.3)" }}
-                    >
-                      <Zap size={11} fill="white" /> 주요 소식
-                    </span>
                     <div className="absolute left-4 bottom-4 flex items-center gap-1.5">
+                      <span
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold text-white"
+                        style={{ background: "linear-gradient(135deg, #FF7A9C, #F0567A)", boxShadow: "0 4px 10px rgba(240,86,122,0.3)" }}
+                      >
+                        <Zap size={10} fill="white" /> 주요 소식
+                      </span>
                       <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: "white", color: fStyle.color }}>{featured.category}</span>
                       <span className="text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.85)", color: "#5E6577" }}>{featured.date}</span>
                     </div>
