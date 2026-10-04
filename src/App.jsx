@@ -242,6 +242,21 @@ function refreshToday() {
 function getDday(deadlineStr) {
   return Math.round((parseLocalDate(deadlineStr) - TODAY) / (1000 * 60 * 60 * 24));
 }
+// 지원금이 적용되는 지역 목록 — 여러 시·도 공동 사업은 regions: ["대구", "경북"]처럼 적어요
+function programRegions(p) {
+  return p.regions || [p.region];
+}
+function isNational(p) {
+  return programRegions(p).includes("전국");
+}
+// 그 지역 사장님이 받을 수 있는지 (전국 사업은 모든 지역에 해당)
+function availableIn(p, r) {
+  return isNational(p) || programRegions(p).includes(r);
+}
+function regionLabel(p) {
+  return programRegions(p).join("·");
+}
+
 function isExpired(p) {
   return getDday(p.deadline) < 0;
 }
@@ -367,7 +382,7 @@ function diagnoseProgram(p, diag) {
   const declineCase = situation.includes("decline");
 
   // 1) 지역
-  const regionOk = p.region === "전국" || p.region === diag.region || (p.name.includes("대구·경북") && diag.region === "경북");
+  const regionOk = availableIn(p, diag.region);
   if (!regionOk) return { eligible: false };
 
   // 2) 소상공인 규모 — 아니면 중소기업도 받을 수 있는 자금만
@@ -418,7 +433,7 @@ function diagnoseProgram(p, diag) {
     score += 1;
     if (!need) reasons.push("냉장고 등 전기를 많이 쓰는 음식점에 유리해요");
   }
-  if (p.region !== "전국") {
+  if (!isNational(p)) {
     score += 1;
     if (reasons.length === 0) reasons.push(`우리 지역(${diag.region}) 소상공인 전용이에요`);
   }
@@ -557,7 +572,7 @@ const SAMPLE_PROGRAMS = [
   { id: 3, name: "경기도 소상공인 정책자금", region: "경기", category: "경영", target: "경기도 소재 사업자등록을 마친 소상공인", amountLabel: "최대 5,000만원 (연 2.5%)", deadline: "2099-12-31", recurring: true, recurringNote: "경기신용보증재단 통해 연중 상시 접수, 예산 소진 시 조기 마감", verified: true, note: "일반 정책자금보다 낮은 금리로 운전·시설자금을 지원해요. 정확한 한도·조건은 경기신용보증재단 공고를 확인하세요.", popularity: 520 },
   { id: 4, name: "2026년 스마트상점 기술보급사업", region: "전국", category: "디지털전환", target: "키오스크·서빙로봇·사이니지 등 스마트기술 도입 희망 소상공인", amountLabel: "구입형 최대 700만원 · 렌탈형 연 최대 350만원", deadline: "2026-09-30", verified: true, note: "2026년 2차 모집(8.26~9.30)까지 접수가 끝났어요. 다음 공고는 보통 연초에 소상공인스마트상점(sbiz.or.kr/smst)에 올라와요.", popularity: 890 },
   { id: 5, name: "부산 자영업자 청년고용 인건비 지원", region: "부산", category: "고용", target: "부산 소재 자영업체에서 청년을 신규 고용한 소상공인", amountLabel: "1인당 월 180만원, 최대 24개월", deadline: "2099-12-31", recurring: true, recurringNote: "부산시소상공인종합지원센터 통해 연중 공모, 예산 소진 시 조기 마감", verified: true, note: "청년을 신규 채용하면 인건비 일부를 지원받아요. 세부 연령·소득 기준은 회차별 공고를 확인하세요.", popularity: 705 },
-  { id: 7, name: "대구·경북 소상공인 경영안정자금 (이차보전)", region: "대구", category: "보증", target: "연 매출 5억원 이하 소상공인 (국세·지방세 체납자, 휴·폐업, 유흥·사치업종 제외)", amountLabel: "대출이자 1~2년간 일부 지원 (신용보증재단 특례보증 연계)", deadline: "2099-12-31", recurring: true, recurringNote: "대구신용보증재단 통해 상·하반기 공고, 예산 소진 시 조기 마감", verified: true, note: "대출 자체가 아니라 대출받을 때 발생하는 이자 일부를 지자체가 보전해줘요. 보증서 발급 후 협약은행에서 대출을 실행해요.", popularity: 430 },
+  { id: 7, name: "대구·경북 소상공인 경영안정자금 (이차보전)", region: "대구", regions: ["대구", "경북"], category: "보증", target: "연 매출 5억원 이하 소상공인 (국세·지방세 체납자, 휴·폐업, 유흥·사치업종 제외)", amountLabel: "대출이자 1~2년간 일부 지원 (신용보증재단 특례보증 연계)", deadline: "2099-12-31", recurring: true, recurringNote: "대구신용보증재단 통해 상·하반기 공고, 예산 소진 시 조기 마감", verified: true, note: "대출 자체가 아니라 대출받을 때 발생하는 이자 일부를 지자체가 보전해줘요. 보증서 발급 후 협약은행에서 대출을 실행해요.", popularity: 430 },
   { id: 8, name: "희망인천 특례보증", region: "인천", category: "보증", target: "인천광역시 소재 소기업·소상공인 (홈플러스 폐점 피해기업 등 포함)", amountLabel: "업체당 최대 5,000만원 + 이자지원(1년차 연 2%, 2~3년차 연 1.5%)", deadline: "2099-12-31", recurring: true, recurringNote: "인천신용보증재단 통해 연중 상시 접수, 예산 소진 시 조기 마감", verified: true, note: "보증기간 6년(1년 거치·5년 분할상환)에 이자까지 지원해줘요. 정확한 대상·한도는 인천신용보증재단 공고를 확인하세요.", popularity: 610 },
   { id: 11, name: "강원특별자치도 소상공인 경영안정자금", region: "강원", category: "경영", target: "강원 도내 소재 사업장 소상공인 (개인신용평점 NICE 710점 이상 또는 KCB 620점 이상)", amountLabel: "연간 2,000억원 규모 융자 (기본 이자지원 연 2%, 다자녀 추가 지원)", deadline: "2099-12-31", recurring: true, recurringNote: "1차(2~6월)·2차(7월~) 두 차례 공고, 자금 소진 시 조기 마감", verified: true, note: "일시상환(2년) 또는 분할상환(2년 거치·3년 분할) 중 선택할 수 있어요. 다자녀 소상공인은 이자지원이 추가돼요. 정확한 일정·한도는 강원특별자치도 공고를 확인하세요.", popularity: 380 },
   { id: 12, name: "제주도 소상공인 육성자금 (경영안정자금)", region: "제주", category: "경영", target: "제주특별자치도 소재 사업자등록을 마친 소상공인", amountLabel: "2026년 총 420억원 규모 저금리 융자", deadline: "2099-12-31", recurring: true, recurringNote: "제주경제통상진흥원·제주신용보증재단 통해 연중 상시 접수, 예산 소진 시 조기 마감", verified: true, note: "제주도가 시설·경영안정자금 등 저금리 융자를 지원해요. 정확한 한도·금리는 제주경제통상진흥원 공고를 확인하세요.", popularity: 295 },
@@ -882,7 +897,7 @@ function SimpleDetail({ program, onBack }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 mb-1">
             <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.8)", color: BLUE }}>{program.category}</span>
-            <span className="text-[11px]" style={{ color: MUTED }}><MapPin size={10} className="inline -mt-0.5" /> {program.region}</span>
+            <span className="text-[11px]" style={{ color: MUTED }}><MapPin size={10} className="inline -mt-0.5" /> {regionLabel(program)}</span>
           </div>
           <p className="text-[16.5px] font-bold leading-snug break-keep" style={{ color: TEXT }}>{program.name}</p>
         </div>
@@ -2404,7 +2419,7 @@ function ProgramRow({ p, onClick, actions, reason, highlight }) {
         <span className="text-[11px] font-bold px-2 py-0.5 rounded-md shrink-0" style={{ background: `${cat.bg}1A`, color: cat.bg }}>
           {p.category}
         </span>
-        <span className="text-[11.5px] truncate" style={{ color: MUTED }}>{p.region}</span>
+        <span className="text-[11.5px] truncate" style={{ color: MUTED }}>{regionLabel(p)}</span>
         <span className="flex-1" />
         <span
           className="text-[11px] font-bold px-2 py-0.5 rounded-md shrink-0 tabular-nums"
@@ -3279,7 +3294,7 @@ export default function App() {
 
   const filtered = useMemo(() => {
     return ALL_PROGRAMS.filter((p) => {
-      const matchesRegion = region === "전체" || p.region === region;
+      const matchesRegion = region === "전체" || (region === "전국" ? isNational(p) : availableIn(p, region));
       const matchesQuery =
         query.trim() === "" ||
         p.name.includes(query) ||
