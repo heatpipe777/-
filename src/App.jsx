@@ -2018,7 +2018,7 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
     .filter((p) => {
       const d = getDday(p.deadline);
       if (statusFilter === "urgent") return d <= 7 && d >= 0;
-      if (statusFilter === "available") return d > 7;
+      if (statusFilter === "available") return d >= 0;
       return true;
     })
     .sort(byDeadline);
@@ -3064,7 +3064,7 @@ export default function App() {
       const matchesStatus =
         statusFilter === "all" ||
         (statusFilter === "urgent" && dday <= 7 && dday >= 0) ||
-        (statusFilter === "available" && dday > 7);
+        (statusFilter === "available" && dday >= 0);
       return matchesRegion && matchesQuery && matchesCategory && matchesFavorite && matchesStatus;
     }).sort((a, b) =>
       sortBy === "amount"
@@ -3105,7 +3105,7 @@ export default function App() {
   }, []);
 
   const urgentCount = ALL_PROGRAMS.filter((p) => getDday(p.deadline) <= 7 && getDday(p.deadline) >= 0).length;
-  const availableCount = ALL_PROGRAMS.filter((p) => getDday(p.deadline) > 7).length;
+  const availableCount = ALL_PROGRAMS.filter((p) => getDday(p.deadline) >= 0).length; // 마감 임박(7일 이내)도 신청 가능에 포함
   const categories = ["전체", ...Array.from(new Set(ALL_PROGRAMS.map((p) => p.category)))];
 
   if (screen.view === "detail") {
