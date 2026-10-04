@@ -3484,18 +3484,14 @@ export default function App() {
             소상공인 정책자금 알리미
           </h1>
         </div>
-        <button
-          onClick={() => {
-            setStatusFilter("available");
-            setHomeScreen("list");
-          }}
-          className="relative z-10 mt-3.5 inline-flex items-center gap-1.5 pl-2.5 pr-2 py-1.5 rounded-full"
+        {/* 안내용 표시 — 목록은 아래 '소상공인 지원금' 카드로 들어가요 */}
+        <div
+          className="relative z-10 mt-3.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full"
           style={{ background: "rgba(255,255,255,0.18)" }}
         >
           <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#81F5BE" }} />
           <span className="text-[12px] font-semibold text-white">지금 신청할 수 있는 지원금 {ALL_PROGRAMS.filter((p) => !isExpired(p)).length}건</span>
-          <ChevronRight size={13} color="white" />
-        </button>
+        </div>
       </div>
 
       {/* 맞춤 진단 CTA — 기존에 만들어둔 진단 기능으로 들어가는 입구가 없었어서 추가 */}
