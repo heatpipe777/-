@@ -4999,7 +4999,7 @@ export default function App() {
               <div className="min-w-0">
                 <p className="text-sm font-semibold" style={{ color: TEXT }}>내 지역</p>
                 <p className="text-[12px] truncate" style={{ color: MUTED }}>
-                  {region === "전체" ? "아직 설정 전이에요 · 눌러서 정해 주세요" : `${region} · 지원금 목록이 이 지역 기준으로 열려요`}
+                  {region === "전체" ? "아직 설정 전이에요 · 눌러서 정해 주세요" : region === "전국" ? "전국 지원금만 보기 · 눌러서 바꾸기" : `${region} · 지원금 목록이 이 지역 기준으로 열려요`}
                 </p>
               </div>
             </div>
@@ -5068,62 +5068,74 @@ export default function App() {
 
       {regionOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-end justify-center" style={{ zIndex: 60 }} onClick={() => setRegionOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="bg-white w-full max-w-md md:max-w-xl rounded-t-2xl p-6 pb-8 max-h-[75%] overflow-y-auto">
-            <div className="w-9 h-1 bg-[#E5E7EE] rounded-full mx-auto mb-5" />
-
-            {pickerStep === "province" ? (
-              <>
-                <h2 className="text-base font-bold mb-1" style={{ color: TEXT }}>내 지역 선택</h2>
-                <p className="text-[12px] mb-4" style={{ color: MUTED }}>선택한 지역은 저장돼서, 다음에도 이 지역 기준으로 지원금을 보여드려요. (전국 지원금도 함께 보여요)</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {REGIONS.map((r) => {
-                    const active = region === r || region.startsWith(r + " ");
-                    return (
-                      <button
-                        key={r}
-                        onClick={() => selectProvince(r)}
-                        className="py-2.5 rounded-lg border text-sm flex items-center justify-center gap-1"
-                        style={active ? { background: BLUE, borderColor: BLUE, color: "white" } : { background: "white", borderColor: BORDER, color: TEXT }}
-                      >
-                        {r}
-                        {DISTRICTS[r] && <ChevronDown size={11} style={{ transform: "rotate(-90deg)" }} color={active ? "white" : MUTED} />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center gap-2 mb-4">
-                  <button onClick={() => setPickerStep("province")} aria-label="시·도 다시 고르기" className="w-7 h-7 -ml-1 rounded-full flex items-center justify-center active:bg-[#F2F3F7]">
-                    <ChevronLeft size={18} color={TEXT} />
+          {/* 제목은 고정, 목록만 스크롤 — 마지막 줄(제주)까지 여유 있게 보여요 */}
+          <div onClick={(e) => e.stopPropagation()} className="bg-white w-full max-w-md md:max-w-xl rounded-t-[24px] flex flex-col" style={{ maxHeight: "86%" }}>
+            <div className="px-5 pt-3 pb-3 shrink-0">
+              <div className="w-9 h-1 bg-[#E5E7EE] rounded-full mx-auto mb-4" />
+              <div className="flex items-center gap-1">
+                {pickerStep === "district" && (
+                  <button onClick={() => setPickerStep("province")} aria-label="시·도 다시 고르기" className="w-8 h-8 -ml-2 rounded-full flex items-center justify-center active:bg-[#F2F3F7]">
+                    <ChevronLeft size={20} color={TEXT} />
                   </button>
-                  <h2 className="text-base font-bold" style={{ color: TEXT }}>{tempProvince} 세부 지역</h2>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    onClick={() => selectDistrict("전체")}
-                    className="py-2.5 rounded-lg border text-sm"
-                    style={{ background: BLUE_SOFT, borderColor: BLUE, color: BLUE }}
-                  >
+                )}
+                <h2 className="text-[17px] font-bold flex-1" style={{ color: TEXT }}>{pickerStep === "province" ? "내 지역 선택" : `${tempProvince} 세부 지역`}</h2>
+                <button onClick={() => setRegionOpen(false)} aria-label="닫기" className="w-8 h-8 -mr-1 rounded-full flex items-center justify-center" style={{ background: "#F3F5FA" }}>
+                  <X size={16} color={MUTED} />
+                </button>
+              </div>
+              <p className="text-[12px] mt-1 leading-relaxed break-keep" style={{ color: MUTED }}>
+                {pickerStep === "province" ? "고른 지역의 지원금과 전국 지원금을 함께 보여드려요. 다음에도 이 지역으로 열려요." : "시·군·구를 고르거나, 도 전체로 볼 수 있어요."}
+              </p>
+            </div>
+
+            <div className="overflow-y-auto px-5 pb-8 pt-1">
+              {pickerStep === "province" ? (
+                <>
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    {[
+                      { key: "전체", label: "지역 상관없이", sub: "모든 지원금 보기" },
+                      { key: "전국", label: "전국 지원금만", sub: "지역 전용 제외" },
+                    ].map((o) => {
+                      const on = region === o.key;
+                      return (
+                        <button key={o.key} onClick={() => selectProvince(o.key)} className="py-3 rounded-2xl text-center" style={on ? CHIP_ON : { ...CARD, color: TEXT }}>
+                          <span className="block text-[14px] font-bold">{o.label}</span>
+                          <span className="block text-[11px] mt-0.5" style={{ opacity: on ? 0.85 : 1, color: on ? "white" : MUTED }}>{o.sub}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[12px] font-bold mb-2 px-0.5" style={{ color: MUTED }}>시·도</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {REGIONS.filter((r) => r !== "전체" && r !== "전국").map((r) => {
+                      const on = region === r || region.startsWith(r + " ");
+                      return (
+                        <button key={r} onClick={() => selectProvince(r)} className="py-3 rounded-xl text-[14px] font-semibold active:scale-[0.97] transition-transform" style={on ? CHIP_ON : { background: "#F5F6FA", color: TEXT }}>
+                          {r}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => selectDistrict("전체")} className="w-full py-3 rounded-2xl text-[14px] font-bold mb-3" style={region === tempProvince ? CHIP_ON : { background: BLUE_SOFT, color: BLUE }}>
                     {tempProvince} 전체
                   </button>
-                  {DISTRICTS[tempProvince].map((d) => (
-                    <button
-                      key={d}
-                      onClick={() => selectDistrict(d)}
-                      className="py-2.5 rounded-lg border text-sm"
-                      style={{ background: "white", borderColor: BORDER, color: TEXT }}
-                    >
-                      {d}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[11px] mt-4" style={{ color: MUTED }}>
-                  * 2026년 기준 행정구역이에요. 시/군 통합 등 행정구역 변경 시 업데이트가 필요해요.
-                </p>
-              </>
-            )}
+                  <div className="grid grid-cols-3 gap-2">
+                    {DISTRICTS[tempProvince].map((d) => {
+                      const on = region === `${tempProvince} ${d}`;
+                      return (
+                        <button key={d} onClick={() => selectDistrict(d)} className="py-3 rounded-xl text-[13.5px] font-semibold active:scale-[0.97] transition-transform" style={on ? CHIP_ON : { background: "#F5F6FA", color: TEXT }}>
+                          {d}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] mt-4" style={{ color: MUTED }}>* 2026년 기준 행정구역이에요.</p>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
