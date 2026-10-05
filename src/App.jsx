@@ -273,17 +273,64 @@ function isExpired(p) {
 function canNotify(p) {
   return !p.recurring && !isExpired(p);
 }
-// 마감 3일 전 오전 9시에 알려요. 이미 지났으면 마감 전날 → 마감 당일 오전 9시 순으로 당겨요
-function notifyTimeFor(p) {
-  const now = new Date();
-  for (const daysBefore of [3, 1, 0]) {
-    const at = parseLocalDate(p.deadline);
-    at.setDate(at.getDate() - daysBefore);
-    at.setHours(9, 0, 0, 0);
-    if (at > now) return { at, daysBefore };
-  }
-  return null;
+// 알림 받는 방식: 마감 며칠 전에 알릴지
+const ALERT_PLANS = {
+  light: { label: "가볍게", days: [1, 0], desc: "마감 1일 전과 당일에 알려드려요" },
+  normal: { label: "적당히", days: [7, 3, 1, 0], desc: "마감 7일·3일·1일 전과 당일에 알려드려요" },
+  daily: { label: "꼼꼼하게", days: [7, 6, 5, 4, 3, 2, 1, 0], desc: "마감 7일 전부터 매일 알려드려요" },
+};
+const ALERT_HOURS = [
+  { h: 8, label: "오전 8시" },
+  { h: 9, label: "오전 9시" },
+  { h: 12, label: "낮 12시" },
+  { h: 18, label: "오후 6시" },
+];
+const STAFF_TAX = ["원천세 신고·납부", "4대보험료 납부", "근로소득 지급명세서 제출"];
+const MAX_ALERTS = 120; // 너무 많이 예약하지 않도록 상한을 둬요
+// 알림 id는 숫자여야 해요 — 지원금 id("voucher" 같은 글자)를 숫자로 바꿔요
+function alertBaseId(key) {
+  let h = 0;
+  for (const ch of String(key)) h = (h * 31 + ch.charCodeAt(0)) % 9000;
+  return 100000 + h * 10;
 }
+function deadlineAlertText(name, days, what) {
+  if (days === 0) return { title: `오늘 마감 · ${name}`, body: `오늘이 ${what} 마지막 날이에요. 놓치지 마세요!` };
+  return { title: `마감 D-${days} · ${name}`, body: `${what}까지 ${days}일 남았어요. 눌러서 확인하세요.` };
+}
+// 설정에 맞는 알림 목록을 만들어요 (시간순)
+function buildAlertList({ programs, taxOn, taxStaff, rateOn, plan, hour }) {
+  const now = new Date();
+  const days = (ALERT_PLANS[plan] || ALERT_PLANS.normal).days;
+  const list = [];
+  const addDeadline = (key, name, deadline, what, extra) => {
+    const base = alertBaseId(key);
+    days.forEach((d, k) => {
+      const at = parseLocalDate(deadline);
+      at.setDate(at.getDate() - d);
+      at.setHours(hour, 0, 0, 0);
+      if (at <= now) return;
+      list.push({ id: base + k, at, ...deadlineAlertText(name, d, what), extra });
+    });
+  };
+  programs.forEach((p) => addDeadline(`p:${p.id}`, p.name, p.deadline, "신청 마감", { programId: p.id }));
+  if (taxOn) {
+    // 세금은 60일 안의 일정만 (매달 돌아오는 원천세 등이 너무 많이 쌓이지 않게)
+    const limit = new Date(now.getTime() + 60 * 864e5);
+    TAX_SCHEDULE.filter((t) => taxStaff || !STAFF_TAX.includes(t.name))
+      .filter((t) => parseLocalDate(t.deadline) <= limit)
+      .forEach((t) => addDeadline(`t:${t.name}:${t.deadline}`, t.name, t.deadline, "신고·납부", { screen: "taxSchedule" }));
+  }
+  if (rateOn) {
+    BOK_MEETINGS.forEach((d, i) => {
+      const at = parseLocalDate(d);
+      at.setHours(10, 10, 0, 0);
+      if (at <= now) return;
+      list.push({ id: 900000 + i, at, title: "오늘 한국은행 기준금리 발표일이에요", body: "금리가 바뀌었는지, 내 대출이자에 어떤 영향이 있는지 확인해 보세요.", extra: { screen: "exchange" } });
+    });
+  }
+  return list.sort((a, b) => a.at - b.at).slice(0, MAX_ALERTS);
+}
+
 // 마감임박순 정렬 — 이미 마감된 항목은 맨 뒤로 보내요
 function byDeadline(a, b) {
   const da = getDday(a.deadline);
@@ -1753,7 +1800,7 @@ const FAQ_DATA = [
   { category: "세금", q: "세금 신고 날짜를 놓치면 어떻게 돼요?", a: "가산세가 붙어요. 늦었더라도 빨리 신고할수록 가산세가 줄어드니 바로 홈택스에서 '기한 후 신고'를 하세요. 국세청 상담센터(국번 없이 126)에서 도움을 받을 수 있어요." },
   { category: "앱 이용", q: "지원금 정보는 얼마나 자주 바뀌어요?", a: "공식 공고를 확인해서 주기적으로 업데이트해요. 지원사업은 예산 상황에 따라 자주 바뀌니, 신청 전에는 반드시 공식 사이트에서 최종 확인하세요. 접수가 끝난 지원금은 '접수마감' 탭에 따로 모아둬요." },
   { category: "앱 이용", q: "내 지역은 어떻게 바꾸나요?", a: "MY 탭 > '내 지역'을 누르면 시·도와 시·군·구를 고를 수 있어요. 한 번 정하면 지원금 목록이 내 지역 기준으로 열리고, 전국 지원금도 함께 보여요." },
-  { category: "앱 이용", q: "마감 임박 알림은 실제로 휴대폰에 오나요?", a: "네. MY 탭에서 '마감 임박 알림'을 켜고, 즐겨찾기 탭에서 원하는 지원금의 🔔를 누르면 마감 3일 전·1일 전·당일 오전 9시에 알려드려요. 상시접수 지원금은 마감일이 없어서 알림 대상이 아니에요." },
+  { category: "앱 이용", q: "어떤 알림을 받을 수 있나요?", a: "MY 탭 > 알림 설정에서 ① 지원금 마감 알림(즐겨찾기에서 🔔 켠 지원금) ② 세금 신고·납부일 알림 ③ 금리 발표일 알림을 켤 수 있어요. 마감 며칠 전부터 알릴지(가볍게·적당히·7일 전부터 매일)와 알림 시각도 고를 수 있어요. 상시접수 지원금은 마감일이 없어서 알림 대상이 아니에요." },
   { category: "앱 이용", q: "즐겨찾기는 어디에 저장되나요?", a: "이 휴대폰에만 저장돼요. 앱을 지우거나 휴대폰을 바꾸면 사라지니, 중요한 지원금은 '공유하기'로 나에게 보내두시면 안전해요." },
   { category: "앱 이용", q: "다른 사장님께 지원금을 알려주고 싶어요", a: "지원금 상세 화면에서 '다른 사장님께 공유하기'를 누르면 카카오톡·문자 등으로 지원금 정보를 보낼 수 있어요." },
   { category: "앱 이용", q: "회원가입이나 개인정보가 필요한가요?", a: "아니요. 로그인 없이 바로 쓸 수 있고, 개인을 알아볼 수 있는 정보는 수집하지 않아요. 자세한 내용은 MY 탭의 개인정보처리방침에서 확인할 수 있어요." },
@@ -2061,7 +2108,7 @@ function DocumentsScreen({ onBack }) {
 
 // 세금·마감 일정 화면 — 세금 신고일 + 즐겨찾기한 지원금 마감일을 월별로 보여줘요
 const TAX_GREEN = "#2C9F6B";
-function TaxScheduleScreen({ onBack, favorites }) {
+function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, planDesc }) {
   const [filter, setFilter] = useState("all"); // all | tax | mine
   const taxItems = TAX_SCHEDULE.map((t) => ({ ...t, type: "tax" }));
   // 상시접수(마감일 없음)·이미 끝난 지원금은 일정에서 빼요
@@ -2105,6 +2152,23 @@ function TaxScheduleScreen({ onBack, favorites }) {
               {getDday(next.deadline) === 0 ? "오늘" : `D-${getDday(next.deadline)}`}
             </span>
           </div>
+        </div>
+      )}
+
+      {onToggleTaxAlert && (
+        <div className="rounded-[20px] p-4 mb-4 flex items-center justify-between gap-3" style={CARD}>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "#E7F7EF" }}>
+              <Bell size={17} color={TAX_GREEN} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[13.5px] font-bold" style={{ color: TEXT }}>세금 신고·납부일 알림</p>
+              <p className="text-[11.5px] leading-snug" style={{ color: MUTED }}>
+                {Capacitor.isNativePlatform() ? (taxAlertOn ? `${planDesc} · MY에서 변경` : "신고 기한을 놓치지 않게 미리 알려드려요") : "알림은 안드로이드 앱에서만 받을 수 있어요"}
+              </p>
+            </div>
+          </div>
+          <Switch checked={!!taxAlertOn} onChange={onToggleTaxAlert} />
         </div>
       )}
 
@@ -3635,6 +3699,11 @@ export default function App() {
   const [newsCategory, setNewsCategory] = useState("전체");
   const [notifyEnabled, setNotifyEnabled] = useState(false);
   const [rateAlertOn, setRateAlertOn] = useState(false); // 한국은행 기준금리 발표일 알림
+  const [taxAlertOn, setTaxAlertOn] = useState(false); // 세금 신고·납부일 알림
+  const [taxStaff, setTaxStaff] = useState(false); // 직원 관련 세금(원천세·4대보험)도 알릴지
+  const [alertPlan, setAlertPlan] = useState("normal"); // 마감 며칠 전부터 알릴지
+  const [alertHour, setAlertHour] = useState(9); // 몇 시에 알릴지
+  const [scheduledAlerts, setScheduledAlerts] = useState([]); // MY 화면 미리보기용
   const [notifyIds, setNotifyIds] = useState(new Set());
   const [diagnosis, setDiagnosis] = useState(null); // { region, revenueBand, yearsBand } | null
   const [diagStep, setDiagStep] = useState(0);
@@ -3692,6 +3761,10 @@ export default function App() {
           if (Array.isArray(data.notifyIds)) setNotifyIds(new Set(data.notifyIds));
           if (typeof data.notifyEnabled === "boolean") setNotifyEnabled(data.notifyEnabled);
           if (typeof data.rateAlertOn === "boolean") setRateAlertOn(data.rateAlertOn);
+          if (typeof data.taxAlertOn === "boolean") setTaxAlertOn(data.taxAlertOn);
+          if (typeof data.taxStaff === "boolean") setTaxStaff(data.taxStaff);
+          if (ALERT_PLANS[data.alertPlan]) setAlertPlan(data.alertPlan);
+          if (ALERT_HOURS.some((x) => x.h === data.alertHour)) setAlertHour(data.alertHour);
           if (data.region) setRegion(data.region);
           if (data.diagnosis) setDiagnosis(data.diagnosis);
         }
@@ -3715,6 +3788,10 @@ export default function App() {
             notifyIds: Array.from(notifyIds),
             notifyEnabled,
             rateAlertOn,
+            taxAlertOn,
+            taxStaff,
+            alertPlan,
+            alertHour,
             region,
             diagnosis,
           }),
@@ -3724,69 +3801,53 @@ export default function App() {
         // 저장 실패해도 앱 사용에는 지장 없도록 조용히 넘어가요
       }
     })();
-  }, [favorites, notifyIds, notifyEnabled, rateAlertOn, region, diagnosis, prefsLoaded]);
+  }, [favorites, notifyIds, notifyEnabled, rateAlertOn, taxAlertOn, taxStaff, alertPlan, alertHour, region, diagnosis, prefsLoaded]);
 
-  // 실제 휴대폰 알림 예약: 알림이 켜져 있고, 즐겨찾기 + 🔔 표시한 항목만 마감 전에 알려요
-  // 설정이 바뀔 때마다 기존 예약을 모두 지우고 다시 예약해요
+  // 실제 휴대폰 알림 예약: 설정이 바뀔 때마다 기존 예약을 모두 지우고 다시 예약해요
   useEffect(() => {
-    if (!prefsLoaded || !Capacitor.isNativePlatform()) return;
+    if (!prefsLoaded) return;
+    const list = buildAlertList({
+      programs: notifyEnabled ? ALL_PROGRAMS.filter((p) => favorites.has(p.id) && notifyIds.has(p.id) && canNotify(p)) : [],
+      taxOn: taxAlertOn,
+      taxStaff,
+      rateOn: rateAlertOn,
+      plan: alertPlan,
+      hour: alertHour,
+    });
+    setScheduledAlerts(list);
+    if (!Capacitor.isNativePlatform()) return;
     (async () => {
       try {
         const pending = await LocalNotifications.getPending();
         if (pending.notifications.length) {
           await LocalNotifications.cancel({ notifications: pending.notifications.map((n) => ({ id: n.id })) });
         }
-        if (!notifyEnabled && !rateAlertOn) return;
-        const deadlineList = notifyEnabled ? ALL_PROGRAMS.filter((p) => favorites.has(p.id) && notifyIds.has(p.id) && canNotify(p)) : [];
-        const notifications = deadlineList
-          .map((p) => {
-            const t = notifyTimeFor(p);
-            if (!t) return null;
-            const when = t.daysBefore === 0 ? "오늘" : `${t.daysBefore}일 뒤`;
-            return {
-              id: p.id,
-              title: `마감 ${t.daysBefore === 0 ? "당일" : `D-${t.daysBefore}`} · ${p.name}`,
-              body: `${when}(${p.deadline}) 신청이 마감돼요. 눌러서 신청 방법을 확인하세요.`,
-              schedule: { at: t.at, allowWhileIdle: true },
-              // 정확한 시각 알람은 별도 권한 화면이 떠서, 몇 분 오차가 있어도 되는 일반 알람으로 예약해요
-              isExactNotification: false,
-              smallIcon: "ic_stat_notify",
-              iconColor: BLUE,
-              extra: { programId: p.id },
-            };
-          })
-          .filter(Boolean);
-        // 금리 발표일 오전 10시 10분 (한국은행은 보통 10시 전후에 결정을 발표해요)
-        if (rateAlertOn) {
-          BOK_MEETINGS.forEach((d, i) => {
-            const at = parseLocalDate(d);
-            at.setHours(10, 10, 0, 0);
-            if (at <= new Date()) return;
-            notifications.push({
-              id: 900000 + i,
-              title: "오늘 한국은행 기준금리 발표일이에요",
-              body: "금리가 바뀌었는지, 내 대출이자에 어떤 영향이 있는지 확인해 보세요.",
-              schedule: { at, allowWhileIdle: true },
-              isExactNotification: false,
-              smallIcon: "ic_stat_notify",
-              iconColor: BLUE,
-              extra: { screen: "exchange" },
-            });
-          });
-        }
-        if (notifications.length) await LocalNotifications.schedule({ notifications });
+        if (!list.length) return;
+        await LocalNotifications.schedule({
+          notifications: list.map((n) => ({
+            id: n.id,
+            title: n.title,
+            body: n.body,
+            schedule: { at: n.at, allowWhileIdle: true },
+            // 정확한 시각 알람은 별도 권한 화면이 떠서, 몇 분 오차가 있어도 되는 일반 알람으로 예약해요
+            isExactNotification: false,
+            smallIcon: "ic_stat_notify",
+            iconColor: BLUE,
+            extra: n.extra,
+          })),
+        });
       } catch (e) {
         // 알림 예약에 실패해도 앱 사용에는 지장 없도록 조용히 넘어가요
       }
     })();
-  }, [notifyEnabled, rateAlertOn, notifyIds, favorites, prefsLoaded, dayKey]);
+  }, [notifyEnabled, rateAlertOn, taxAlertOn, taxStaff, alertPlan, alertHour, notifyIds, favorites, prefsLoaded, dayKey]);
 
   // 알림을 누르면 해당 지원금 상세 화면으로 바로 이동해요
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const handle = LocalNotifications.addListener("localNotificationActionPerformed", (action) => {
       const extra = action.notification?.extra || {};
-      if (extra.screen === "exchange") return setScreen({ view: "exchange" });
+      if (extra.screen === "exchange" || extra.screen === "taxSchedule") return setScreen({ view: extra.screen });
       const id = extra.programId;
       if (id != null && ALL_PROGRAMS.some((p) => p.id === id)) setScreen({ view: "detail", id });
     });
@@ -3796,35 +3857,26 @@ export default function App() {
   }, []);
 
   // 전체 알림 스위치: 켤 때 휴대폰 알림 권한을 요청하고, 거부되면 다시 꺼요
-  const toggleNotifyEnabled = async () => {
-    if (notifyEnabled || !Capacitor.isNativePlatform()) {
-      setNotifyEnabled(!notifyEnabled);
-      return;
-    }
+  // 알림을 켤 때 휴대폰 알림 권한을 요청하고, 거부되면 켜지 않아요
+  const ensureNotifyPermission = async () => {
+    if (!Capacitor.isNativePlatform()) return true;
     try {
       let perm = await LocalNotifications.checkPermissions();
       if (perm.display !== "granted") perm = await LocalNotifications.requestPermissions();
-      if (perm.display === "granted") setNotifyEnabled(true);
-      else alert("알림 권한이 꺼져 있어요. 휴대폰 설정 → 애플리케이션 → 지원금알리미 → 알림에서 허용해 주세요.");
+      if (perm.display === "granted") return true;
+      alert("알림 권한이 꺼져 있어요. 휴대폰 설정 → 애플리케이션 → 지원금알리미 → 알림에서 허용해 주세요.");
+      return false;
     } catch (e) {
-      setNotifyEnabled(true);
+      return true;
     }
   };
-
-  const toggleRateAlert = async () => {
-    if (rateAlertOn || !Capacitor.isNativePlatform()) {
-      setRateAlertOn(!rateAlertOn);
-      return;
-    }
-    try {
-      let perm = await LocalNotifications.checkPermissions();
-      if (perm.display !== "granted") perm = await LocalNotifications.requestPermissions();
-      if (perm.display === "granted") setRateAlertOn(true);
-      else alert("알림 권한이 꺼져 있어요. 휴대폰 설정 → 애플리케이션 → 지원금알리미 → 알림에서 허용해 주세요.");
-    } catch (e) {
-      setRateAlertOn(true);
-    }
+  const makeToggle = (value, setter) => async () => {
+    if (value) return setter(false);
+    if (await ensureNotifyPermission()) setter(true);
   };
+  const toggleNotifyEnabled = makeToggle(notifyEnabled, setNotifyEnabled);
+  const toggleRateAlert = makeToggle(rateAlertOn, setRateAlertOn);
+  const toggleTaxAlert = makeToggle(taxAlertOn, setTaxAlertOn);
 
   const toggleFavoriteId = (id) => {
     const adding = !favorites.has(id);
@@ -3955,7 +4007,7 @@ export default function App() {
   if (screen.view === "taxSchedule") {
     return (
       <Shell>
-        <TaxScheduleScreen onBack={() => setScreen({ view: "home" })} favorites={favorites} />
+        <TaxScheduleScreen onBack={() => setScreen({ view: "home" })} favorites={favorites} taxAlertOn={taxAlertOn} onToggleTaxAlert={toggleTaxAlert} planDesc={ALERT_PLANS[alertPlan].desc} />
       </Shell>
     );
   }
@@ -4426,8 +4478,8 @@ export default function App() {
           <h1 className="text-[19px] font-bold mb-1" style={{ color: TEXT }}>즐겨찾기</h1>
           {favorites.size > 0 && (
             <p className="text-[11.5px] mb-4" style={{ color: MUTED }}>
-              <Bell size={11} className="inline -mt-0.5 mr-0.5" /> 종 아이콘을 눌러 마감 3일 전 알림을 켜고 끌 수 있어요
-              {!notifyEnabled && " (MY 탭에서 '마감 임박 알림'을 먼저 켜주세요)"}
+              <Bell size={11} className="inline -mt-0.5 mr-0.5" /> 종 아이콘을 눌러 마감 알림을 켜고 끌 수 있어요 (알림 시점은 MY에서 설정)
+              {!notifyEnabled && " · MY 탭에서 '지원금 마감 알림'을 먼저 켜주세요"}
             </p>
           )}
           {favorites.size === 0 ? (
@@ -4628,33 +4680,73 @@ export default function App() {
             </div>
             <ChevronRight size={16} color={MUTED} className="shrink-0" />
           </button>
-          <div className="rounded-[20px] p-4 mb-1 flex items-center justify-between" style={CARD}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "#FDEEE9" }}>
-                <Bell size={17} color="#E5674D" />
+          <p className="text-[12px] font-bold mb-2 px-1 mt-5" style={{ color: MUTED }}>알림 설정</p>
+          <div className="rounded-[20px] overflow-hidden" style={CARD}>
+            {[
+              { key: "deadline", icon: Bell, color: "#E5674D", bg: "#FDEEE9", title: "지원금 마감 알림", sub: "즐겨찾기에서 🔔 켠 지원금", on: notifyEnabled, toggle: toggleNotifyEnabled },
+              { key: "tax", icon: CalendarCheck, color: "#2C9F6B", bg: "#E7F7EF", title: "세금 신고·납부일 알림", sub: "부가세·종합소득세 등", on: taxAlertOn, toggle: toggleTaxAlert },
+              { key: "rate", icon: Landmark, color: BLUE, bg: BLUE_SOFT, title: "금리 발표일 알림", sub: "한국은행 기준금리 발표 당일", on: rateAlertOn, toggle: toggleRateAlert },
+            ].map((r, i) => (
+              <div key={r.key} style={{ borderTop: i > 0 ? "1px solid #F1F2F6" : "none" }}>
+                <div className="px-4 py-3.5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: r.bg }}>
+                      <r.icon size={17} color={r.color} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold" style={{ color: TEXT }}>{r.title}</p>
+                      <p className="text-[12px]" style={{ color: MUTED }}>{r.sub}</p>
+                    </div>
+                  </div>
+                  <Switch checked={r.on} onChange={r.toggle} />
+                </div>
+                {r.key === "tax" && taxAlertOn && (
+                  <button onClick={() => setTaxStaff(!taxStaff)} className="flex items-center gap-2 px-4 pb-3.5 -mt-1 ml-[52px] text-left">
+                    <span className="w-[18px] h-[18px] rounded-md flex items-center justify-center shrink-0" style={taxStaff ? { background: GREEN } : { border: "1.5px solid #C9CEDA" }}>
+                      {taxStaff && <Check size={12} color="white" strokeWidth={3} />}
+                    </span>
+                    <span className="text-[12px]" style={{ color: TEXT }}>직원이 있어요 (원천세·4대보험도 알림)</span>
+                  </button>
+                )}
               </div>
-              <div>
-                <p className="text-sm font-semibold" style={{ color: TEXT }}>마감 임박 알림</p>
-                <p className="text-[12px]" style={{ color: MUTED }}>즐겨찾기한 항목 마감 3일 전 알림</p>
-              </div>
-            </div>
-            <Switch checked={notifyEnabled} onChange={toggleNotifyEnabled} />
+            ))}
           </div>
-          <div className="rounded-[20px] p-4 mt-2 mb-1 flex items-center justify-between" style={CARD}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: BLUE_SOFT }}>
-                <Landmark size={17} color={BLUE} />
-              </div>
-              <div>
-                <p className="text-sm font-semibold" style={{ color: TEXT }}>금리 발표일 알림</p>
-                <p className="text-[12px]" style={{ color: MUTED }}>한국은행 기준금리 발표 당일 알림</p>
-              </div>
+
+          {(notifyEnabled || taxAlertOn) && (
+            <div className="rounded-[20px] p-4 mt-2.5" style={CARD}>
+              <p className="text-[13px] font-bold mb-2" style={{ color: TEXT }}>마감 며칠 전부터 알릴까요?</p>
+              <CalcModeSwitch value={alertPlan} onChange={setAlertPlan} options={Object.entries(ALERT_PLANS).map(([key, v]) => ({ key, label: v.label }))} />
+              <p className="text-[11.5px] -mt-2 mb-3.5 px-1" style={{ color: MUTED }}>{ALERT_PLANS[alertPlan].desc}</p>
+              <p className="text-[13px] font-bold mb-2" style={{ color: TEXT }}>몇 시에 알릴까요?</p>
+              <CalcModeSwitch value={String(alertHour)} onChange={(v) => setAlertHour(Number(v))} options={ALERT_HOURS.map((x) => ({ key: String(x.h), label: x.label }))} />
             </div>
-            <Switch checked={rateAlertOn} onChange={toggleRateAlert} />
-          </div>
-          <p className="text-[11px] mb-5 px-1 leading-relaxed" style={{ color: MUTED }}>
+          )}
+
+          {Capacitor.isNativePlatform() && (notifyEnabled || taxAlertOn || rateAlertOn) && (
+            <div className="rounded-[20px] p-4 mt-2.5" style={{ background: "#F6F7FA" }}>
+              <p className="text-[12.5px] font-bold" style={{ color: TEXT }}>예약된 알림 {scheduledAlerts.length}개</p>
+              {scheduledAlerts.length > 0 ? (
+                <div className="mt-2 space-y-1.5">
+                  {scheduledAlerts.slice(0, 3).map((n) => (
+                    <div key={n.id} className="flex items-center gap-2 text-[11.5px]">
+                      <span className="font-semibold tabular-nums shrink-0" style={{ color: BLUE }}>
+                        {n.at.getMonth() + 1}/{n.at.getDate()} {String(n.at.getHours()).padStart(2, "0")}:{String(n.at.getMinutes()).padStart(2, "0")}
+                      </span>
+                      <span className="truncate" style={{ color: "#5E6577" }}>{n.title}</span>
+                    </div>
+                  ))}
+                  {scheduledAlerts.length > 3 && <p className="text-[11px]" style={{ color: MUTED }}>외 {scheduledAlerts.length - 3}개</p>}
+                </div>
+              ) : (
+                <p className="text-[11.5px] mt-1 leading-relaxed" style={{ color: MUTED }}>
+                  {notifyEnabled && !taxAlertOn && !rateAlertOn ? "즐겨찾기 탭에서 지원금의 🔔를 켜면 마감 알림이 예약돼요." : "지금 예약할 알림이 없어요."}
+                </p>
+              )}
+            </div>
+          )}
+          <p className="text-[11px] mb-5 mt-2 px-1 leading-relaxed" style={{ color: MUTED }}>
             {Capacitor.isNativePlatform()
-              ? "마감 알림은 즐겨찾기 탭에서 🔔를 켠 항목만 마감 3일 전·1일 전·당일 오전 9시에 알려드려요."
+              ? "휴대폰 절전 상태에 따라 알림이 몇 분~1시간 늦게 올 수 있어요."
               : "알림은 지원금알리미 앱(안드로이드)에서만 받을 수 있어요."}
           </p>
 
