@@ -4869,8 +4869,10 @@ export default function App() {
         <>
       <div
         className="relative overflow-hidden mb-3 pl-5 pr-4 pt-5 pb-5"
-        style={{ background: "linear-gradient(135deg, #6AAEFE 0%, #4E86FA 45%, #3E72F6 100%)", borderRadius: 28 }}
+        style={{ background: "linear-gradient(135deg, #6AAEFE 0%, #4E86FA 45%, #3E72F6 100%)", borderRadius: 28, boxShadow: "0 10px 24px rgba(62,114,246,0.25), inset 0 1px 0 rgba(255,255,255,0.35)" }}
       >
+        {/* 위쪽 은은한 광택 */}
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(110% 85% at 15% -15%, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0) 55%)" }} />
         {/* 배경 장식 원 */}
         <div className="absolute -right-12 -top-16 w-48 h-48 rounded-full" style={{ background: "rgba(255,255,255,0.07)" }} />
         <div className="absolute -left-10 -bottom-16 w-40 h-40 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }} />
@@ -4888,7 +4890,7 @@ export default function App() {
           />
           {/* 그림 속 종 말풍선을 누르면 알림 설정(MY)으로 */}
           <button
-            onClick={() => setMainTab("my")}
+            onClick={() => setScreen({ view: "alertSettings" })}
             aria-label="알림 설정"
             className="absolute z-10 rounded-full"
             style={{ right: "4%", top: "2%", width: "36%", aspectRatio: "1 / 1" }}
@@ -4904,10 +4906,12 @@ export default function App() {
         {/* 안내용 표시 — 목록은 아래 '소상공인 지원금' 카드로 들어가요 */}
         <div
           className="relative z-10 mt-3.5 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full"
-          style={{ background: "rgba(255,255,255,0.18)" }}
+          style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.25)" }}
         >
-          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#81F5BE" }} />
-          <span className="text-[12px] font-semibold text-white" style={{ lineHeight: 1.5 }}>지금 신청할 수 있는 지원금 {ALL_PROGRAMS.filter((p) => !isExpired(p)).length}건</span>
+          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#81F5BE", boxShadow: "0 0 6px #81F5BE" }} />
+          <span className="text-[12px] font-semibold text-white" style={{ lineHeight: 1.5 }}>
+            지금 신청할 수 있는 지원금 <b className="text-[14px] font-extrabold tabular-nums" style={{ color: "#FFE680" }}>{ALL_PROGRAMS.filter((p) => !isExpired(p)).length}</b>건
+          </span>
         </div>
       </div>
 
