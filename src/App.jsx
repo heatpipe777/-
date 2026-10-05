@@ -302,7 +302,7 @@ function deadlineAlertText(name, days, what) {
   return { title: `마감 D-${days} · ${name}`, body: `${what}까지 ${days}일 남았어요. 눌러서 확인하세요.` };
 }
 // 설정에 맞는 알림 목록을 만들어요 (시간순)
-function buildAlertList({ programs, taxOn, taxStaff, rateOn, plan, hour, events = [] }) {
+function buildAlertList({ programs, taxOn, taxStaff, rateOn, plan, hour, events = [], name = "사장님" }) {
   const now = new Date();
   const days = (ALERT_PLANS[plan] || ALERT_PLANS.normal).days;
   const list = [];
@@ -333,7 +333,8 @@ function buildAlertList({ programs, taxOn, taxStaff, rateOn, plan, hour, events 
       list.push({ id: 900000 + i, at, title: "오늘 한국은행 기준금리 발표일이에요", body: "금리가 바뀌었는지, 내 대출이자에 어떤 영향이 있는지 확인해 보세요.", extra: { screen: "exchange" } });
     });
   }
-  return list.sort((a, b) => a.at - b.at).slice(0, MAX_ALERTS);
+  // 알림 내용 앞에 이름을 붙여 불러요 (예: 민지님, 월급날까지 3일 남았어요)
+  return list.sort((a, b) => a.at - b.at).slice(0, MAX_ALERTS).map((n) => ({ ...n, body: `${name}, ${n.body}` }));
 }
 
 // 마감임박순 정렬 — 이미 마감된 항목은 맨 뒤로 보내요
@@ -406,6 +407,76 @@ function buildTaxSchedule() {
   return TAX_SCHEDULE_BASE.map((t) => ({ ...t, ...shiftWeekend(nextOccurrenceDate(t)) }));
 }
 let TAX_SCHEDULE = buildTaxSchedule();
+
+// ---- 호칭: 처음 실행 때 입력한 이름으로 불러요 (안 쓰면 "사장님") ----
+const NICK_MAX = 6;
+function callNameOf(nick) {
+  const n = (nick || "").trim();
+  if (!n) return "사장님";
+  return n.endsWith("님") ? n : `${n}님`;
+}
+
+// 이름(닉네임) 입력 화면 — 첫 실행과 MY > 내 이름에서 같이 써요
+function NicknameScreen({ initial = "", firstRun, onSave, onSkip, onBack }) {
+  const [value, setValue] = useState(initial);
+  const preview = callNameOf(value);
+  return (
+    <div className={firstRun ? "pt-8" : ""}>
+      {firstRun ? (
+        <div className="text-center mb-7">
+          <div className="w-20 h-20 mx-auto rounded-[26px] flex items-center justify-center mb-4" style={{ background: "linear-gradient(135deg, #6AAEFE, #3E72F6)", boxShadow: "0 10px 24px rgba(62,114,246,0.3)" }}>
+            <span className="text-[38px]">👋</span>
+          </div>
+          <p className="text-[22px] font-extrabold" style={{ color: TEXT }}>반가워요!</p>
+          <p className="text-[15px] mt-1.5" style={{ color: "#5E6577" }}>어떻게 불러드릴까요?</p>
+        </div>
+      ) : (
+        <HeroHeader icon={User} color={BLUE} title="내 이름" subtitle="앱 화면과 알림에서 이 이름으로 불러드려요" onBack={onBack} />
+      )}
+
+      <div className="flex items-center rounded-2xl px-4 py-3.5" style={{ background: INPUT_BG }}>
+        <input
+          autoFocus={firstRun}
+          value={value}
+          onChange={(e) => setValue(e.target.value.replace(/\s+/g, "").slice(0, NICK_MAX))}
+          placeholder="예: 김사장, 민지"
+          className="flex-1 min-w-0 bg-transparent outline-none text-[17px] font-bold"
+          style={{ color: TEXT }}
+        />
+        <span className="text-[12px] tabular-nums shrink-0" style={{ color: MUTED }}>{value.length}/{NICK_MAX}</span>
+      </div>
+      <p className="text-[11.5px] mt-2 px-1" style={{ color: MUTED }}>이름이나 가게 이름, 별명 모두 좋아요. "님"은 자동으로 붙어요.</p>
+
+      {/* 미리보기 */}
+      <div className="rounded-[22px] p-4 mt-5" style={{ background: "linear-gradient(135deg, #6AAEFE 0%, #3E72F6 100%)" }}>
+        <p className="text-[11px] font-semibold text-white/70 mb-1">미리보기</p>
+        <p className="text-[15px] font-semibold text-white">{preview}, 안녕하세요 👋</p>
+        <p className="text-[12px] text-white/80 mt-1.5">🔔 {preview}, '월급날'까지 3일 남았어요.</p>
+      </div>
+
+      <button
+        disabled={!value.trim()}
+        onClick={() => onSave(value.trim())}
+        className="w-full py-4 mt-6 rounded-2xl text-[15px] font-bold"
+        style={value.trim() ? BTN_PRIMARY : { background: "#E7E9F0", color: MUTED }}
+      >
+        {firstRun ? "시작하기" : "저장하기"}
+      </button>
+      {firstRun ? (
+        <button onClick={onSkip} className="w-full py-3.5 mt-1 text-[13px] font-semibold" style={{ color: MUTED }}>
+          건너뛰기 · "사장님"으로 불러주세요
+        </button>
+      ) : (
+        initial && (
+          <button onClick={() => onSave("")} className="w-full py-3.5 mt-1 text-[13px] font-semibold" style={{ color: MUTED }}>
+            이름 지우고 "사장님"으로 부르기
+          </button>
+        )
+      )}
+      <p className="text-[11px] text-center mt-3" style={{ color: "#A3A9B8" }}>이름은 이 휴대폰에만 저장되고, 어디로도 보내지 않아요.</p>
+    </div>
+  );
+}
 
 // ---- 사장님 일정 (내 일정 + 세금 + 즐겨찾기 지원금 마감) ----
 const EVENT_PRESETS = [
@@ -2258,7 +2329,7 @@ function EventEditor({ initial, onSave, onDelete, onClose }) {
   );
 }
 
-function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, planDesc, myEvents = [], onSaveEvent, onDeleteEvent, onSelectProgram }) {
+function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, planDesc, myEvents = [], onSaveEvent, onDeleteEvent, onSelectProgram, callName = "사장님" }) {
   const [filter, setFilter] = useState("all"); // all | my | tax | subsidy
   const [editing, setEditing] = useState(null); // null | {} (새로) | 이벤트
   const all = buildScheduleItems({ favorites, myEvents });
@@ -2278,7 +2349,7 @@ function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, pl
 
   return (
     <div>
-      <HeroHeader icon={CalendarCheck} color={TAX_GREEN} title="사장님 일정" subtitle="월급날·임대료 같은 내 일정과 세금 신고일, 지원금 마감일을 한눈에 챙겨요" onBack={onBack} />
+      <HeroHeader icon={CalendarCheck} color={TAX_GREEN} title={`${callName} 일정`} subtitle="월급날·임대료 같은 내 일정과 세금 신고일, 지원금 마감일을 한눈에 챙겨요" onBack={onBack} />
 
       {next && (
         <div className="relative overflow-hidden rounded-[24px] p-4 mb-3" style={{ background: "linear-gradient(135deg, #3DBB82 0%, #2C9F6B 100%)" }}>
@@ -2799,7 +2870,7 @@ function DiagnosisWizard({ onBack, onComplete }) {
   );
 }
 
-function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, onSelectProgram, statusFilter, setStatusFilter }) {
+function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, onSelectProgram, statusFilter, setStatusFilter, callName = "사장님" }) {
   const results = ALL_PROGRAMS.map((p) => ({ p, r: diagnoseProgram(p, diagnosis) })).filter((x) => x.r.eligible);
   const open = results.filter((x) => !isExpired(x.p));
   const urgentCount = open.filter((x) => getDday(x.p.deadline) <= 7).length;
@@ -2864,11 +2935,11 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
         <div className="absolute -right-10 -top-12 w-40 h-40 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
         <div className="relative flex items-center gap-1.5 mb-1.5">
           <CheckCircle2 size={15} color="white" />
-          <p className="text-[12.5px] text-white/80">사장님이 지금 신청할 수 있는</p>
+          <p className="text-[12.5px] text-white/80">{callName}이 지금 신청할 수 있는</p>
         </div>
         <p className="relative text-white font-extrabold text-[22px] mt-1 pt-0.5" style={{ lineHeight: 1.45 }}>지원금이 {open.length}건 있어요</p>
         {top.length > 0 && (
-          <p className="relative text-[12.5px] mt-1 text-white/85">그중 {top.length}건은 사장님 상황에 특히 잘 맞아요</p>
+          <p className="relative text-[12.5px] mt-1 text-white/85">그중 {top.length}건은 {callName} 상황에 특히 잘 맞아요</p>
         )}
         <div className="relative flex flex-wrap gap-1.5 mt-3.5">
           {chips.map((c) => (
@@ -2895,7 +2966,7 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
         <>
           <div className="flex items-center gap-2 mt-5 mb-2.5">
             <span className="w-1 h-4 rounded-full" style={{ background: BLUE }} />
-            <p className="text-[15px] font-bold" style={{ color: TEXT }}>사장님께 딱 맞는 지원금</p>
+            <p className="text-[15px] font-bold" style={{ color: TEXT }}>{callName}께 딱 맞는 지원금</p>
           </div>
           <div className="space-y-2 mb-5">
             {top.map(({ p, r }) => (
@@ -3937,6 +4008,11 @@ export default function App() {
     }
   };
   const [myEvents, setMyEvents] = useState([]); // 사장님이 직접 등록한 일정 (월급날·임대료 등)
+  const [nickname, setNickname] = useState(""); // 처음 실행 때 입력한 이름
+  const [onboardDone, setOnboardDone] = useState(false);
+  const callName = callNameOf(nickname);
+  // 좁은 자리(홈 타일·전환 버튼)에는 긴 이름 대신 "내"를 써요 (예: 김사장가게님 → 내 일정)
+  const shortCall = callName.length <= 4 ? callName : "내";
   const [notifyIds, setNotifyIds] = useState(new Set());
   const [diagnosis, setDiagnosis] = useState(null); // { region, revenueBand, yearsBand } | null
   const [diagStep, setDiagStep] = useState(0);
@@ -3999,6 +4075,8 @@ export default function App() {
           if (ALERT_PLANS[data.alertPlan]) setAlertPlan(data.alertPlan);
           if (ALERT_HOURS.some((x) => x.h === data.alertHour)) setAlertHour(data.alertHour);
           if (Array.isArray(data.myEvents)) setMyEvents(data.myEvents);
+          if (typeof data.nickname === "string") setNickname(data.nickname);
+          if (data.onboardDone) setOnboardDone(true);
           if (data.region) setRegion(data.region);
           if (data.diagnosis) setDiagnosis(data.diagnosis);
         }
@@ -4027,6 +4105,8 @@ export default function App() {
             alertPlan,
             alertHour,
             myEvents,
+            nickname,
+            onboardDone,
             region,
             diagnosis,
           }),
@@ -4036,7 +4116,7 @@ export default function App() {
         // 저장 실패해도 앱 사용에는 지장 없도록 조용히 넘어가요
       }
     })();
-  }, [favorites, notifyIds, notifyEnabled, rateAlertOn, taxAlertOn, taxStaff, alertPlan, alertHour, myEvents, region, diagnosis, prefsLoaded]);
+  }, [favorites, notifyIds, notifyEnabled, rateAlertOn, taxAlertOn, taxStaff, alertPlan, alertHour, myEvents, nickname, onboardDone, region, diagnosis, prefsLoaded]);
 
   // 실제 휴대폰 알림 예약: 설정이 바뀔 때마다 기존 예약을 모두 지우고 다시 예약해요
   useEffect(() => {
@@ -4049,6 +4129,7 @@ export default function App() {
       plan: alertPlan,
       hour: alertHour,
       events: myEvents,
+      name: callName,
     });
     setScheduledAlerts(list);
     if (!Capacitor.isNativePlatform()) return;
@@ -4076,7 +4157,7 @@ export default function App() {
         // 알림 예약에 실패해도 앱 사용에는 지장 없도록 조용히 넘어가요
       }
     })();
-  }, [notifyEnabled, rateAlertOn, taxAlertOn, taxStaff, alertPlan, alertHour, myEvents, notifyIds, favorites, prefsLoaded, dayKey]);
+  }, [notifyEnabled, rateAlertOn, taxAlertOn, taxStaff, alertPlan, alertHour, myEvents, callName, notifyIds, favorites, prefsLoaded, dayKey]);
 
   // 알림을 누르면 해당 지원금 상세 화면으로 바로 이동해요
   useEffect(() => {
@@ -4244,6 +4325,37 @@ export default function App() {
     );
   }
 
+  // 처음 실행: 이름 입력 (저장된 설정을 다 불러온 뒤에만 보여줘요)
+  if (prefsLoaded && !onboardDone) {
+    return (
+      <Shell>
+        <NicknameScreen
+          firstRun
+          onSave={(n) => {
+            setNickname(n);
+            setOnboardDone(true);
+          }}
+          onSkip={() => setOnboardDone(true)}
+        />
+      </Shell>
+    );
+  }
+
+  if (screen.view === "nickname") {
+    return (
+      <Shell>
+        <NicknameScreen
+          initial={nickname}
+          onBack={() => setScreen({ view: "home" })}
+          onSave={(n) => {
+            setNickname(n);
+            setScreen({ view: "home" });
+          }}
+        />
+      </Shell>
+    );
+  }
+
   if (screen.view === "regionPicker") {
     const regionText = region === "전체" || region === "전국" ? "지역 선택 안 함 (모든 지원금)" : `${region} (+ 전국 지원금)`;
     return (
@@ -4398,6 +4510,7 @@ export default function App() {
           onSaveEvent={saveEvent}
           onDeleteEvent={deleteEvent}
           onSelectProgram={(id) => setScreen({ view: "detail", id })}
+          callName={callName}
         />
       </Shell>
     );
@@ -4463,6 +4576,7 @@ export default function App() {
     return (
       <Shell>
         <DiagnosisResultScreen
+          callName={callName}
           diagnosis={diagnosis}
           onBack={() => setScreen({ view: "home" })}
           onRedo={() => setScreen({ view: "diagnosis" })}
@@ -4533,7 +4647,7 @@ export default function App() {
         </div>
 
         <div className="relative z-10">
-          <p className="text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.95)" }}>사장님, 안녕하세요 👋</p>
+          <p className="text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.95)" }}>{callName}, 안녕하세요 👋</p>
           <h1 className="font-black mt-1 whitespace-nowrap" style={{ color: "white", fontSize: 21, lineHeight: 1.4, letterSpacing: "-0.03em" }}>
             소상공인 정책자금 알리미
           </h1>
@@ -4603,7 +4717,7 @@ export default function App() {
               {diagnosis ? (
                 `${diagnosis.region}${diagnosis.industry ? ` · ${diagLabel(DIAG_INDUSTRY, diagnosis.industry).split(" (")[0]}` : ""} 기준으로 골라둔 지원금이 있어요`
               ) : (
-                "몇 가지만 답하면 사장님 상황에 맞는 지원금만 보여드려요!"
+                `몇 가지만 답하면 ${callName} 상황에 맞는 지원금만 보여드려요!`
               )}
             </p>
           </div>
@@ -4629,7 +4743,7 @@ export default function App() {
         </button>
       </div>
       <div className="rounded-[22px] mb-6 px-3.5 pt-3 pb-1 bg-white" style={{ border: "1px solid #F0F1F6", boxShadow: "0 6px 20px rgba(40,60,120,0.06)" }}>
-        <CalcModeSwitch value={homeUpcoming} onChange={setHomeUpcomingSaved} options={[{ key: "subsidy", label: "지원금 마감" }, { key: "mine", label: "사장님 일정" }]} />
+        <CalcModeSwitch value={homeUpcoming} onChange={setHomeUpcomingSaved} options={[{ key: "subsidy", label: "지원금 마감" }, { key: "mine", label: `${shortCall} 일정` }]} />
         {homeUpcoming === "subsidy" ? (
           <div className="-mt-3">
             <DeadlineSoonList key={dayKey} onSelect={(id) => setScreen({ view: "detail", id })} />
@@ -4664,7 +4778,7 @@ export default function App() {
       {/* 자주 쓰는 도구 */}
       <div className="grid grid-cols-3 gap-2.5 mb-4">
         {[
-          { key: "tax", label: "사장님\n일정", bg: "#E7F7EF", img: toolTaxImg, onClick: () => setScreen({ view: "taxSchedule" }) },
+          { key: "tax", label: shortCall === "내" ? "내 일정" : `${shortCall}\n일정`, bg: "#E7F7EF", img: toolTaxImg, onClick: () => setScreen({ view: "taxSchedule" }) },
           { key: "faq", label: "도움말\nQ&A", bg: "#F1ECFC", img: toolFaqImg, onClick: () => setScreen({ view: "faq" }) },
           { key: "docs", label: "서류·양식\n자료실", bg: "#FFF0E6", img: toolDocsImg, onClick: () => setScreen({ view: "documents" }) },
         ].map((tile) => (
@@ -5055,6 +5169,18 @@ export default function App() {
           </div>
 
           <p className="text-[12px] font-bold mb-2 px-1" style={{ color: MUTED }}>내 정보</p>
+          <button onClick={() => setScreen({ view: "nickname" })} className="w-full text-left rounded-[20px] p-4 mb-3 flex items-center justify-between gap-3" style={CARD}>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "#FFF3E0" }}>
+                <User size={17} color={MY_ACCENT} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold" style={{ color: TEXT }}>내 이름</p>
+                <p className="text-[12px] truncate" style={{ color: MUTED }}>{nickname ? `${callName}으로 불러드려요` : "아직 설정 전이에요 · 지금은 '사장님'으로 불러요"}</p>
+              </div>
+            </div>
+            <ChevronRight size={16} color="#C3C8D4" className="shrink-0" />
+          </button>
           <button onClick={openPicker} className="w-full text-left rounded-[20px] p-4 mb-3 flex items-center justify-between gap-3" style={CARD}>
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: BLUE_SOFT }}>
@@ -5203,7 +5329,7 @@ function PrivacyPolicyScreen({ onBack }) {
     {
       title: "2. 기기에 저장되는 정보",
       body:
-        "즐겨찾기한 지원금 목록, 알림 켜기/끄기 설정, 마지막으로 선택한 지역 정보는 사용하시는 기기(브라우저)의 로컬 저장소에만 저장돼요. 이 정보는 외부 서버로 전송되지 않고, 앱을 삭제하거나 브라우저 저장공간을 초기화하면 함께 사라져요.",
+        "직접 입력한 이름(호칭), 즐겨찾기한 지원금 목록, 내 일정, 알림 설정, 마지막으로 선택한 지역 정보는 사용하시는 기기(브라우저)의 로컬 저장소에만 저장돼요. 이 정보는 외부 서버로 전송되지 않고, 앱을 삭제하거나 브라우저 저장공간을 초기화하면 함께 사라져요.",
     },
     {
       title: "3. 외부 공개 데이터 호출",

@@ -133,13 +133,15 @@ const SCREENS = [
   { name: "계산기", steps: [["home"], ["click", "사장님 필수 계산기"]] },
   { name: "도움말 Q&A", steps: [["home"], ["click", "도움말"]] },
   { name: "서류·양식", steps: [["home"], ["click", "서류"]] },
-  { name: "홈 사장님 일정 탭", steps: [["home"], ["click", "지원금 마감"], ["click", "사장님 일정"]] },
-  { name: "사장님 일정", steps: [["home"], ["click", "서류"], ["home"], ["click", "도움말"], ["home"], ["click", "사장님 일정"], ["click", "전체보기"]] },
+  { name: "홈 사장님 일정 탭", steps: [["home"], ["click", "지원금 마감"], ["click", " 일정"]] },
+  { name: "사장님 일정", steps: [["home"], ["click", "서류"], ["home"], ["click", "도움말"], ["home"], ["click", " 일정"], ["click", "전체보기"]] },
   { name: "내 일정 추가 창", steps: [["click", "내 일정 추가"]] },
   { name: "뉴스", steps: [["home"], ["click", "뉴스"]] },
   { name: "뉴스 상세", steps: [["click", "울산시"]] },
   { name: "즐겨찾기", steps: [["home"], ["click", "즐겨찾기"]] },
   { name: "MY", steps: [["home"], ["click", "MY"]] },
+  { name: "내 이름", steps: [["click", "내 이름"]] },
+  { name: "MY 복귀", steps: [["home"], ["click", "MY"]] },
   { name: "알림 설정", steps: [["click", "알림 설정"]] },
   { name: "내 지역 선택 창", steps: [["home"], ["click", "MY"], ["click", "내 지역"]] },
   { name: "세부 지역 선택", steps: [["click", "경북"]] },
@@ -149,6 +151,12 @@ const SCREENS = [
 
 await evaluate(HELPERS);
 const results = [];
+// 첫 실행 이름 입력 화면이 떠 있으면 먼저 점검하고 건너뛰어요
+if (await evaluate(`document.body.innerText.includes("어떻게 불러드릴까요")`)) {
+  results.push(await evaluate(`__audit.check("첫 실행 이름 입력")`));
+  await evaluate(`__audit.click("건너뛰기")`);
+  await sleep(900);
+}
 for (const sc of SCREENS) {
   for (const [kind, arg] of sc.steps) {
     if (kind === "home") {
