@@ -4914,41 +4914,33 @@ export default function App() {
       {/* 맞춤 진단 CTA — 기존에 만들어둔 진단 기능으로 들어가는 입구가 없었어서 추가 */}
       <style>{`
         @keyframes shimmerSweep {
-          0% { left: -20%; }
-          100% { left: 104%; }
+          0% { transform: translateX(-120%) skewX(-18deg); opacity: 0; }
+          8% { opacity: 1; }
+          42% { transform: translateX(330%) skewX(-18deg); opacity: 1; }
+          50%, 100% { transform: translateX(330%) skewX(-18deg); opacity: 0; }
         }
       `}</style>
       <button
         onClick={() => setScreen({ view: diagnosis ? "diagnosisResult" : "diagnosis" })}
         className="relative overflow-hidden w-full text-left rounded-[24px] py-3.5 pl-2 pr-3.5 mb-5 flex items-center justify-between active:scale-[0.99] transition-transform"
-        style={{ background: "linear-gradient(120deg, #FFD54A 0%, #FFC21F 50%, #F2A30F 100%)", boxShadow: "0 8px 20px rgba(232,160,15,0.30)" }}
+        style={{ background: "linear-gradient(120deg, #FFE680 0%, #FFD84A 45%, #FFC53A 100%)", boxShadow: "0 8px 20px rgba(245,180,30,0.28), inset 0 1px 0 rgba(255,255,255,0.7)" }}
       >
+        {/* 위쪽 은은한 광택 */}
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(120% 90% at 18% -10%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 55%)" }} />
+        {/* 부드럽게 지나가는 빛 (한 번 지나가고 잠시 쉬어요) */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div
             style={{
               position: "absolute",
-              top: 0,
-              left: "-20%",
-              width: "16%",
-              height: "100%",
-              background: "linear-gradient(75deg, transparent 0%, rgba(255,255,255,0.85) 50%, transparent 100%)",
-              animation: "shimmerSweep 2.6s linear infinite",
+              top: "-20%",
+              left: 0,
+              width: "34%",
+              height: "140%",
+              background: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.18) 30%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.18) 70%, rgba(255,255,255,0) 100%)",
+              filter: "blur(6px)",
+              animation: "shimmerSweep 4.5s ease-in-out infinite",
             }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                top: "-6px",
-                left: "50%",
-                width: "16px",
-                height: "16px",
-                borderRadius: "50%",
-                background: "rgba(255,255,255,0.95)",
-                filter: "blur(5px)",
-                transform: "translateX(-50%)",
-              }}
-            />
-          </div>
+          />
         </div>
         <div className="relative z-10 flex items-center gap-1.5 min-w-0">
           <img
@@ -4971,8 +4963,8 @@ export default function App() {
             </p>
           </div>
         </div>
-        <span className="relative z-10 w-9 h-9 rounded-full flex items-center justify-center shrink-0 ml-2" style={{ background: "rgba(255,255,255,0.85)" }}>
-          <ChevronRight size={18} color="#C47F00" strokeWidth={2.6} />
+        <span className="relative z-10 w-9 h-9 rounded-full flex items-center justify-center shrink-0 ml-2" style={{ background: "rgba(255,255,255,0.92)", boxShadow: "0 3px 8px rgba(200,140,0,0.18)" }}>
+          <ChevronRight size={18} color="#D99100" strokeWidth={2.6} />
         </span>
       </button>
 
