@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useLayoutEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import {
   Search,
   MapPin,
@@ -2265,11 +2265,23 @@ function EventEditor({ initial, onSave, onDelete, onClose }) {
     if (p.day) setDay(p.day);
   };
   const ok = title.trim().length > 0 && (repeat === "monthly" || date);
+  useEffect(() => {
+    window.__subBack = onClose;
+    window.scrollTo(0, 0);
+    return () => {
+      if (window.__subBack === onClose) window.__subBack = null;
+    };
+  }, [onClose]);
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-end justify-center" style={{ zIndex: 60 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="bg-white w-full max-w-md md:max-w-xl rounded-t-[24px] p-5 pb-7 max-h-[88%] overflow-y-auto">
-        <div className="w-9 h-1 bg-[#E5E7EE] rounded-full mx-auto mb-4" />
-        <p className="text-[17px] font-bold mb-4" style={{ color: TEXT }}>{editing ? "일정 수정" : "내 일정 추가"}</p>
+    <div>
+      <div>
+        <HeroHeader
+          icon={CalendarCheck}
+          color={MY_ACCENT}
+          title={editing ? "일정 수정" : "내 일정 추가"}
+          subtitle={editing ? "내용을 바꾸거나 일정을 삭제할 수 있어요" : "월급날·임대료처럼 챙겨야 할 날을 등록하면 미리 알려드려요"}
+          onBack={onClose}
+        />
 
         {!editing && (
           <div className="flex flex-wrap gap-1.5 mb-4">
@@ -2347,6 +2359,7 @@ function EventEditor({ initial, onSave, onDelete, onClose }) {
 function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, planDesc, myEvents = [], onSaveEvent, onDeleteEvent, onSelectProgram, callName = "사장님", taxStaff = false, onToggleTaxStaff }) {
   const [filter, setFilter] = useState("all"); // all | my | tax | subsidy
   const [editing, setEditing] = useState(null); // null | {} (새로) | 이벤트
+  const closeEditor = useCallback(() => setEditing(null), []);
   // 원천세·4대보험은 "직원이 있어요"를 켠 사장님께만 보여줘요 (홈과 같은 기준)
   const all = buildScheduleItems({ favorites, myEvents }).filter((x) => taxStaff || x.type !== "tax" || !STAFF_TAX.includes(x.name));
   const shown = all.filter((x) => filter === "all" || x.type === filter);
@@ -2362,6 +2375,24 @@ function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, pl
     g.items.push(item);
   }
   const tone = (t) => (t === "my" ? { accent: MY_ACCENT, soft: "#FFF3E0" } : t === "tax" ? { accent: TAX_GREEN, soft: "#E7F7EF" } : { accent: BLUE, soft: BLUE_SOFT });
+
+  if (editing) {
+    return (
+      <EventEditor
+        initial={editing.id ? editing : null}
+        onClose={closeEditor}
+        onSave={(ev) => {
+          onSaveEvent(ev);
+          setEditing(null);
+          setFilter("my");
+        }}
+        onDelete={(id) => {
+          onDeleteEvent(id);
+          setEditing(null);
+        }}
+      />
+    );
+  }
 
   return (
     <div>
@@ -2522,21 +2553,6 @@ function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, pl
         * 세금 일정은 개인사업자 기준이에요. 마감일이 주말·공휴일이면 다음 평일까지 신고할 수 있어요. 법인이나 특수한 경우는 기한이 다를 수 있으니 홈택스 또는 국세청 상담센터(국번 없이 126)에서 꼭 확인하세요. 내 일정은 이 휴대폰에만 저장돼요.
       </p>
 
-      {editing && (
-        <EventEditor
-          initial={editing.id ? editing : null}
-          onClose={() => setEditing(null)}
-          onSave={(ev) => {
-            onSaveEvent(ev);
-            setEditing(null);
-            setFilter("my");
-          }}
-          onDelete={(id) => {
-            onDeleteEvent(id);
-            setEditing(null);
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -4304,6 +4320,7 @@ export default function App() {
   // 안드로이드 뒤로가기 버튼: 열린 창 닫기 → 이전 화면 → 홈 탭 → 그래도 홈이면 앱 종료
   const backRef = useRef(null);
   backRef.current = () => {
+    if (window.__subBack) return window.__subBack();
     if (screen.view === "regionPicker" && pickerStep === "district") return setPickerStep("province");
     if (screen.view !== "home") return setScreen({ view: "home" });
     if (homeScreen !== "hub") return setHomeScreen("hub");
