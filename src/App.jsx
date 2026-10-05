@@ -4245,6 +4245,82 @@ export default function App() {
     );
   }
 
+  if (screen.view === "alertSettings") {
+    return (
+      <Shell>
+        <HeroHeader icon={Bell} color="#E5674D" title="알림 설정" subtitle="받을 알림과 며칠 전·몇 시에 알릴지 정해요" onBack={() => setScreen({ view: "home" })} />
+        <div className="rounded-[20px] overflow-hidden" style={CARD}>
+          {[
+            { key: "deadline", icon: Bell, color: "#E5674D", bg: "#FDEEE9", title: "지원금 마감 알림", sub: "즐겨찾기에서 🔔 켠 지원금", on: notifyEnabled, toggle: toggleNotifyEnabled },
+            { key: "tax", icon: CalendarCheck, color: "#2C9F6B", bg: "#E7F7EF", title: "세금 신고·납부일 알림", sub: "부가세·종합소득세 등", on: taxAlertOn, toggle: toggleTaxAlert },
+            { key: "rate", icon: Landmark, color: BLUE, bg: BLUE_SOFT, title: "금리 발표일 알림", sub: "한국은행 기준금리 발표 당일", on: rateAlertOn, toggle: toggleRateAlert },
+          ].map((r, i) => (
+            <div key={r.key} style={{ borderTop: i > 0 ? "1px solid #F1F2F6" : "none" }}>
+              <div className="px-4 py-3.5 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: r.bg }}>
+                    <r.icon size={17} color={r.color} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold" style={{ color: TEXT }}>{r.title}</p>
+                    <p className="text-[12px]" style={{ color: MUTED }}>{r.sub}</p>
+                  </div>
+                </div>
+                <Switch checked={r.on} onChange={r.toggle} />
+              </div>
+              {r.key === "tax" && taxAlertOn && (
+                <button onClick={() => setTaxStaff(!taxStaff)} className="flex items-center gap-2 px-4 pb-3.5 -mt-1 ml-[52px] text-left">
+                  <span className="w-[18px] h-[18px] rounded-md flex items-center justify-center shrink-0" style={taxStaff ? { background: GREEN } : { border: "1.5px solid #C9CEDA" }}>
+                    {taxStaff && <Check size={12} color="white" strokeWidth={3} />}
+                  </span>
+                  <span className="text-[12px]" style={{ color: TEXT }}>직원이 있어요 (원천세·4대보험도 알림)</span>
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {(notifyEnabled || taxAlertOn) && (
+          <div className="rounded-[20px] p-4 mt-2.5" style={CARD}>
+            <p className="text-[13px] font-bold mb-2" style={{ color: TEXT }}>마감 며칠 전부터 알릴까요?</p>
+            <CalcModeSwitch value={alertPlan} onChange={setAlertPlan} options={Object.entries(ALERT_PLANS).map(([key, v]) => ({ key, label: v.label }))} />
+            <p className="text-[11.5px] -mt-2 mb-3.5 px-1" style={{ color: MUTED }}>{ALERT_PLANS[alertPlan].desc}</p>
+            <p className="text-[13px] font-bold mb-2" style={{ color: TEXT }}>몇 시에 알릴까요?</p>
+            <CalcModeSwitch value={String(alertHour)} onChange={(v) => setAlertHour(Number(v))} options={ALERT_HOURS.map((x) => ({ key: String(x.h), label: x.label }))} />
+          </div>
+        )}
+
+        {Capacitor.isNativePlatform() && (notifyEnabled || taxAlertOn || rateAlertOn) && (
+          <div className="rounded-[20px] p-4 mt-2.5" style={{ background: "#F6F7FA" }}>
+            <p className="text-[12.5px] font-bold" style={{ color: TEXT }}>예약된 알림 {scheduledAlerts.length}개</p>
+            {scheduledAlerts.length > 0 ? (
+              <div className="mt-2 space-y-1.5">
+                {scheduledAlerts.slice(0, 3).map((n) => (
+                  <div key={n.id} className="flex items-center gap-2 text-[11.5px]">
+                    <span className="font-semibold tabular-nums shrink-0" style={{ color: BLUE }}>
+                      {n.at.getMonth() + 1}/{n.at.getDate()} {String(n.at.getHours()).padStart(2, "0")}:{String(n.at.getMinutes()).padStart(2, "0")}
+                    </span>
+                    <span className="truncate" style={{ color: "#5E6577" }}>{n.title}</span>
+                  </div>
+                ))}
+                {scheduledAlerts.length > 3 && <p className="text-[11px]" style={{ color: MUTED }}>외 {scheduledAlerts.length - 3}개</p>}
+              </div>
+            ) : (
+              <p className="text-[11.5px] mt-1 leading-relaxed" style={{ color: MUTED }}>
+                {notifyEnabled && !taxAlertOn && !rateAlertOn ? "즐겨찾기 탭에서 지원금의 🔔를 켜면 마감 알림이 예약돼요." : "지금 예약할 알림이 없어요."}
+              </p>
+            )}
+          </div>
+        )}
+        <p className="text-[11px] mb-5 mt-2 px-1 leading-relaxed" style={{ color: MUTED }}>
+          {Capacitor.isNativePlatform()
+            ? "휴대폰 절전 상태에 따라 알림이 몇 분~1시간 늦게 올 수 있어요."
+            : "알림은 지원금알리미 앱(안드로이드)에서만 받을 수 있어요."}
+        </p>
+      </Shell>
+    );
+  }
+
   if (screen.view === "taxSchedule") {
     return (
       <Shell>
@@ -4947,75 +5023,25 @@ export default function App() {
             </div>
             <ChevronRight size={16} color={MUTED} className="shrink-0" />
           </button>
-          <p className="text-[12px] font-bold mb-2 px-1 mt-5" style={{ color: MUTED }}>알림 설정</p>
-          <div className="rounded-[20px] overflow-hidden" style={CARD}>
-            {[
-              { key: "deadline", icon: Bell, color: "#E5674D", bg: "#FDEEE9", title: "지원금 마감 알림", sub: "즐겨찾기에서 🔔 켠 지원금", on: notifyEnabled, toggle: toggleNotifyEnabled },
-              { key: "tax", icon: CalendarCheck, color: "#2C9F6B", bg: "#E7F7EF", title: "세금 신고·납부일 알림", sub: "부가세·종합소득세 등", on: taxAlertOn, toggle: toggleTaxAlert },
-              { key: "rate", icon: Landmark, color: BLUE, bg: BLUE_SOFT, title: "금리 발표일 알림", sub: "한국은행 기준금리 발표 당일", on: rateAlertOn, toggle: toggleRateAlert },
-            ].map((r, i) => (
-              <div key={r.key} style={{ borderTop: i > 0 ? "1px solid #F1F2F6" : "none" }}>
-                <div className="px-4 py-3.5 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: r.bg }}>
-                      <r.icon size={17} color={r.color} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold" style={{ color: TEXT }}>{r.title}</p>
-                      <p className="text-[12px]" style={{ color: MUTED }}>{r.sub}</p>
-                    </div>
-                  </div>
-                  <Switch checked={r.on} onChange={r.toggle} />
-                </div>
-                {r.key === "tax" && taxAlertOn && (
-                  <button onClick={() => setTaxStaff(!taxStaff)} className="flex items-center gap-2 px-4 pb-3.5 -mt-1 ml-[52px] text-left">
-                    <span className="w-[18px] h-[18px] rounded-md flex items-center justify-center shrink-0" style={taxStaff ? { background: GREEN } : { border: "1.5px solid #C9CEDA" }}>
-                      {taxStaff && <Check size={12} color="white" strokeWidth={3} />}
-                    </span>
-                    <span className="text-[12px]" style={{ color: TEXT }}>직원이 있어요 (원천세·4대보험도 알림)</span>
-                  </button>
-                )}
+          <p className="text-[12px] font-bold mb-2 px-1 mt-5" style={{ color: MUTED }}>알림</p>
+          <button onClick={() => setScreen({ view: "alertSettings" })} className="w-full text-left rounded-[20px] p-4 mb-5 flex items-center justify-between gap-3" style={CARD}>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "#FDEEE9" }}>
+                <Bell size={17} color="#E5674D" />
               </div>
-            ))}
-          </div>
-
-          {(notifyEnabled || taxAlertOn) && (
-            <div className="rounded-[20px] p-4 mt-2.5" style={CARD}>
-              <p className="text-[13px] font-bold mb-2" style={{ color: TEXT }}>마감 며칠 전부터 알릴까요?</p>
-              <CalcModeSwitch value={alertPlan} onChange={setAlertPlan} options={Object.entries(ALERT_PLANS).map(([key, v]) => ({ key, label: v.label }))} />
-              <p className="text-[11.5px] -mt-2 mb-3.5 px-1" style={{ color: MUTED }}>{ALERT_PLANS[alertPlan].desc}</p>
-              <p className="text-[13px] font-bold mb-2" style={{ color: TEXT }}>몇 시에 알릴까요?</p>
-              <CalcModeSwitch value={String(alertHour)} onChange={(v) => setAlertHour(Number(v))} options={ALERT_HOURS.map((x) => ({ key: String(x.h), label: x.label }))} />
-            </div>
-          )}
-
-          {Capacitor.isNativePlatform() && (notifyEnabled || taxAlertOn || rateAlertOn) && (
-            <div className="rounded-[20px] p-4 mt-2.5" style={{ background: "#F6F7FA" }}>
-              <p className="text-[12.5px] font-bold" style={{ color: TEXT }}>예약된 알림 {scheduledAlerts.length}개</p>
-              {scheduledAlerts.length > 0 ? (
-                <div className="mt-2 space-y-1.5">
-                  {scheduledAlerts.slice(0, 3).map((n) => (
-                    <div key={n.id} className="flex items-center gap-2 text-[11.5px]">
-                      <span className="font-semibold tabular-nums shrink-0" style={{ color: BLUE }}>
-                        {n.at.getMonth() + 1}/{n.at.getDate()} {String(n.at.getHours()).padStart(2, "0")}:{String(n.at.getMinutes()).padStart(2, "0")}
-                      </span>
-                      <span className="truncate" style={{ color: "#5E6577" }}>{n.title}</span>
-                    </div>
-                  ))}
-                  {scheduledAlerts.length > 3 && <p className="text-[11px]" style={{ color: MUTED }}>외 {scheduledAlerts.length - 3}개</p>}
-                </div>
-              ) : (
-                <p className="text-[11.5px] mt-1 leading-relaxed" style={{ color: MUTED }}>
-                  {notifyEnabled && !taxAlertOn && !rateAlertOn ? "즐겨찾기 탭에서 지원금의 🔔를 켜면 마감 알림이 예약돼요." : "지금 예약할 알림이 없어요."}
+              <div className="min-w-0">
+                <p className="text-sm font-semibold" style={{ color: TEXT }}>알림 설정</p>
+                <p className="text-[12px] truncate" style={{ color: MUTED }}>
+                  {(() => {
+                    const n = [notifyEnabled, taxAlertOn, rateAlertOn].filter(Boolean).length;
+                    if (!n) return "꺼져 있어요 · 마감·세금·금리 발표일 알림";
+                    return `${n}개 켜짐 · ${ALERT_PLANS[alertPlan].label} · ${ALERT_HOURS.find((x) => x.h === alertHour).label}${Capacitor.isNativePlatform() ? ` · 예약 ${scheduledAlerts.length}개` : ""}`;
+                  })()}
                 </p>
-              )}
+              </div>
             </div>
-          )}
-          <p className="text-[11px] mb-5 mt-2 px-1 leading-relaxed" style={{ color: MUTED }}>
-            {Capacitor.isNativePlatform()
-              ? "휴대폰 절전 상태에 따라 알림이 몇 분~1시간 늦게 올 수 있어요."
-              : "알림은 지원금알리미 앱(안드로이드)에서만 받을 수 있어요."}
-          </p>
+            <ChevronRight size={16} color="#C3C8D4" className="shrink-0" />
+          </button>
 
           <p className="text-[12px] font-bold mb-2 px-1 mt-4" style={{ color: MUTED }}>약관·정보</p>
           <div className="rounded-[20px] overflow-hidden mb-3" style={CARD}>

@@ -140,6 +140,7 @@ const SCREENS = [
   { name: "뉴스 상세", steps: [["click", "울산시"]] },
   { name: "즐겨찾기", steps: [["home"], ["click", "즐겨찾기"]] },
   { name: "MY", steps: [["home"], ["click", "MY"]] },
+  { name: "알림 설정", steps: [["click", "알림 설정"]] },
   { name: "맞춤 진단 1단계", steps: [["home"], ["click", "맞춤"]] },
 ];
 
