@@ -4245,14 +4245,14 @@ export default function App() {
   }
 
   if (screen.view === "regionPicker") {
-    const regionText = region === "전체" ? "지역 상관없이 모든 지원금" : region === "전국" ? "전국 지원금만" : region;
+    const regionText = region === "전체" || region === "전국" ? "지역 선택 안 함 (모든 지원금)" : `${region} (+ 전국 지원금)`;
     return (
       <Shell>
         <HeroHeader
           icon={MapPin}
           color={BLUE}
           title={pickerStep === "province" ? "내 지역 선택" : `${tempProvince} 세부 지역`}
-          subtitle={pickerStep === "province" ? "고른 지역의 지원금과 전국 지원금을 함께 보여드려요. 다음에도 이 지역으로 열려요." : "시·군·구를 고르거나, 도 전체로 볼 수 있어요."}
+          subtitle={pickerStep === "province" ? "사업장이 있는 지역을 고르면, 그 지역 지원금과 전국 지원금을 함께 보여드려요." : "시·군·구를 고르거나, 도 전체로 볼 수 있어요."}
           onBack={() => (pickerStep === "district" ? setPickerStep("province") : closePicker())}
         />
 
@@ -4263,20 +4263,14 @@ export default function App() {
 
         {pickerStep === "province" ? (
           <>
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              {[
-                { key: "전체", label: "지역 상관없이", sub: "모든 지원금 보기" },
-                { key: "전국", label: "전국 지원금만", sub: "지역 전용 제외" },
-              ].map((o) => {
-                const on = region === o.key;
-                return (
-                  <button key={o.key} onClick={() => selectProvince(o.key)} className="py-3 rounded-2xl text-center active:scale-[0.98] transition-transform" style={on ? CHIP_ON : { ...CARD, color: TEXT }}>
-                    <span className="block text-[14px] font-bold">{o.label}</span>
-                    <span className="block text-[11px] mt-0.5" style={{ color: on ? "rgba(255,255,255,0.85)" : MUTED }}>{o.sub}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <button
+              onClick={() => selectProvince("전체")}
+              className="w-full py-3.5 rounded-2xl mb-4 flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
+              style={region === "전체" || region === "전국" ? CHIP_ON : { ...CARD, color: TEXT }}
+            >
+              <span className="text-[14px] font-bold">지역 선택 안 함</span>
+              <span className="text-[11.5px]" style={{ color: region === "전체" || region === "전국" ? "rgba(255,255,255,0.85)" : MUTED }}>· 모든 지원금 보기</span>
+            </button>
             <p className="text-[12px] font-bold mb-2 px-0.5" style={{ color: MUTED }}>시·도</p>
             <div className="grid grid-cols-4 gap-2">
               {REGIONS.filter((r) => r !== "전체" && r !== "전국").map((r) => {
@@ -5069,7 +5063,7 @@ export default function App() {
               <div className="min-w-0">
                 <p className="text-sm font-semibold" style={{ color: TEXT }}>내 지역</p>
                 <p className="text-[12px] truncate" style={{ color: MUTED }}>
-                  {region === "전체" ? "아직 설정 전이에요 · 눌러서 정해 주세요" : region === "전국" ? "전국 지원금만 보기 · 눌러서 바꾸기" : `${region} · 지원금 목록이 이 지역 기준으로 열려요`}
+                  {region === "전체" || region === "전국" ? "아직 설정 전이에요 · 눌러서 정해 주세요" : `${region} · 지원금 목록이 이 지역 기준으로 열려요`}
                 </p>
               </div>
             </div>
