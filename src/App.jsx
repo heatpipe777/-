@@ -4979,13 +4979,6 @@ export default function App() {
           <p className="text-[16px] font-bold" style={{ color: TEXT }}>다가오는 마감·일정</p>
           <Clock size={15} color="#F0567A" strokeWidth={2.4} />
         </div>
-        <button
-          onClick={() => (homeUpcoming === "subsidy" ? setHomeScreen("list") : setScreen({ view: "taxSchedule" }))}
-          className="text-[11px] font-medium flex items-center gap-0.5"
-          style={{ color: MUTED }}
-        >
-          전체보기 <ChevronRight size={12} />
-        </button>
       </div>
       <div className="rounded-[22px] mb-6 px-3.5 pt-3 pb-1 bg-white" style={{ border: "1px solid #F0F1F6", boxShadow: "0 6px 20px rgba(40,60,120,0.06)" }}>
         <CalcModeSwitch value={homeUpcoming} onChange={setHomeUpcomingSaved} options={[{ key: "subsidy", label: "지원금 마감" }, { key: "mine", label: `${shortCall} 일정` }]} />
@@ -5030,7 +5023,7 @@ export default function App() {
           <button
             key={tile.key}
             onClick={tile.onClick}
-            aria-label={tile.label.replace("\n", " ")}
+            aria-label={`${tile.label.replace("\n", " ")} 열기`}
             className="relative overflow-hidden rounded-[20px] active:scale-[0.97] transition-transform"
             style={{ background: tile.bg, aspectRatio: "298 / 305" }}
           >

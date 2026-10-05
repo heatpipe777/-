@@ -143,7 +143,7 @@ const SCREENS = [
   { name: "도움말 Q&A", steps: [["home"], ["click", "도움말"]] },
   { name: "서류·양식", steps: [["home"], ["click", "서류"]] },
   { name: "홈 사장님 일정 탭", steps: [["home"], ["click", "지원금 마감"], ["click", " 일정"]] },
-  { name: "사장님 일정", steps: [["home"], ["click", "서류"], ["home"], ["click", "도움말"], ["home"], ["click", " 일정"], ["click", "전체보기"]] },
+  { name: "사장님 일정", steps: [["home"], ["click", "서류"], ["home"], ["click", "도움말"], ["home"], ["click", "일정 열기"]] },
   { name: "내 일정 추가 창", steps: [["click", "내 일정 추가"]] },
   { name: "뉴스", steps: [["home"], ["click", "뉴스"]] },
   { name: "뉴스 상세", steps: [["click", "울산시"]] },
