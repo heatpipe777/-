@@ -67,6 +67,8 @@ import catStartup from "./assets/cat/startup.webp";
 import catCredit from "./assets/cat/credit.webp";
 import catRestart from "./assets/cat/restart.webp";
 import listHeroImg from "./assets/cat/list-hero.webp";
+import centerHeroImg from "./assets/cat/hero-center.webp";
+import centerPinImg from "./assets/cat/center-pin.webp";
 import tileCenterImg from "./assets/home-tiles/center.webp";
 import tileExchangeImg from "./assets/home-tiles/exchange.webp";
 import tileNewsImg from "./assets/home-tiles/news.webp";
@@ -2719,6 +2721,11 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
       : REGIONAL_CENTERS.filter((c) => activeGroup && c.covers.some((cv) => activeGroup.members.includes(cv)));
   const totalPages = Math.max(1, Math.ceil(visibleCenters.length / PAGE_SIZE));
   const pagedCenters = visibleCenters.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const centerCount = (p) => {
+    if (p === "전체") return REGIONAL_CENTERS.length;
+    const g = CENTER_GROUPS.find((x) => x.label === p);
+    return REGIONAL_CENTERS.filter((c) => g && c.covers.some((cv) => g.members.includes(cv))).length;
+  };
   const selectProvince = (p) => {
     setActiveProvince(p);
     setPage(1);
@@ -2729,16 +2736,18 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
 
   return (
     <div>
-      <HeroHeader icon={MapPin} color="#D6478E" title="지역센터 찾기" subtitle="가까운 소상공인시장진흥공단 센터를 찾아보세요" onBack={onBack} />
+      <HeroHeader icon={MapPin} color="#D6478E" image={centerHeroImg} title="지역센터 찾기" subtitle="소상공인시장진흥공단 지역센터" headline="가까운 센터를 찾아보세요!" onBack={onBack} />
 
-      <div className="rounded-2xl p-3.5 mb-4" style={{ background: "#FDF3D9" }}>
-        <div className="flex items-start gap-2 mb-2.5">
-          <AlertTriangle size={15} color="#B8860B" className="shrink-0 mt-0.5" />
-          <div>
-            <p className="text-[12.5px] font-bold" style={{ color: "#8A6200" }}>
+      <div className="rounded-[22px] p-4 mb-4" style={{ ...CARD, background: "linear-gradient(135deg, #FFF8E6 0%, #FFFFFF 70%)" }}>
+        <div className="flex items-start gap-3 mb-3">
+          <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "#FDEFC8" }}>
+            <AlertTriangle size={17} color="#C98A0B" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[13.5px] font-bold" style={{ color: TEXT }}>
               2026년 조직개편으로 지역본부가 재편됐어요
             </p>
-            <p className="text-[11.5px] mt-1" style={{ color: "#8A6200" }}>
+            <p className="text-[12px] mt-1 break-keep" style={{ color: MUTED }}>
               일부 신설 지역본부는 상세주소를 아직 확인 중이에요. 방문 전에는 아래 콜센터나 공식 사이트에서 최신 정보를 꼭 다시 확인해주세요.
             </p>
           </div>
@@ -2746,23 +2755,23 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
         <div className="flex gap-2">
           <a
             href="tel:1533-0100"
-            className="flex-1 py-2 rounded-xl text-center text-[12px] font-bold flex items-center justify-center gap-1"
-            style={{ background: "#FFFFFF", color: "#8A6200" }}
+            className="flex-1 min-w-0 py-2.5 rounded-full text-center text-[12.5px] font-bold flex items-center justify-center gap-1 whitespace-nowrap"
+            style={BTN_PRIMARY}
           >
-            <Phone size={12} /> 통합콜센터 1533-0100
+            <Phone size={13} /> 콜센터 1533-0100
           </a>
           <a
             href="https://www.semas.or.kr"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 py-2 rounded-xl text-center text-[12px] font-bold flex items-center justify-center gap-1"
-            style={{ background: "#FFFFFF", color: "#8A6200" }}
+            className="flex-1 min-w-0 py-2.5 rounded-full text-center text-[12.5px] font-bold flex items-center justify-center gap-1 whitespace-nowrap"
+            style={{ background: "#FFFFFF", color: TEXT, border: "1px solid #E6E9F2" }}
           >
-            <ExternalLink size={12} /> 공식 사이트
+            <ExternalLink size={13} /> 공식 사이트
           </a>
         </div>
-        <p className="text-[11px] mt-2 px-0.5" style={{ color: "#8A6200" }}>
-          급하게 전화 상담이 필요하면 중소기업 통합콜센터 <a href="tel:1357" className="font-bold underline">1357</a>로도 문의할 수 있어요
+        <p className="text-[11.5px] mt-2.5 px-0.5 break-keep" style={{ color: MUTED }}>
+          급하게 전화 상담이 필요하면 중소기업 통합콜센터 <a href="tel:1357" className="font-bold underline" style={{ color: TEXT }}>1357</a>로도 문의할 수 있어요
         </p>
       </div>
 
@@ -2770,72 +2779,67 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
         @keyframes centerPageFadeIn { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: translateY(0); } }
       `}</style>
 
-      <div className="-mx-5 px-5 mb-3.5">
+      <div className="mb-3.5">
         <div
           ref={provinceScrollRef}
-          className="flex gap-1.5 overflow-x-auto pt-1 pb-3 -mt-1 -mb-2"
-          style={{
-            scrollbarWidth: "none",
-            WebkitMaskImage: "linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%)",
-            maskImage: "linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%)",
-          }}
+          className="flex gap-1.5 overflow-x-auto pt-1 pb-3 -mt-1 -mb-2 -mx-5 px-5"
+          style={{ scrollbarWidth: "none" }}
         >
           {provinces.map((p) => (
             <button
               key={p}
               ref={(el) => (provinceChipRefs.current[p] = el)}
               onClick={() => selectProvince(p)}
-              className="shrink-0 px-3 py-1.5 rounded-full text-[12.5px] font-semibold"
-              style={
-                activeProvince === p
-                  ? CHIP_ON
-                  : CHIP_OFF
-              }
+              className="shrink-0 px-4 py-2 rounded-full text-[12.5px] font-semibold whitespace-nowrap"
+              style={activeProvince === p ? CHIP_ON : CHIP_OFF}
             >
-              {p}
+              {p} <span className="tabular-nums" style={{ opacity: 0.7 }}>{centerCount(p)}</span>
             </button>
           ))}
           <span data-scroll-end aria-hidden="true" className="shrink-0 w-6" />
         </div>
       </div>
 
+      <p className="text-xs mb-2.5" style={{ color: MUTED }}>총 {visibleCenters.length}곳</p>
       <div key={activeProvince} style={{ animation: "centerPageFadeIn 0.22s ease" }}>
       <div className="space-y-2.5">
         {pagedCenters.map((c) => (
           <div
             key={c.name}
-            className="rounded-2xl border p-4"
-            style={c.isHQ ? { borderColor: BLUE, background: BLUE_SOFT } : { borderColor: BORDER }}
+            className="rounded-[22px] p-4"
+            style={c.isHQ ? { ...CARD, border: `1.5px solid #D6478E55`, boxShadow: "0 6px 18px rgba(214,71,142,0.12)" } : CARD}
           >
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-[14.5px] font-bold flex items-center gap-1" style={{ color: c.isHQ ? BLUE : TEXT }}>
-                {c.isHQ && <MapPin size={14} color={BLUE} />} {c.name}
-              </p>
-              {!c.districts && (
-                <span
-                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                  style={
-                    c.addressPending
-                      ? { background: "#FDEDED", color: RED }
-                      : { background: "#FDF3D9", color: "#8A6200" }
-                  }
-                >
-                  {c.addressPending ? "주소 확인 중" : "2026년 기준"}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-1 mb-2">
-              {(c.districts || c.covers).map((r) => (
-                <span key={r} className="text-[10.5px] px-1.5 py-0.5 rounded-full" style={{ background: c.isHQ ? "white" : BLUE_SOFT, color: BLUE }}>{r}</span>
-              ))}
+            <div className="flex items-start gap-3 mb-3">
+              <img src={centerPinImg} alt="" className="w-[52px] h-[52px] shrink-0 object-contain" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  {c.isHQ && (
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#D6478E1A", color: "#D6478E" }}>지역본부</span>
+                  )}
+                  {!c.districts && (
+                    <span
+                      className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                      style={c.addressPending ? { background: "#FDEDED", color: RED } : { background: "#FFF3D6", color: "#B07A06" }}
+                    >
+                      {c.addressPending ? "주소 확인 중" : "2026년 기준"}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[15px] font-bold leading-snug break-keep" style={{ color: TEXT }}>{c.name}</p>
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {(c.districts || c.covers).map((r) => (
+                    <span key={r} className="text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ background: "#F1F3F9", color: MUTED }}>{r}</span>
+                  ))}
+                </div>
+              </div>
             </div>
             {c.addressPending ? (
-              <p className="text-[12.5px] mb-3 flex items-start gap-1.5" style={{ color: MUTED }}>
+              <p className="text-[12.5px] mb-3 flex items-start gap-1.5 rounded-xl px-3 py-2.5" style={{ color: MUTED, background: "#F7F8FB" }}>
                 <MapPin size={13} className="shrink-0 mt-0.5" /> {c.city} 인근 (2026년 조직개편으로 신설 · 정확한 상세주소는 아직 확인 중이에요)
               </p>
             ) : (
-              <div className="mb-3 flex items-start justify-between gap-2">
-                <p className="text-[12.5px] flex items-start gap-1.5" style={{ color: MUTED }}>
+              <div className="mb-3 flex items-center justify-between gap-2 rounded-xl pl-3 pr-2 py-2" style={{ background: "#F7F8FB" }}>
+                <p className="text-[12.5px] flex items-start gap-1.5 min-w-0 break-keep" style={{ color: "#5E6577" }}>
                   <MapPin size={13} className="shrink-0 mt-0.5" /> {c.address}
                 </p>
                 <button
@@ -2844,9 +2848,10 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
                     setCopiedName(c.name);
                     setTimeout(() => setCopiedName((n) => (n === c.name ? null : n)), 1500);
                   }}
-                  className="shrink-0 text-[11px] font-semibold px-2 py-1 rounded-lg"
-                  style={copiedName === c.name ? { background: GREEN_SOFT, color: GREEN } : { background: "#EEF0F5", color: TEXT }}
+                  className="shrink-0 flex items-center gap-1 text-[11.5px] font-semibold px-2.5 py-1.5 rounded-full"
+                  style={copiedName === c.name ? { background: GREEN_SOFT, color: GREEN } : { background: "#FFFFFF", color: TEXT, border: "1px solid #E6E9F2" }}
                 >
+                  {copiedName === c.name ? <Check size={12} /> : <Copy size={12} />}
                   {copiedName === c.name ? "복사됨" : "복사"}
                 </button>
               </div>
@@ -2854,7 +2859,7 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
             <div className="flex gap-2">
               <a
                 href={`tel:${c.phone}`}
-                className="flex-1 py-2.5 rounded-xl text-center text-[12.5px] font-bold flex items-center justify-center gap-1"
+                className="flex-1 min-w-0 py-2.5 rounded-full text-center text-[12.5px] font-bold flex items-center justify-center gap-1 whitespace-nowrap"
                 style={{ background: BLUE_SOFT, color: BLUE }}
               >
                 <Phone size={13} /> {c.addressPending ? "콜센터로 문의" : c.phone}
@@ -2865,8 +2870,8 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
                   href={`https://map.naver.com/p/search/${encodeURIComponent(c.address)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 py-2.5 rounded-xl text-center text-[12.5px] font-bold flex items-center justify-center gap-1"
-                  style={{ background: "#F2F3F7", color: TEXT }}
+                  className="flex-1 min-w-0 py-2.5 rounded-full text-center text-[12.5px] font-bold flex items-center justify-center gap-1 whitespace-nowrap"
+                  style={{ background: "#FFFFFF", color: TEXT, border: "1px solid #E6E9F2" }}
                 >
                   <MapPin size={13} /> 지도 보기 <ExternalLink size={11} />
                 </a>
@@ -2874,11 +2879,11 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
               {!c.addressPending && typeof c.lat === "number" && (
                 <button
                   onClick={() => setExpandedMap(expandedMap === c.name ? null : c.name)}
-                  className="flex-1 py-2.5 rounded-xl text-center text-[12.5px] font-bold flex items-center justify-center gap-1"
+                  className="flex-1 min-w-0 py-2.5 rounded-full text-center text-[12.5px] font-bold flex items-center justify-center gap-1 whitespace-nowrap"
                   style={
                     expandedMap === c.name
-                      ? CHIP_ON
-                      : { background: "#F2F3F7", color: TEXT }
+                      ? { background: BLUE_SOFT, color: BLUE, border: "1px solid transparent" }
+                      : { background: "#FFFFFF", color: TEXT, border: "1px solid #E6E9F2" }
                   }
                 >
                   <MapPin size={13} /> {expandedMap === c.name ? "닫기" : "지도 보기"}
@@ -2889,13 +2894,13 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
               <p className="text-[11px] mt-2" style={{ color: MUTED }}>팩스 {c.fax}</p>
             )}
             {!c.addressPending && expandedMap === c.name && (
-              <div className="mt-3 rounded-xl p-3.5" style={{ background: "#FAFAFA", border: `1px solid ${BORDER}` }}>
+              <div className="mt-3 rounded-2xl p-3.5" style={{ background: "#F7F8FB" }}>
                 <CenterMapPreview center={c} />
                 <a
                   href={`https://map.naver.com/p/search/${encodeURIComponent(c.address)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full py-2.5 rounded-xl text-center text-[12.5px] font-bold flex items-center justify-center gap-1"
+                  className="w-full py-2.5 rounded-full text-center text-[12.5px] font-bold flex items-center justify-center gap-1"
                   style={{ background: BLUE_SOFT, color: BLUE }}
                 >
                   네이버 지도에서 보기 <ExternalLink size={12} />
@@ -2942,8 +2947,8 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
         href="https://mgr.sbiz.or.kr/cm/CM_10301_SL.do"
         target="_blank"
         rel="noopener noreferrer"
-        className="w-full mt-4 py-3 rounded-xl text-center text-[12.5px] font-semibold flex items-center justify-center gap-1"
-        style={{ background: "#FAFAFA", color: MUTED }}
+        className="w-full mt-4 py-3 rounded-full text-center text-[12.5px] font-semibold flex items-center justify-center gap-1"
+        style={{ background: "#FFFFFF", color: MUTED, border: "1px solid #E6E9F2" }}
       >
         공식 사이트에서 전체 센터 보기 <ExternalLink size={12} />
       </a>
