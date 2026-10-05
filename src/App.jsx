@@ -501,7 +501,7 @@ function eventOccurrences(ev, withinDays = 60) {
   }
   const out = [];
   const limit = new Date(today.getTime() + withinDays * 864e5);
-  for (let m = 0; m < 4; m++) {
+  for (let m = 0; m <= Math.ceil(withinDays / 28); m++) {
     const d = eventDateIn(today.getFullYear(), today.getMonth() + m, ev.day);
     if (d >= today && d <= limit) out.push(formatLocalDate(d));
   }
@@ -513,13 +513,26 @@ function eventRepeatLabel(ev) {
   return ev.day >= 31 ? "매달 말일" : `매달 ${ev.day}일`;
 }
 // 화면에 보여줄 일정 목록 (가까운 순)
+const SCHEDULE_MONTHS = 12; // 일정 화면에 보여줄 기간
 function buildScheduleItems({ favorites, myEvents }) {
   const items = [];
+  const today = startOfToday();
   myEvents.forEach((ev) => {
-    const [d] = eventOccurrences(ev);
-    if (d) items.push({ key: `my:${ev.id}`, type: "my", name: ev.title, deadline: d, who: eventRepeatLabel(ev), note: ev.alert ? "알림 켜짐" : "알림 꺼짐", ev, emoji: ev.emoji || "📌" });
+    const dates = ev.repeat === "once" ? eventOccurrences(ev) : eventOccurrences(ev, SCHEDULE_MONTHS * 30);
+    dates.forEach((d) =>
+      items.push({ key: `my:${ev.id}:${d}`, type: "my", name: ev.title, deadline: d, who: eventRepeatLabel(ev), note: ev.alert ? "알림 켜짐" : "알림 꺼짐", ev, emoji: ev.emoji || "📌" })
+    );
   });
-  TAX_SCHEDULE.forEach((t) => items.push({ key: `tax:${t.name}:${t.deadline}`, type: "tax", ...t }));
+  TAX_SCHEDULE.forEach((t) => {
+    if (!t.monthly) return items.push({ key: `tax:${t.name}:${t.deadline}`, type: "tax", ...t });
+    // 원천세·4대보험처럼 매달 있는 일정은 달마다 따로 넣어요 (주말이면 다음 월요일)
+    for (let m = 0; m < SCHEDULE_MONTHS; m++) {
+      const raw = formatLocalDate(eventDateIn(today.getFullYear(), today.getMonth() + m, t.monthly));
+      if (parseLocalDate(raw) < today) continue;
+      const sw = shiftWeekend(raw);
+      items.push({ key: `tax:${t.name}:${sw.deadline}`, type: "tax", ...t, ...sw });
+    }
+  });
   ALL_PROGRAMS.filter((p) => favorites.has(p.id) && !p.recurring && getDday(p.deadline) >= 0).forEach((p) =>
     items.push({ key: `p:${p.id}`, type: "subsidy", name: p.name, deadline: p.deadline, note: p.amountLabel, who: "내 즐겨찾기", programId: p.id })
   );
@@ -2331,14 +2344,14 @@ function EventEditor({ initial, onSave, onDelete, onClose }) {
   );
 }
 
-function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, planDesc, myEvents = [], onSaveEvent, onDeleteEvent, onSelectProgram, callName = "사장님", taxStaff = false }) {
+function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, planDesc, myEvents = [], onSaveEvent, onDeleteEvent, onSelectProgram, callName = "사장님", taxStaff = false, onToggleTaxStaff }) {
   const [filter, setFilter] = useState("all"); // all | my | tax | subsidy
   const [editing, setEditing] = useState(null); // null | {} (새로) | 이벤트
   // 원천세·4대보험은 "직원이 있어요"를 켠 사장님께만 보여줘요 (홈과 같은 기준)
   const all = buildScheduleItems({ favorites, myEvents }).filter((x) => taxStaff || x.type !== "tax" || !STAFF_TAX.includes(x.name));
   const shown = all.filter((x) => filter === "all" || x.type === filter);
   const next = all.find((x) => getDday(x.deadline) >= 0);
-  const counts = { my: all.filter((x) => x.type === "my").length, subsidy: all.filter((x) => x.type === "subsidy").length };
+  const counts = { my: myEvents.length, subsidy: all.filter((x) => x.type === "subsidy").length };
 
   const groups = [];
   for (const item of shown) {
@@ -2394,6 +2407,18 @@ function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, pl
           </div>
           <Switch checked={!!taxAlertOn} onChange={onToggleTaxAlert} />
         </div>
+      )}
+
+      {onToggleTaxStaff && (
+        <button onClick={onToggleTaxStaff} className="w-full flex items-center gap-2.5 rounded-[18px] px-4 py-3 mb-3 text-left" style={CARD}>
+          <span className="w-[20px] h-[20px] rounded-md flex items-center justify-center shrink-0" style={taxStaff ? { background: TAX_GREEN } : { border: "1.5px solid #C9CEDA" }}>
+            {taxStaff && <Check size={13} color="white" strokeWidth={3} />}
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-[13px] font-semibold" style={{ color: TEXT }}>직원이 있어요</span>
+            <span className="block text-[11.5px]" style={{ color: MUTED }}>매달 10일 원천세·4대보험 납부일도 함께 보여드려요</span>
+          </span>
+        </button>
       )}
 
       <div className="grid grid-cols-4 gap-1.5 mb-4">
@@ -4529,6 +4554,7 @@ export default function App() {
           onSelectProgram={(id) => setScreen({ view: "detail", id })}
           callName={callName}
           taxStaff={taxStaff}
+          onToggleTaxStaff={() => setTaxStaff(!taxStaff)}
         />
       </Shell>
     );
