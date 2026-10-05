@@ -4908,7 +4908,8 @@ export default function App() {
           className="relative z-10 mt-3.5 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full"
           style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.25)" }}
         >
-          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#81F5BE", boxShadow: "0 0 6px #81F5BE" }} />
+          {/* 초록 점: 몇 번만 깜박이고 멈춰요 (계속 깜박이면 화면을 쉬지 않고 다시 그려요) */}
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#81F5BE", boxShadow: "0 0 6px #81F5BE", animation: "dotPulse 2s cubic-bezier(0.4, 0, 0.6, 1) 4" }} />
           <span className="text-[12px] font-semibold text-white" style={{ lineHeight: 1.5 }}>
             지금 신청할 수 있는 지원금 <b className="text-[14px] font-extrabold tabular-nums" style={{ color: "#FFE680" }}>{ALL_PROGRAMS.filter((p) => !isExpired(p)).length}</b>건
           </span>
@@ -4923,6 +4924,7 @@ export default function App() {
           42% { transform: translateX(330%) skewX(-18deg); opacity: 1; }
           50%, 100% { transform: translateX(330%) skewX(-18deg); opacity: 0; }
         }
+        @keyframes dotPulse { 50% { opacity: 0.35; } }
       `}</style>
       <button
         onClick={() => setScreen({ view: diagnosis ? "diagnosisResult" : "diagnosis" })}
@@ -4940,9 +4942,10 @@ export default function App() {
               left: 0,
               width: "34%",
               height: "140%",
-              background: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.18) 30%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.18) 70%, rgba(255,255,255,0) 100%)",
-              filter: "blur(6px)",
-              animation: "shimmerSweep 4.5s ease-in-out infinite",
+              background: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.12) 25%, rgba(255,255,255,0.45) 50%, rgba(255,255,255,0.12) 75%, rgba(255,255,255,0) 100%)",
+              willChange: "transform, opacity",
+              // 화면을 계속 다시 그리면 느린 폰·배터리에 부담 → 홈에 들어올 때 3번만 지나가고 멈춰요
+              animation: "shimmerSweep 4.5s ease-in-out 0.6s 3 both",
             }}
           />
         </div>
