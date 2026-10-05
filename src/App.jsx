@@ -2233,6 +2233,8 @@ function DocumentsScreen({ onBack }) {
 // 세금·마감 일정 화면 → "사장님 일정": 내 일정 + 세금 신고일 + 즐겨찾기 지원금 마감일을 월별로 보여줘요
 const TAX_GREEN = "#2C9F6B";
 const WEEK = ["일", "월", "화", "수", "목", "금", "토"];
+// 달마다 다른 색 — 일정이 많아도 어느 달인지 한눈에 보여요 (1월~12월)
+const MONTH_COLORS = ["#3D63DD", "#7A46D6", "#2C9F6B", "#D6478E", "#0E9AA7", "#E8890C", "#2F86D6", "#C2410C", "#8B62D9", "#E5674D", "#A0701A", "#1F7A5C"];
 
 // 내 일정 추가·수정 창 (아래에서 올라오는 시트)
 function EventEditor({ initial, onSave, onDelete, onClose }) {
@@ -2329,10 +2331,11 @@ function EventEditor({ initial, onSave, onDelete, onClose }) {
   );
 }
 
-function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, planDesc, myEvents = [], onSaveEvent, onDeleteEvent, onSelectProgram, callName = "사장님" }) {
+function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, planDesc, myEvents = [], onSaveEvent, onDeleteEvent, onSelectProgram, callName = "사장님", taxStaff = false }) {
   const [filter, setFilter] = useState("all"); // all | my | tax | subsidy
   const [editing, setEditing] = useState(null); // null | {} (새로) | 이벤트
-  const all = buildScheduleItems({ favorites, myEvents });
+  // 원천세·4대보험은 "직원이 있어요"를 켠 사장님께만 보여줘요 (홈과 같은 기준)
+  const all = buildScheduleItems({ favorites, myEvents }).filter((x) => taxStaff || x.type !== "tax" || !STAFF_TAX.includes(x.name));
   const shown = all.filter((x) => filter === "all" || x.type === filter);
   const next = all.find((x) => getDday(x.deadline) >= 0);
   const counts = { my: all.filter((x) => x.type === "my").length, subsidy: all.filter((x) => x.type === "subsidy").length };
@@ -2342,7 +2345,7 @@ function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, pl
     const d = parseLocalDate(item.deadline);
     const key = `${d.getFullYear()}년 ${d.getMonth() + 1}월`;
     let g = groups.find((x) => x.key === key);
-    if (!g) groups.push((g = { key, items: [] }));
+    if (!g) groups.push((g = { key, year: d.getFullYear(), month: d.getMonth(), items: [] }));
     g.items.push(item);
   }
   const tone = (t) => (t === "my" ? { accent: MY_ACCENT, soft: "#FFF3E0" } : t === "tax" ? { accent: TAX_GREEN, soft: "#E7F7EF" } : { accent: BLUE, soft: BLUE_SOFT });
@@ -2406,10 +2409,23 @@ function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, pl
         ))}
       </div>
 
-      {groups.map((g) => (
-        <div key={g.key} className="mb-4">
-          <p className="text-[12.5px] font-bold mb-2 px-1" style={{ color: MUTED }}>{g.key}</p>
-          <div className="rounded-[20px] overflow-hidden" style={CARD}>
+      {groups.map((g) => {
+        const mc = MONTH_COLORS[g.month];
+        const thisMonth = g.year === TODAY.getFullYear() && g.month === TODAY.getMonth();
+        return (
+        <div key={g.key} className="mb-5">
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <span className="px-3 py-1 rounded-full text-[13.5px] font-extrabold text-white" style={{ background: mc, boxShadow: `0 3px 8px ${mc}40` }}>
+              {g.month + 1}월
+            </span>
+            <span className="text-[12px] font-semibold" style={{ color: MUTED }}>{g.year}년</span>
+            {thisMonth && (
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${mc}18`, color: mc }}>이번 달</span>
+            )}
+            <span className="flex-1 h-px ml-1" style={{ background: `${mc}30` }} />
+            <span className="text-[11.5px] font-semibold tabular-nums" style={{ color: mc }}>{g.items.length}개</span>
+          </div>
+          <div className="rounded-[20px] overflow-hidden" style={{ ...CARD, borderLeft: `4px solid ${mc}` }}>
             {g.items.map((item, i) => {
               const d = parseLocalDate(item.deadline);
               const dday = getDday(item.deadline);
@@ -2450,7 +2466,8 @@ function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, pl
             })}
           </div>
         </div>
-      ))}
+        );
+      })}
 
       {filter === "my" && counts.my === 0 && (
         <div className="rounded-[20px] p-5 text-center mb-4" style={{ background: "#FFF8EE" }}>
@@ -4511,6 +4528,7 @@ export default function App() {
           onDeleteEvent={deleteEvent}
           onSelectProgram={(id) => setScreen({ view: "detail", id })}
           callName={callName}
+          taxStaff={taxStaff}
         />
       </Shell>
     );
