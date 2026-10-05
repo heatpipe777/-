@@ -4791,7 +4791,7 @@ export default function App() {
           >
             <img src={tile.img} alt="" draggable={false} className="absolute inset-0 w-full h-full object-cover" />
             {/* 제목은 글자로 — 나중에 이름을 바꾸기 쉬워요 */}
-            <span className="absolute left-[11%] right-[20%] bottom-[11%] text-left font-extrabold whitespace-pre-line" style={{ color: "#1A1F2C", fontSize: "clamp(13px, 4.1vw, 17px)", lineHeight: 1.3, letterSpacing: "-0.02em" }}>
+            <span className="absolute left-[11%] right-[20%] bottom-[11%] text-left font-extrabold whitespace-pre-line" style={{ color: "#1A1F2C", fontSize: "clamp(13px, 4.1vw, 17px)", lineHeight: 1.42, letterSpacing: "-0.02em" }}>
               {tile.label}
             </span>
             <ChevronRight size={15} color="#6B7385" className="absolute right-[9%] bottom-[22%]" />
