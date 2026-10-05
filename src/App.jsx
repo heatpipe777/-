@@ -4047,15 +4047,18 @@ function CalculatorToolkit({ onBack }) {
                 setTimeout(() => cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
               }}
               aria-label={t.label}
-              className="relative overflow-hidden flex flex-col md:flex-row items-center gap-1 md:gap-2.5 pt-2.5 pb-3 md:py-3 px-1.5 md:pl-2 md:pr-3 rounded-[20px] transition-transform active:scale-[0.97]"
+              className="relative flex flex-col md:flex-row items-center gap-1 md:gap-2.5 pt-2.5 pb-3 md:py-3 px-1.5 md:pl-2 md:pr-3 rounded-[20px] transition-transform active:scale-[0.97]"
               style={{
                 background: `linear-gradient(145deg, ${t.color}${on ? "1F" : "12"} 0%, #FFFFFF 75%)`,
                 border: on ? `2px solid ${t.color}` : "1px solid #EEF0F6",
                 boxShadow: on ? `0 6px 16px ${t.color}33` : "0 4px 14px rgba(40,60,120,0.05)",
               }}
             >
-              <span className="absolute -right-5 -top-6 w-16 h-16 rounded-full pointer-events-none" style={{ background: `${t.color}10` }} />
-              <span className="absolute -right-4 -bottom-7 w-14 h-14 rounded-full pointer-events-none" style={{ background: `${t.color}0A` }} />
+              {/* 모서리 원 장식 — 버튼 안쪽 틀에서만 보이게 (버튼 밖으로 넘치지 않게) */}
+              <span aria-hidden="true" className="absolute inset-0 overflow-hidden rounded-[20px] pointer-events-none">
+                <span className="absolute -right-5 -top-6 w-16 h-16 rounded-full" style={{ background: `${t.color}10` }} />
+                <span className="absolute -right-4 -bottom-7 w-14 h-14 rounded-full" style={{ background: `${t.color}0A` }} />
+              </span>
               <img src={t.img} alt="" className="relative w-[54px] h-[54px] md:w-[64px] md:h-[64px] shrink-0 object-contain" />
               <span className="relative flex items-center gap-0.5 md:flex-1 md:justify-between min-w-0">
                 <span className="text-[12.5px] md:text-[14px] font-bold whitespace-nowrap" style={{ color: on ? t.color : TEXT, letterSpacing: "-0.02em" }}>{t.short}</span>
