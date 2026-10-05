@@ -838,6 +838,18 @@ const CATEGORY_ICON = {
   신용: Wallet,
   재기: Rocket,
 };
+// 목록에 보이는 분야 — "경영"과 "보증"처럼 사장님이 구분하기 어려운 세부 분야를 하나로 묶어요
+const CATEGORY_GROUPS = [
+  { key: "대출·보증", cats: ["경영", "보증"], color: "#3D63DD" },
+  { key: "저신용·대환", cats: ["신용"], color: "#6B5FD3" },
+  { key: "고정비 지원", cats: ["고정비", "에너지", "임차료"], color: "#1FA866" },
+  { key: "인건비", cats: ["고용"], color: "#C23B7A" },
+  { key: "창업", cats: ["창업"], color: "#7A3FE0" },
+  { key: "폐업·재기", cats: ["재기"], color: "#0E8A78" },
+  { key: "디지털 전환", cats: ["디지털전환"], color: "#0F93B8" },
+];
+const groupOf = (p) => CATEGORY_GROUPS.find((g) => g.cats.includes(p.category)) || { key: p.category, color: BLUE };
+
 // 분야별 입체 그림 (지원금 카드 왼쪽)
 const CATEGORY_IMAGES = {
   고용: catEmploy,
@@ -1197,8 +1209,11 @@ function SimpleDetail({ program, onBack, favorites, onToggleFavorite }) {
       )}
       <div
         className="relative overflow-hidden rounded-[24px] p-4 mb-3 flex items-center gap-3.5"
-        style={{ background: `linear-gradient(135deg, ${catStyle.bg}55 0%, #FFFFFF 85%)`, border: "1px solid #EEF0F6" }}
+        style={{ background: `linear-gradient(135deg, ${groupOf(program).color}2E 0%, #FFFFFF 85%)`, border: "1px solid #EEF0F6" }}
       >
+        {CATEGORY_IMAGES[program.category] ? (
+          <img src={CATEGORY_IMAGES[program.category]} alt="" className="w-16 h-16 shrink-0 object-contain -my-1" />
+        ) : (
         <div
           className="w-14 h-14 rounded-full flex items-center justify-center shrink-0 relative overflow-hidden"
           style={{
@@ -1209,9 +1224,10 @@ function SimpleDetail({ program, onBack, favorites, onToggleFavorite }) {
           <div className="absolute -top-2 -left-2 w-7 h-7 rounded-full" style={{ background: "rgba(255,255,255,0.25)" }} />
           <CatIcon size={24} color={catStyle.color} strokeWidth={2.3} className="relative" />
         </div>
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 mb-1">
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.8)", color: BLUE }}>{program.category}</span>
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.8)", color: groupOf(program).color }}>{groupOf(program).key}</span>
             <span className="text-[11px]" style={{ color: MUTED }}><MapPin size={10} className="inline -mt-0.5" /> {regionLabel(program)}</span>
           </div>
           <p className="text-[16.5px] font-bold leading-snug break-keep" style={{ color: TEXT }}>{program.name}</p>
@@ -3291,7 +3307,8 @@ function ClosedNotice() {
 // 지원금 목록 카드 — 목록·즐겨찾기·맞춤진단 결과에서 같이 써요
 function ProgramRow({ p, onClick, actions, reason, highlight }) {
   const dday = getDday(p.deadline);
-  const cat = CATEGORY_COLORS[p.category] || { bg: BLUE };
+  const grp = groupOf(p);
+  const cat = { bg: grp.color };
   const img = CATEGORY_IMAGES[p.category];
   const CatIcon = CATEGORY_ICON[p.category] || FileText;
   const urgent = !p.recurring && dday >= 0 && dday <= 7;
@@ -3318,7 +3335,7 @@ function ProgramRow({ p, onClick, actions, reason, highlight }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-1">
           <span className="text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0" style={{ background: `${cat.bg}1A`, color: cat.bg }}>
-            {p.category}
+            {grp.key}
           </span>
           <span className="text-[11px] font-medium px-2 py-0.5 rounded-full truncate min-w-0" style={{ background: "#F1F3F9", color: MUTED }}>{regionLabel(p)}</span>
           <span className="flex-1" />
@@ -4439,7 +4456,8 @@ export default function App() {
     setRegion(d === "전체" ? tempProvince : `${tempProvince} ${d}`);
   };
 
-  const filtered = useMemo(() => {
+  // 분야를 뺀 나머지 조건(상태·지역·검색·즐겨찾기)에 맞는 지원금 — 분야 칩 개수에도 써요
+  const baseList = useMemo(() => {
     return ALL_PROGRAMS.filter((p) => {
       const baseRegion = region.split(" ")[0];
       const matchesRegion = region === "전체" || (baseRegion === "전국" ? isNational(p) : availableIn(p, baseRegion));
@@ -4447,21 +4465,24 @@ export default function App() {
         query.trim() === "" ||
         p.name.includes(query) ||
         p.category.includes(query) ||
+        groupOf(p).key.includes(query) ||
         (typeof p.target === "string" && p.target.includes(query));
-      const matchesCategory = category === "전체" || p.category === category;
       const matchesFavorite = !showFavoritesOnly || favorites.has(p.id);
       const dday = getDday(p.deadline);
       const matchesStatus =
         (statusFilter === "urgent" && dday <= 7 && dday >= 0) ||
         (statusFilter === "closed" && dday < 0) ||
         (statusFilter === "available" && dday >= 0);
-      return matchesRegion && matchesQuery && matchesCategory && matchesFavorite && matchesStatus;
-    }).sort((a, b) =>
+      return matchesRegion && matchesQuery && matchesFavorite && matchesStatus;
+    });
+  }, [query, region, showFavoritesOnly, favorites, statusFilter, dayKey]);
+  const filtered = useMemo(() => {
+    return baseList.filter((p) => category === "전체" || groupOf(p).key === category).sort((a, b) =>
       sortBy === "amount"
         ? parseAmount(b.amountLabel) - parseAmount(a.amountLabel)
         : byDeadline(a, b)
     );
-  }, [query, region, category, showFavoritesOnly, favorites, sortBy, statusFilter, dayKey]);
+  }, [baseList, category, sortBy]);
 
   // 안드로이드 뒤로가기 버튼: 열린 창 닫기 → 이전 화면 → 홈 탭 → 그래도 홈이면 앱 종료
   const backRef = useRef(null);
@@ -4498,7 +4519,9 @@ export default function App() {
   const urgentCount = ALL_PROGRAMS.filter((p) => getDday(p.deadline) <= 7 && getDday(p.deadline) >= 0).length;
   const availableCount = ALL_PROGRAMS.filter((p) => getDday(p.deadline) >= 0).length; // 마감 임박(7일 이내)도 신청 가능에 포함
   const closedCount = ALL_PROGRAMS.length - availableCount;
-  const categories = ["전체", ...Array.from(new Set(ALL_PROGRAMS.map((p) => p.category)))];
+  // 분야 칩: 정해진 순서로, 지금 조건에서 1건 이상 있는 분야만 (고른 분야는 0건이어도 남겨요)
+  const categoryCounts = Object.fromEntries(CATEGORY_GROUPS.map((g) => [g.key, baseList.filter((p) => groupOf(p).key === g.key).length]));
+  const categories = ["전체", ...CATEGORY_GROUPS.map((g) => g.key).filter((k) => categoryCounts[k] > 0 || k === category)];
 
   if (screen.view === "detail") {
     const program = ALL_PROGRAMS.find((p) => p.id === screen.id);
@@ -5110,7 +5133,7 @@ export default function App() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="이름·대상·카테고리로 검색"
+            placeholder="이름·대상·분야로 검색"
             className="flex-1 min-w-0 outline-none text-sm bg-transparent"
             style={{ color: TEXT }}
           />
@@ -5138,7 +5161,7 @@ export default function App() {
               className="px-4 py-2 rounded-full text-[12.5px] font-semibold whitespace-nowrap shrink-0"
               style={active ? CHIP_ON : CHIP_OFF}
             >
-              {c}
+              {c} <span className="tabular-nums" style={{ opacity: 0.7 }}>{c === "전체" ? baseList.length : categoryCounts[c]}</span>
             </button>
           );
         })}
