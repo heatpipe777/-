@@ -69,6 +69,16 @@ import catRestart from "./assets/cat/restart.webp";
 import listHeroImg from "./assets/cat/list-hero.webp";
 import centerHeroImg from "./assets/cat/hero-center.webp";
 import centerPinImg from "./assets/cat/center-pin.webp";
+import heroNameImg from "./assets/cat/hero-name.webp";
+import heroRateImg from "./assets/cat/hero-rate.webp";
+import heroFaqImg from "./assets/cat/hero-faq.webp";
+import heroDocsImg from "./assets/cat/hero-docs.webp";
+import heroEventImg from "./assets/cat/hero-event.webp";
+import heroScheduleImg from "./assets/cat/hero-schedule.webp";
+import heroCalcImg from "./assets/cat/hero-calc.webp";
+import heroRegionImg from "./assets/cat/hero-region.webp";
+import heroAlertImg from "./assets/cat/hero-alert.webp";
+import heroNewsImg from "./assets/cat/hero-news.webp";
 import tileCenterImg from "./assets/home-tiles/center.webp";
 import tileExchangeImg from "./assets/home-tiles/exchange.webp";
 import tileNewsImg from "./assets/home-tiles/news.webp";
@@ -447,7 +457,7 @@ function NicknameScreen({ initial = "", firstRun, onSave, onSkip, onBack }) {
           <p className="text-[15px] mt-1.5" style={{ color: "#5E6577" }}>어떻게 불러드릴까요?</p>
         </div>
       ) : (
-        <HeroHeader icon={User} color={BLUE} title="내 이름" subtitle="앱 화면과 알림에서 이 이름으로 불러드려요" onBack={onBack} />
+        <HeroHeader icon={User} color={BLUE} image={heroNameImg} title="내 이름" subtitle="앱 화면과 알림에서 불러드릴" headline="이름을 정해주세요!" onBack={onBack} />
       )}
 
       <div className="flex items-center rounded-2xl px-4 py-3.5" style={{ background: INPUT_BG }}>
@@ -1805,7 +1815,7 @@ function RateAndExchangeScreen({ onBack, onOpenCalculator, rateAlertOn, onToggle
   const [tab, setTab] = useState("rate");
   return (
     <div>
-      <HeroHeader icon={Landmark} color={BLUE} title="금리·환율 정보" subtitle="기준금리·정책자금 금리와 환율을 한눈에 확인해요" onBack={onBack} />
+      <HeroHeader icon={Landmark} color={BLUE} image={heroRateImg} title="금리·환율 정보" subtitle="기준금리·정책자금 금리와 환율" headline="한눈에 확인하세요!" onBack={onBack} />
       <CalcModeSwitch value={tab} onChange={setTab} options={[{ key: "rate", label: "금리 정보" }, { key: "exchange", label: "환율 정보" }]} />
       {tab === "rate" ? <InterestRateContent onOpenCalculator={onOpenCalculator} rateAlertOn={rateAlertOn} onToggleRateAlert={onToggleRateAlert} /> : <ExchangeRateContent />}
     </div>
@@ -2047,7 +2057,7 @@ function FaqSearchScreen({ onBack }) {
 
   return (
     <div>
-      <HeroHeader icon={HelpCircle} color={FAQ_PURPLE} title="도움말 · Q&A" subtitle="지원금 기본 상식부터 앱 사용법까지 자주 묻는 질문을 모았어요" onBack={onBack} />
+      <HeroHeader icon={HelpCircle} color={FAQ_PURPLE} image={heroFaqImg} title="도움말 · Q&A" subtitle="지원금 상식부터 앱 사용법까지" headline="궁금한 점을 찾아보세요!" onBack={onBack} />
 
       <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl mb-3" style={{ background: INPUT_BG }}>
         <Search size={16} color={MUTED} />
@@ -2210,7 +2220,7 @@ function DocumentsScreen({ onBack }) {
 
   return (
     <div>
-      <HeroHeader icon={FileText} color={DOC_ORANGE} title="서류 · 양식 자료실" subtitle="지원금 신청 전에 자주 필요한 서류를 미리 챙겨두세요" onBack={onBack} />
+      <HeroHeader icon={FileText} color={DOC_ORANGE} image={heroDocsImg} title="서류 · 양식 자료실" subtitle="지원금 신청 전 자주 필요한 서류" headline="미리 챙겨두세요!" onBack={onBack} />
 
       {/* 준비 현황 */}
       <div className="rounded-[24px] p-4 mb-3" style={{ background: "linear-gradient(135deg, #FFF3E8 0%, #FFFFFF 100%)", border: "1px solid #FBE3CF" }}>
@@ -2432,8 +2442,10 @@ function EventEditor({ initial, onSave, onDelete, onClose }) {
         <HeroHeader
           icon={CalendarCheck}
           color={MY_ACCENT}
+          image={heroEventImg}
           title={editing ? "일정 수정" : "내 일정 추가"}
-          subtitle={editing ? "내용을 바꾸거나 일정을 삭제할 수 있어요" : "월급날·임대료처럼 챙겨야 할 날을 등록하면 미리 알려드려요"}
+          subtitle={editing ? "일정 내용을 바꾸거나" : "월급날·임대료처럼 챙길 날을 등록하면"}
+          headline={editing ? "삭제할 수 있어요" : "미리 알려드려요!"}
           onBack={onClose}
         />
 
@@ -2543,7 +2555,7 @@ function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, pl
 
   return (
     <div>
-      <HeroHeader icon={CalendarCheck} color={TAX_GREEN} title={`${callName} 일정`} subtitle="월급날·임대료 같은 내 일정과 세금 신고일, 지원금 마감일을 한눈에 챙겨요" onBack={onBack} />
+      <HeroHeader icon={CalendarCheck} color={TAX_GREEN} image={heroScheduleImg} title={`${callName} 일정`} subtitle="내 일정·세금 신고일·지원금 마감일" headline="한눈에 챙겨요!" onBack={onBack} />
 
       {next && (
         <div className="relative overflow-hidden rounded-[24px] p-4 mb-3" style={{ background: "linear-gradient(135deg, #3DBB82 0%, #2C9F6B 100%)" }}>
@@ -4042,7 +4054,7 @@ function CalculatorToolkit({ onBack }) {
 
   return (
     <div>
-      <HeroHeader icon={Calculator} color={BLUE} title="사장님 필수 계산기" subtitle="가격 정하기부터 인건비·대출까지 자주 쓰는 계산을 바로 해보세요" onBack={onBack} />
+      <HeroHeader icon={Calculator} color={BLUE} image={heroCalcImg} title="사장님 필수 계산기" subtitle="가격 정하기부터 인건비·대출까지" headline="바로 계산해보세요!" onBack={onBack} />
 
       {/* 계산기 고르기 */}
       <div className="grid grid-cols-3 md:grid-cols-5 gap-2 mb-4">
@@ -4596,8 +4608,10 @@ export default function App() {
         <HeroHeader
           icon={MapPin}
           color={BLUE}
+          image={heroRegionImg}
           title={pickerStep === "province" ? "내 지역 선택" : `${tempProvince} 세부 지역`}
-          subtitle={pickerStep === "province" ? "사업장이 있는 지역을 고르면, 그 지역 지원금과 전국 지원금을 함께 보여드려요." : "시·군·구를 고르거나, 도 전체로 볼 수 있어요."}
+          subtitle={pickerStep === "province" ? "고른 지역 지원금과 전국 지원금을" : "시·군·구를 고르거나"}
+          headline={pickerStep === "province" ? "함께 보여드려요!" : "도 전체로 볼 수 있어요"}
           onBack={() => (pickerStep === "district" ? setPickerStep("province") : closePicker())}
         />
 
@@ -4657,7 +4671,7 @@ export default function App() {
   if (screen.view === "alertSettings") {
     return (
       <Shell>
-        <HeroHeader icon={Bell} color="#E5674D" title="알림 설정" subtitle="받을 알림과 며칠 전·몇 시에 알릴지 정해요" onBack={() => setScreen({ view: "home" })} />
+        <HeroHeader icon={Bell} color="#E5674D" image={heroAlertImg} title="알림 설정" subtitle="마감일·세금 신고일·금리 발표일" headline="미리 알려드려요!" onBack={() => setScreen({ view: "home" })} />
         <div className="rounded-[20px] overflow-hidden" style={CARD}>
           {[
             { key: "deadline", icon: Bell, color: "#E5674D", bg: "#FDEEE9", title: "지원금 마감 알림", sub: "즐겨찾기에서 🔔 켠 지원금", on: notifyEnabled, toggle: toggleNotifyEnabled },
@@ -5284,7 +5298,7 @@ export default function App() {
         const rest = filteredNews.filter((n) => n !== featured);
         return (
           <>
-            <HeroHeader icon={Newspaper} color="#7A46D6" title="소상공인 정책 뉴스" subtitle="공식 출처와 주요 매체 기사만 엄선해서 모았어요" onBack={() => setMainTab("home")} />
+            <HeroHeader icon={Newspaper} color="#7A46D6" image={heroNewsImg} title="소상공인 정책 뉴스" subtitle="공식 출처와 주요 매체 기사만" headline="엄선해서 모았어요!" onBack={() => setMainTab("home")} />
 
             <div className="flex gap-1.5 overflow-x-auto pt-1 pb-3 -mt-1 mb-2 -mx-4 px-4" style={{ scrollbarWidth: "none" }}>
               {NEWS_CATEGORIES.map((c) => (
