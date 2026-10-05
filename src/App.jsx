@@ -1402,7 +1402,7 @@ const BANKS = [
   { name: "IBK기업", mark: "IBK", bg: "linear-gradient(135deg, #2F86D6, #0D5FA6)", fg: "white", url: "https://www.ibk.co.kr" },
 ];
 
-function InterestRateContent({ onOpenCalculator }) {
+function InterestRateContent({ onOpenCalculator, rateAlertOn, onToggleRateAlert }) {
   const next = BOK_MEETINGS.find((d) => getDday(d) >= 0);
   const nextD = next ? getDday(next) : null;
   const nextDate = next ? parseLocalDate(next) : null;
@@ -1426,7 +1426,7 @@ function InterestRateContent({ onOpenCalculator }) {
           </div>
           {next && (
             <span className="text-[11px] font-bold px-2.5 py-1 rounded-full text-white shrink-0" style={{ background: "rgba(255,255,255,0.18)" }}>
-              다음 발표 {nextDate.getMonth() + 1}/{nextDate.getDate()} · D-{nextD}
+              {nextD === 0 ? "오늘 발표일" : `다음 발표 ${nextDate.getMonth() + 1}/${nextDate.getDate()} · D-${nextD}`}
             </span>
           )}
         </div>
@@ -1440,6 +1440,28 @@ function InterestRateContent({ onOpenCalculator }) {
           기준금리가 오르면 변동금리 대출 이자도 따라 오를 수 있어요. 정책자금은 상승 폭이 작은 편이에요.
         </p>
       </div>
+
+      {/* 금리 발표일 알림 */}
+      {onToggleRateAlert && (
+        <div className="rounded-[20px] p-4 mb-5 flex items-center justify-between gap-3" style={CARD}>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: BLUE_SOFT }}>
+              <Bell size={17} color={BLUE} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[13.5px] font-bold" style={{ color: TEXT }}>금리 발표일 알림</p>
+              <p className="text-[11.5px] leading-snug break-keep" style={{ color: MUTED }}>
+                {Capacitor.isNativePlatform()
+                  ? next
+                    ? nextD === 0 ? "오늘이 발표일이에요 · 결과는 오전 10시쯤 나와요" : `발표일 오전 10~11시 사이에 알려드려요 · 다음 ${nextDate.getMonth() + 1}월 ${nextDate.getDate()}일`
+                    : "올해 발표가 모두 끝났어요. 내년 일정이 나오면 알려드려요"
+                  : "알림은 안드로이드 앱에서만 받을 수 있어요"}
+              </p>
+            </div>
+          </div>
+          <Switch checked={!!rateAlertOn} onChange={onToggleRateAlert} />
+        </div>
+      )}
 
       {/* 변동 추이 */}
       <p className="font-bold mb-2.5" style={{ color: TEXT, fontSize: 15 }}>최근 변동 추이</p>
@@ -1538,13 +1560,13 @@ function InterestRateContent({ onOpenCalculator }) {
   );
 }
 
-function RateAndExchangeScreen({ onBack, onOpenCalculator }) {
+function RateAndExchangeScreen({ onBack, onOpenCalculator, rateAlertOn, onToggleRateAlert }) {
   const [tab, setTab] = useState("rate");
   return (
     <div>
       <HeroHeader icon={Landmark} color={BLUE} title="금리·환율 정보" subtitle="기준금리·정책자금 금리와 환율을 한눈에 확인해요" onBack={onBack} />
       <CalcModeSwitch value={tab} onChange={setTab} options={[{ key: "rate", label: "금리 정보" }, { key: "exchange", label: "환율 정보" }]} />
-      {tab === "rate" ? <InterestRateContent onOpenCalculator={onOpenCalculator} /> : <ExchangeRateContent />}
+      {tab === "rate" ? <InterestRateContent onOpenCalculator={onOpenCalculator} rateAlertOn={rateAlertOn} onToggleRateAlert={onToggleRateAlert} /> : <ExchangeRateContent />}
     </div>
   );
 }
@@ -3612,6 +3634,7 @@ export default function App() {
   const [sortBy, setSortBy] = useState("deadline");
   const [newsCategory, setNewsCategory] = useState("전체");
   const [notifyEnabled, setNotifyEnabled] = useState(false);
+  const [rateAlertOn, setRateAlertOn] = useState(false); // 한국은행 기준금리 발표일 알림
   const [notifyIds, setNotifyIds] = useState(new Set());
   const [diagnosis, setDiagnosis] = useState(null); // { region, revenueBand, yearsBand } | null
   const [diagStep, setDiagStep] = useState(0);
@@ -3668,6 +3691,7 @@ export default function App() {
           if (Array.isArray(data.favorites)) setFavorites(new Set(data.favorites));
           if (Array.isArray(data.notifyIds)) setNotifyIds(new Set(data.notifyIds));
           if (typeof data.notifyEnabled === "boolean") setNotifyEnabled(data.notifyEnabled);
+          if (typeof data.rateAlertOn === "boolean") setRateAlertOn(data.rateAlertOn);
           if (data.region) setRegion(data.region);
           if (data.diagnosis) setDiagnosis(data.diagnosis);
         }
@@ -3690,6 +3714,7 @@ export default function App() {
             favorites: Array.from(favorites),
             notifyIds: Array.from(notifyIds),
             notifyEnabled,
+            rateAlertOn,
             region,
             diagnosis,
           }),
@@ -3699,7 +3724,7 @@ export default function App() {
         // 저장 실패해도 앱 사용에는 지장 없도록 조용히 넘어가요
       }
     })();
-  }, [favorites, notifyIds, notifyEnabled, region, diagnosis, prefsLoaded]);
+  }, [favorites, notifyIds, notifyEnabled, rateAlertOn, region, diagnosis, prefsLoaded]);
 
   // 실제 휴대폰 알림 예약: 알림이 켜져 있고, 즐겨찾기 + 🔔 표시한 항목만 마감 전에 알려요
   // 설정이 바뀔 때마다 기존 예약을 모두 지우고 다시 예약해요
@@ -3711,8 +3736,9 @@ export default function App() {
         if (pending.notifications.length) {
           await LocalNotifications.cancel({ notifications: pending.notifications.map((n) => ({ id: n.id })) });
         }
-        if (!notifyEnabled) return;
-        const notifications = ALL_PROGRAMS.filter((p) => favorites.has(p.id) && notifyIds.has(p.id) && canNotify(p))
+        if (!notifyEnabled && !rateAlertOn) return;
+        const deadlineList = notifyEnabled ? ALL_PROGRAMS.filter((p) => favorites.has(p.id) && notifyIds.has(p.id) && canNotify(p)) : [];
+        const notifications = deadlineList
           .map((p) => {
             const t = notifyTimeFor(p);
             if (!t) return null;
@@ -3730,18 +3756,38 @@ export default function App() {
             };
           })
           .filter(Boolean);
+        // 금리 발표일 오전 10시 10분 (한국은행은 보통 10시 전후에 결정을 발표해요)
+        if (rateAlertOn) {
+          BOK_MEETINGS.forEach((d, i) => {
+            const at = parseLocalDate(d);
+            at.setHours(10, 10, 0, 0);
+            if (at <= new Date()) return;
+            notifications.push({
+              id: 900000 + i,
+              title: "오늘 한국은행 기준금리 발표일이에요",
+              body: "금리가 바뀌었는지, 내 대출이자에 어떤 영향이 있는지 확인해 보세요.",
+              schedule: { at, allowWhileIdle: true },
+              isExactNotification: false,
+              smallIcon: "ic_stat_notify",
+              iconColor: BLUE,
+              extra: { screen: "exchange" },
+            });
+          });
+        }
         if (notifications.length) await LocalNotifications.schedule({ notifications });
       } catch (e) {
         // 알림 예약에 실패해도 앱 사용에는 지장 없도록 조용히 넘어가요
       }
     })();
-  }, [notifyEnabled, notifyIds, favorites, prefsLoaded, dayKey]);
+  }, [notifyEnabled, rateAlertOn, notifyIds, favorites, prefsLoaded, dayKey]);
 
   // 알림을 누르면 해당 지원금 상세 화면으로 바로 이동해요
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const handle = LocalNotifications.addListener("localNotificationActionPerformed", (action) => {
-      const id = action.notification?.extra?.programId;
+      const extra = action.notification?.extra || {};
+      if (extra.screen === "exchange") return setScreen({ view: "exchange" });
+      const id = extra.programId;
       if (id != null && ALL_PROGRAMS.some((p) => p.id === id)) setScreen({ view: "detail", id });
     });
     return () => {
@@ -3762,6 +3808,21 @@ export default function App() {
       else alert("알림 권한이 꺼져 있어요. 휴대폰 설정 → 애플리케이션 → 지원금알리미 → 알림에서 허용해 주세요.");
     } catch (e) {
       setNotifyEnabled(true);
+    }
+  };
+
+  const toggleRateAlert = async () => {
+    if (rateAlertOn || !Capacitor.isNativePlatform()) {
+      setRateAlertOn(!rateAlertOn);
+      return;
+    }
+    try {
+      let perm = await LocalNotifications.checkPermissions();
+      if (perm.display !== "granted") perm = await LocalNotifications.requestPermissions();
+      if (perm.display === "granted") setRateAlertOn(true);
+      else alert("알림 권한이 꺼져 있어요. 휴대폰 설정 → 애플리케이션 → 지원금알리미 → 알림에서 허용해 주세요.");
+    } catch (e) {
+      setRateAlertOn(true);
     }
   };
 
@@ -3877,7 +3938,7 @@ export default function App() {
   if (screen.view === "exchange") {
     return (
       <Shell>
-        <RateAndExchangeScreen onBack={() => setScreen({ view: "home" })} onOpenCalculator={() => setScreen({ view: "calculator" })} />
+        <RateAndExchangeScreen onBack={() => setScreen({ view: "home" })} onOpenCalculator={() => setScreen({ view: "calculator" })} rateAlertOn={rateAlertOn} onToggleRateAlert={toggleRateAlert} />
       </Shell>
     );
   }
@@ -4579,9 +4640,21 @@ export default function App() {
             </div>
             <Switch checked={notifyEnabled} onChange={toggleNotifyEnabled} />
           </div>
+          <div className="rounded-[20px] p-4 mt-2 mb-1 flex items-center justify-between" style={CARD}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: BLUE_SOFT }}>
+                <Landmark size={17} color={BLUE} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: TEXT }}>금리 발표일 알림</p>
+                <p className="text-[12px]" style={{ color: MUTED }}>한국은행 기준금리 발표 당일 알림</p>
+              </div>
+            </div>
+            <Switch checked={rateAlertOn} onChange={toggleRateAlert} />
+          </div>
           <p className="text-[11px] mb-5 px-1 leading-relaxed" style={{ color: MUTED }}>
             {Capacitor.isNativePlatform()
-              ? "즐겨찾기 탭에서 🔔를 켠 항목만 마감 3일 전 오전 9시에 알려드려요."
+              ? "마감 알림은 즐겨찾기 탭에서 🔔를 켠 항목만 마감 3일 전·1일 전·당일 오전 9시에 알려드려요."
               : "알림은 지원금알리미 앱(안드로이드)에서만 받을 수 있어요."}
           </p>
 
