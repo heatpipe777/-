@@ -3185,12 +3185,19 @@ function LoanInterestCalc() {
 // 고용보험 근로자 0.9%·사업주 1.15%(150인 미만), 산재 = 도소매·음식·숙박업 0.8% + 출퇴근 0.06%
 function InsuranceCalc() {
   const [pay, payRaw, onPayChange] = useNumberInput("2500000");
-  const pension = pay * 0.0475;
-  const health = pay * 0.03595;
-  const ltc = health * 0.1314;
-  const empWorker = pay * 0.009;
-  const empEmployer = pay * 0.0115;
-  const injury = pay * 0.0086;
+  const cut10 = (v) => Math.floor(v / 10) * 10; // 보험료는 10원 미만을 버려요
+  // 국민연금: 기준소득월액(천원 미만 버림)에 상·하한 적용 — 2026.7~2027.6 하한 41만원·상한 659만원
+  const pensionBase = Math.min(6590000, Math.max(410000, Math.floor(pay / 1000) * 1000));
+  const pension = pay > 0 ? cut10(pensionBase * 0.0475) : 0;
+  // 건강보험: 전체 7.19%를 계산해 반씩 / 장기요양: 건강보험료의 13.14%를 반씩
+  const healthTotal = cut10(pay * 0.0719);
+  const health = cut10(healthTotal / 2);
+  const ltc = cut10(cut10(healthTotal * 0.1314) / 2);
+  // 고용보험: 실업급여 각 0.9% + 사장님만 고용안정·직업능력개발 0.25%(150인 미만)
+  const empWorker = cut10(pay * 0.009);
+  const empEmployer = cut10(pay * 0.0115);
+  // 산재보험: 전액 사장님 부담 — 도소매·음식·숙박업 0.8% + 출퇴근재해 0.06%
+  const injury = cut10(pay * 0.0086);
   const workerTotal = pension + health + ltc + empWorker;
   const employerTotal = pension + health + ltc + empEmployer + injury;
   const breakdown = [
@@ -3226,7 +3233,7 @@ function InsuranceCalc() {
         ]}
       />
       <p className="text-[11px] mt-3 leading-relaxed" style={{ color: MUTED }}>
-        * 2026년 요율 기준(산재보험은 도소매·음식·숙박업 0.86%)이에요. 업종에 따라 산재보험료가 달라요.
+        * 2026년 요율 기준이에요. 국민연금 각 4.75%(월 소득 41만~659만원 구간에만 적용), 건강보험 각 3.595%, 장기요양 건강보험료의 13.14%, 고용보험 직원 0.9%·사장님 1.15%(150인 미만), 산재보험 사장님만 0.86%(도소매·음식·숙박업, 업종마다 달라요). 실제 고지서와 몇십 원 차이가 날 수 있어요.
       </p>
     </div>
   );
@@ -3292,21 +3299,53 @@ function CardFeeCalc() {
 
 const MIN_WAGE_2026 = 10320;
 function MinWageCheckCalc() {
+  const [mode, setMode] = useState("hourly");
+  const [wage, wageRaw, onWageChange] = useNumberInput("10320");
+  const [weekHours, weekRaw, onWeekChange] = useNumberInput("40");
   const [pay, payRaw, onPayChange] = useNumberInput("2156880");
   const [hours, hoursRaw, onHoursChange] = useNumberInput("209");
+  const MW = MIN_WAGE_2026.toLocaleString("ko-KR");
+
+  if (mode === "hourly") {
+    // 주 15시간 이상이면 주휴시간(주 근무시간 ÷ 5, 최대 8시간)을 더해 월 소정근로시간을 구해요
+    const juhu = weekHours >= 15 ? Math.min(weekHours, 40) / 5 : 0;
+    const monthHours = Math.round((weekHours + juhu) * (365 / 7 / 12)); // 주 40시간 → 209시간 (고용노동부 기준과 같게 반올림)
+    const ok = wage >= MIN_WAGE_2026;
+    return (
+      <div>
+        <CalcModeSwitch value={mode} onChange={setMode} options={[{ key: "hourly", label: "시급으로 확인" }, { key: "monthly", label: "월급으로 확인" }]} />
+        <CalcNumberField label="시급" value={wageRaw} onChange={onWageChange} placeholder="10,320" suffix="원" />
+        <CalcNumberField label="1주 근무시간" value={weekRaw} onChange={onWeekChange} placeholder="40" suffix="시간" hint="주 15시간 이상이면 주휴수당이 붙어요" />
+        <CalcNotice tone={ok ? "green" : "red"}>
+          {ok
+            ? `2026년 최저시급(${MW}원) 이상이에요.`
+            : `2026년 최저시급(${MW}원)보다 시간당 ${won(MIN_WAGE_2026 - wage)} 적어요. 최저임금 위반 소지가 있어요.`}
+        </CalcNotice>
+        <CalcResultCard
+          title="최저임금 체크 (시급)"
+          rows={[
+            { label: "한 달 줘야 할 월급 (주휴 포함)", value: won(wage * monthHours), primary: true },
+            { label: "월 소정근로시간 (주휴 포함)", value: `${monthHours}시간` },
+            { label: "최저임금 기준 월급", value: won(MIN_WAGE_2026 * monthHours) },
+            ...(!ok ? [{ label: "한 달 부족한 금액", value: won((MIN_WAGE_2026 - wage) * monthHours), tone: "red" }] : []),
+          ]}
+        />
+      </div>
+    );
+  }
+
   const effectiveWage = hours > 0 ? pay / hours : 0;
   const isViolation = effectiveWage < MIN_WAGE_2026;
   return (
     <div>
+      <CalcModeSwitch value={mode} onChange={setMode} options={[{ key: "hourly", label: "시급으로 확인" }, { key: "monthly", label: "월급으로 확인" }]} />
       <CalcNumberField label="월 급여 (세전)" value={payRaw} onChange={onPayChange} placeholder="2,156,880" suffix="원" />
       <CalcNumberField label="월 소정근로시간" value={hoursRaw} onChange={onHoursChange} placeholder="209" suffix="시간" hint="주 40시간이면 주휴 포함 209시간" />
       <CalcNotice tone={isViolation ? "red" : "green"}>
-        {isViolation
-          ? `2026년 최저시급(${MIN_WAGE_2026.toLocaleString("ko-KR")}원)보다 낮아요. 최저임금 위반 소지가 있어요.`
-          : `2026년 최저시급(${MIN_WAGE_2026.toLocaleString("ko-KR")}원) 이상으로 지급하고 있어요.`}
+        {isViolation ? `2026년 최저시급(${MW}원)보다 낮아요. 최저임금 위반 소지가 있어요.` : `2026년 최저시급(${MW}원) 이상으로 지급하고 있어요.`}
       </CalcNotice>
       <CalcResultCard
-        title="최저임금 체크"
+        title="최저임금 체크 (월급)"
         rows={[
           { label: "환산 시급", value: won(effectiveWage), primary: true },
           { label: "최저임금 기준 월급", value: won(MIN_WAGE_2026 * hours) },
