@@ -1,3 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* 한글 글자가 위아래로 눌려 보이지 않도록 앱 전체 줄 간격을 넉넉하게 맞춰요 */
+body { line-height: 1.6; word-break: keep-all; }
+.leading-none { line-height: 1.15 !important; }
+.leading-snug { line-height: 1.5 !important; }
+.leading-relaxed { line-height: 1.7 !important; }
+.text-xs { line-height: 1.6 !important; }
+.text-sm { line-height: 1.6 !important; }
+/* 여러 줄 말줄임은 위아래 여백을 조금 줘서 글자 머리·꼬리가 잘리지 않게 해요 */
+.line-clamp-2 { padding-block: 0.1em; }
+.truncate { padding-block: 0.08em; }

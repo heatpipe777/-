@@ -115,6 +115,15 @@ window.__audit = {
         issues.push({ type: "글자 세로 잘림", el: label(el) });
       }
     }
+    // ④ 글자 눌림: 줄 간격이 글자 크기의 1.35배보다 좁은 여러 줄 글자
+    for (const el of document.querySelectorAll("p, span, h1, h2, h3, button, a, b, li")) {
+      if (!visible(el) || !el.innerText.trim() || el.children.length > 2) continue;
+      const st = getComputedStyle(el);
+      const fsz = parseFloat(st.fontSize), lh = parseFloat(st.lineHeight);
+      if (!lh || !fsz) continue;
+      const lines = Math.round(el.getBoundingClientRect().height / lh);
+      if (lines >= 2 && lh / fsz < 1.35) issues.push({ type: "글자 눌림(줄 간격 좁음)", el: label(el), ratio: +(lh / fsz).toFixed(2) });
+    }
     // 하단 탭바에 내용이 가리는지: 맨 아래까지 내렸을 때 마지막 내용의 아래쪽이 탭바 위에 있어야 해요
     return { screen, vw, issues };
   },
