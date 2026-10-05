@@ -81,6 +81,15 @@ import heroAlertImg from "./assets/cat/hero-alert.webp";
 import heroNewsImg from "./assets/cat/hero-news.webp";
 import heroFavImg from "./assets/cat/hero-fav.webp";
 import heroMyImg from "./assets/cat/hero-my.webp";
+import calc_marginImg from "./assets/calc/margin.webp";
+import calc_breakevenImg from "./assets/calc/breakeven.webp";
+import calc_vatImg from "./assets/calc/vat.webp";
+import calc_loanImg from "./assets/calc/loan.webp";
+import calc_insuranceImg from "./assets/calc/insurance.webp";
+import calc_allowanceImg from "./assets/calc/allowance.webp";
+import calc_severanceImg from "./assets/calc/severance.webp";
+import calc_cardfeeImg from "./assets/calc/cardfee.webp";
+import calc_minwageImg from "./assets/calc/minwage.webp";
 import tileCenterImg from "./assets/home-tiles/center.webp";
 import tileExchangeImg from "./assets/home-tiles/exchange.webp";
 import tileNewsImg from "./assets/home-tiles/news.webp";
@@ -3937,15 +3946,15 @@ function MinWageCheckCalc() {
 }
 
 const CALC_TABS = [
-  { key: "margin", label: "마진율·판매가", short: "마진·판매가", Icon: Tag, color: "#3D63DD", Comp: MarginCalc },
-  { key: "breakeven", label: "손익분기점", short: "손익분기점", Icon: Target, color: "#E5674D", Comp: BreakEvenCalc },
-  { key: "vat", label: "부가세 계산", short: "부가세", Icon: Receipt, color: "#2C9F6B", Comp: VatSplitCalc },
-  { key: "loan", label: "대출이자", short: "대출이자", Icon: Landmark, color: "#7A46D6", Comp: LoanInterestCalc },
-  { key: "insurance", label: "4대보험료", short: "4대보험", Icon: ShieldCheck, color: "#0E9AA7", Comp: InsuranceCalc },
-  { key: "allowance", label: "주휴수당", short: "주휴수당", Icon: CalendarDays, color: "#D6478E", Comp: WeeklyAllowanceCalc },
-  { key: "severance", label: "퇴직금", short: "퇴직금", Icon: Briefcase, color: "#B8862A", Comp: SeveranceCalc },
-  { key: "cardfee", label: "카드수수료", short: "카드수수료", Icon: CreditCard, color: "#4F6FE0", Comp: CardFeeCalc },
-  { key: "minwage", label: "최저임금 체크", short: "최저임금", Icon: BadgeCheck, color: "#C2410C", Comp: MinWageCheckCalc },
+  { key: "margin", label: "마진율·판매가", short: "마진·판매가", Icon: Tag, color: "#3D63DD", img: calc_marginImg, Comp: MarginCalc },
+  { key: "breakeven", label: "손익분기점", short: "손익분기점", Icon: Target, color: "#EE6A3C", img: calc_breakevenImg, Comp: BreakEvenCalc },
+  { key: "vat", label: "부가세 계산", short: "부가세", Icon: Receipt, color: "#22A06B", img: calc_vatImg, Comp: VatSplitCalc },
+  { key: "loan", label: "대출이자", short: "대출이자", Icon: Landmark, color: "#7A46D6", img: calc_loanImg, Comp: LoanInterestCalc },
+  { key: "insurance", label: "4대보험료", short: "4대보험", Icon: ShieldCheck, color: "#13A39B", img: calc_insuranceImg, Comp: InsuranceCalc },
+  { key: "allowance", label: "주휴수당", short: "주휴수당", Icon: CalendarDays, color: "#E2457E", img: calc_allowanceImg, Comp: WeeklyAllowanceCalc },
+  { key: "severance", label: "퇴직금", short: "퇴직금", Icon: Briefcase, color: "#E39A12", img: calc_severanceImg, Comp: SeveranceCalc },
+  { key: "cardfee", label: "카드수수료", short: "카드수수료", Icon: CreditCard, color: "#3F6BEA", img: calc_cardfeeImg, Comp: CardFeeCalc },
+  { key: "minwage", label: "최저임금 체크", short: "최저임금", Icon: BadgeCheck, color: "#EE6A3C", img: calc_minwageImg, Comp: MinWageCheckCalc },
 ];
 const CALC_TIPS = {
   margin: [
@@ -4026,7 +4035,8 @@ function CalculatorToolkit({ onBack }) {
       <HeroHeader icon={Calculator} color={BLUE} image={heroCalcImg} title="사장님 필수 계산기" subtitle="가격 정하기부터 인건비·대출까지" headline="바로 계산해보세요!" onBack={onBack} />
 
       {/* 계산기 고르기 */}
-      <div className="grid grid-cols-3 md:grid-cols-5 gap-2 mb-4">
+      {/* 폰: 그림 위·이름 아래 / 태블릿: 그림 왼쪽·이름 오른쪽 (시안 모양) */}
+      <div className="grid grid-cols-3 gap-2 md:gap-3 mb-4">
         {CALC_TABS.map((t) => {
           const on = t.key === tab;
           return (
@@ -4037,13 +4047,20 @@ function CalculatorToolkit({ onBack }) {
                 setTimeout(() => cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
               }}
               aria-label={t.label}
-              className="flex flex-col items-center gap-1.5 py-3 rounded-[18px] transition-colors active:scale-[0.97]"
-              style={on ? { background: `${t.color}14`, border: `1.5px solid ${t.color}66` } : { ...CARD }}
+              className="relative overflow-hidden flex flex-col md:flex-row items-center gap-1 md:gap-2.5 pt-2.5 pb-3 md:py-3 px-1.5 md:pl-2 md:pr-3 rounded-[20px] transition-transform active:scale-[0.97]"
+              style={{
+                background: `linear-gradient(145deg, ${t.color}${on ? "1F" : "12"} 0%, #FFFFFF 75%)`,
+                border: on ? `2px solid ${t.color}` : "1px solid #EEF0F6",
+                boxShadow: on ? `0 6px 16px ${t.color}33` : "0 4px 14px rgba(40,60,120,0.05)",
+              }}
             >
-              <span className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: on ? t.color : `${t.color}14` }}>
-                <t.Icon size={18} color={on ? "white" : t.color} strokeWidth={2.2} />
+              <span className="absolute -right-5 -top-6 w-16 h-16 rounded-full pointer-events-none" style={{ background: `${t.color}10` }} />
+              <span className="absolute -right-4 -bottom-7 w-14 h-14 rounded-full pointer-events-none" style={{ background: `${t.color}0A` }} />
+              <img src={t.img} alt="" className="relative w-[54px] h-[54px] md:w-[64px] md:h-[64px] shrink-0 object-contain" />
+              <span className="relative flex items-center gap-0.5 md:flex-1 md:justify-between min-w-0">
+                <span className="text-[12.5px] md:text-[14px] font-bold whitespace-nowrap" style={{ color: on ? t.color : TEXT, letterSpacing: "-0.02em" }}>{t.short}</span>
+                <ChevronRight size={14} color={on ? t.color : "#A9AFBE"} className="hidden md:block shrink-0" />
               </span>
-              <span className="text-[11.5px] font-semibold" style={{ color: on ? t.color : TEXT }}>{t.short}</span>
             </button>
           );
         })}
@@ -4052,9 +4069,7 @@ function CalculatorToolkit({ onBack }) {
       <div ref={cardRef} key={tab} className="rounded-[22px] p-4 scroll-mt-4" style={{ ...CARD, animation: "calcFadeIn 0.2s ease" }}>
         <style>{`@keyframes calcFadeIn { 0% { opacity: 0; transform: translateY(6px); } 100% { opacity: 1; transform: translateY(0); } }`}</style>
         <div className="flex items-center gap-2 mb-4">
-          <span className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `${active.color}14` }}>
-            <active.Icon size={16} color={active.color} strokeWidth={2.2} />
-          </span>
+          <img src={active.img} alt="" className="w-10 h-10 shrink-0 object-contain -my-1" />
           <p className="text-[16px] font-bold" style={{ color: TEXT }}>{active.label}</p>
         </div>
         <Active />
