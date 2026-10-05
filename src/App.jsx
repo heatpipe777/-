@@ -3946,15 +3946,15 @@ function MinWageCheckCalc() {
 }
 
 const CALC_TABS = [
-  { key: "margin", label: "마진율·판매가", short: "마진·판매가", Icon: Tag, color: "#3D63DD", img: calc_marginImg, Comp: MarginCalc },
-  { key: "breakeven", label: "손익분기점", short: "손익분기점", Icon: Target, color: "#EE6A3C", img: calc_breakevenImg, Comp: BreakEvenCalc },
-  { key: "vat", label: "부가세 계산", short: "부가세", Icon: Receipt, color: "#22A06B", img: calc_vatImg, Comp: VatSplitCalc },
-  { key: "loan", label: "대출이자", short: "대출이자", Icon: Landmark, color: "#7A46D6", img: calc_loanImg, Comp: LoanInterestCalc },
-  { key: "insurance", label: "4대보험료", short: "4대보험", Icon: ShieldCheck, color: "#13A39B", img: calc_insuranceImg, Comp: InsuranceCalc },
-  { key: "allowance", label: "주휴수당", short: "주휴수당", Icon: CalendarDays, color: "#E2457E", img: calc_allowanceImg, Comp: WeeklyAllowanceCalc },
-  { key: "severance", label: "퇴직금", short: "퇴직금", Icon: Briefcase, color: "#E39A12", img: calc_severanceImg, Comp: SeveranceCalc },
-  { key: "cardfee", label: "카드수수료", short: "카드수수료", Icon: CreditCard, color: "#3F6BEA", img: calc_cardfeeImg, Comp: CardFeeCalc },
-  { key: "minwage", label: "최저임금 체크", short: "최저임금", Icon: BadgeCheck, color: "#EE6A3C", img: calc_minwageImg, Comp: MinWageCheckCalc },
+  { key: "margin", label: "마진율·판매가", short: "마진·판매가", Icon: Tag, color: "#3D63DD", img: calc_marginImg, sub: "원가·마진율로 판매가를 정하거나", head: "내 마진을 확인해요", Comp: MarginCalc },
+  { key: "breakeven", label: "손익분기점", short: "손익분기점", Icon: Target, color: "#EE6A3C", img: calc_breakevenImg, sub: "한 달 고정비와 원가율로", head: "목표 매출을 알아봐요", Comp: BreakEvenCalc },
+  { key: "vat", label: "부가세 계산", short: "부가세", Icon: Receipt, color: "#22A06B", img: calc_vatImg, sub: "부가세 포함 금액을 쪼개거나 더해서", head: "공급가액·세액을 계산해요", Comp: VatSplitCalc },
+  { key: "loan", label: "대출이자", short: "대출이자", Icon: Landmark, color: "#7A46D6", img: calc_loanImg, sub: "상환 방식별로", head: "매달 갚을 돈을 비교해요", Comp: LoanInterestCalc },
+  { key: "insurance", label: "4대보험료", short: "4대보험", Icon: ShieldCheck, color: "#13A39B", img: calc_insuranceImg, sub: "직원 월급으로", head: "4대보험료를 미리 계산해요", Comp: InsuranceCalc },
+  { key: "allowance", label: "주휴수당", short: "주휴수당", Icon: CalendarDays, color: "#E2457E", img: calc_allowanceImg, sub: "주 근무시간과 시급으로", head: "주휴수당을 계산해요", Comp: WeeklyAllowanceCalc },
+  { key: "severance", label: "퇴직금", short: "퇴직금", Icon: Briefcase, color: "#E39A12", img: calc_severanceImg, sub: "근무기간과 월급으로", head: "퇴직금을 미리 알아봐요", Comp: SeveranceCalc },
+  { key: "cardfee", label: "카드수수료", short: "카드수수료", Icon: CreditCard, color: "#3F6BEA", img: calc_cardfeeImg, sub: "카드 매출과 수수료율로", head: "실제 입금액을 계산해요", Comp: CardFeeCalc },
+  { key: "minwage", label: "최저임금 체크", short: "최저임금", Icon: BadgeCheck, color: "#EE6A3C", img: calc_minwageImg, sub: "월급·시급이", head: "최저임금 이상인지 확인해요", Comp: MinWageCheckCalc },
 ];
 const CALC_TIPS = {
   margin: [
@@ -4008,50 +4008,130 @@ const CALC_TIPS = {
 };
 const CALC_TAB_KEY = "calcTab";
 
-function CalculatorToolkit({ onBack }) {
-  const [tab, setTabState] = useState(() => {
+function CalculatorToolkit({ onBack, initialTab }) {
+  // 마지막으로 쓴 계산기 (목록에 '최근' 표시)
+  const [lastTab, setLastTab] = useState(() => {
     try {
       const saved = localStorage.getItem(CALC_TAB_KEY);
-      return CALC_TABS.some((t) => t.key === saved) ? saved : "margin";
+      return CALC_TABS.some((t) => t.key === saved) ? saved : null;
     } catch (e) {
-      return "margin";
+      return null;
     }
   });
-  const setTab = (k) => {
-    setTabState(k);
+  // 지금 열려 있는 계산기 (없으면 목록) — 다른 화면에서 특정 계산기로 바로 들어오면 그 계산기부터
+  const [open, setOpen] = useState(initialTab || null);
+  const direct = useRef(!!initialTab);
+  const listScroll = useRef(0);
+  const openCalc = (k) => {
+    if (!open) listScroll.current = window.scrollY;
+    setOpen(k);
+    setLastTab(k);
     try {
       localStorage.setItem(CALC_TAB_KEY, k);
     } catch (e) {
       // 저장 안 돼도 괜찮아요
     }
   };
-  const active = CALC_TABS.find((t) => t.key === tab);
-  const Active = active.Comp;
-  const tips = CALC_TIPS[tab] || [];
-  const cardRef = useRef(null);
+  const closeCalc = useCallback(() => {
+    // 다른 화면(예: 금리)에서 바로 들어왔으면 그 화면으로 돌아가요
+    if (direct.current) return onBack();
+    setOpen(null);
+  }, [onBack]);
+  // 계산기를 열거나 바꾸면 맨 위부터, 목록으로 돌아오면 보던 위치로
+  useLayoutEffect(() => {
+    if (open) window.scrollTo(0, 0);
+    else window.scrollTo(0, listScroll.current);
+  }, [open]);
+  // 휴대폰 뒤로가기 버튼: 계산기 → 목록
+  useEffect(() => {
+    if (!open) return;
+    window.__subBack = closeCalc;
+    return () => {
+      if (window.__subBack === closeCalc) window.__subBack = null;
+    };
+  }, [open, closeCalc]);
+
+  if (open) {
+    const active = CALC_TABS.find((t) => t.key === open);
+    const Active = active.Comp;
+    const tips = CALC_TIPS[open] || [];
+    return (
+      <div>
+        <HeroHeader icon={active.Icon} color={active.color} image={active.img} title={active.label} subtitle={active.sub} headline={active.head} onBack={closeCalc} />
+
+        {/* 다른 계산기로 바로 바꾸기 */}
+        <div className="flex gap-1.5 overflow-x-auto pt-1 pb-3 -mt-2 mb-2 -mx-5 px-5" style={{ scrollbarWidth: "none" }}>
+          {CALC_TABS.map((t) => {
+            const on = t.key === open;
+            return (
+              <button
+                key={t.key}
+                onClick={() => openCalc(t.key)}
+                // 지금 계산기 버튼이 줄 가운데 보이게
+                ref={on ? (el) => el && el.parentElement.scrollTo({ left: el.offsetLeft - (el.parentElement.clientWidth - el.offsetWidth) / 2 }) : undefined}
+                aria-label={`${t.label} 계산기로 바꾸기`}
+                className="shrink-0 flex items-center gap-1 pl-1 pr-3 py-1 rounded-full text-[12.5px] font-semibold whitespace-nowrap"
+                style={on ? { background: `${t.color}1A`, color: t.color, border: `1.5px solid ${t.color}` } : { background: "#FFFFFF", color: TEXT, border: "1px solid #E6E9F2" }}
+              >
+                <img src={t.img} alt="" className="w-7 h-7 object-contain" />
+                {t.short}
+              </button>
+            );
+          })}
+          <span data-scroll-end aria-hidden="true" className="shrink-0 w-6" />
+        </div>
+
+        <div key={open} className="rounded-[22px] p-4" style={{ ...CARD, animation: "calcFadeIn 0.2s ease" }}>
+          <style>{`@keyframes calcFadeIn { 0% { opacity: 0; transform: translateY(6px); } 100% { opacity: 1; transform: translateY(0); } }`}</style>
+          <Active />
+        </div>
+
+        {tips.length > 0 && (
+          <div className="relative overflow-hidden rounded-[20px] p-4 mt-3" style={{ background: "#FFFBF0" }}>
+            <div className="absolute -right-6 -bottom-8 w-24 h-24 rounded-full" style={{ background: "rgba(217,166,46,0.08)" }} />
+            <div className="relative flex items-center gap-1.5 mb-2.5">
+              <Lightbulb size={14} color="#B8862A" />
+              <p className="text-[13px] font-bold" style={{ color: "#8A6520" }}>알아두면 좋아요</p>
+            </div>
+            <ul className="relative space-y-2">
+              {tips.map((t, i) => (
+                <li key={i} className="text-[12.5px] leading-relaxed flex items-start gap-1.5 break-keep" style={{ color: "#6B5220" }}>
+                  <span className="mt-2 w-1 h-1 rounded-full shrink-0" style={{ background: "#B8862A" }} />
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <p className="text-[11px] mt-5 leading-relaxed" style={{ color: MUTED }}>
+          * 계산 결과는 참고용 추정치예요. 세금·인건비처럼 법령이 자주 바뀌는 항목은 신고·지급 전에 세무사나 관련 기관에서 꼭 확인하세요.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>
       <HeroHeader icon={Calculator} color={BLUE} image={heroCalcImg} title="사장님 필수 계산기" subtitle="가격 정하기부터 인건비·대출까지" headline="바로 계산해보세요!" onBack={onBack} />
 
-      {/* 계산기 고르기 */}
+      {/* 계산기 고르기 — 누르면 그 계산기만 전체 화면으로 열려요 */}
       {/* 폰: 그림 위·이름 아래 / 태블릿: 그림 왼쪽·이름 오른쪽 (시안 모양) */}
       <div className="grid grid-cols-3 gap-2 md:gap-3 mb-4">
         {CALC_TABS.map((t) => {
-          const on = t.key === tab;
+          const on = t.key === lastTab;
           return (
             <button
               key={t.key}
               onClick={() => {
-                setTab(t.key);
-                setTimeout(() => cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+                openCalc(t.key);
               }}
               aria-label={t.label}
               className="relative flex flex-col md:flex-row items-center gap-1 md:gap-2.5 pt-2.5 pb-3 md:py-3 px-1.5 md:pl-2 md:pr-3 rounded-[20px] transition-transform active:scale-[0.97]"
               style={{
                 background: `linear-gradient(145deg, ${t.color}${on ? "1F" : "12"} 0%, #FFFFFF 75%)`,
-                border: on ? `2px solid ${t.color}` : "1px solid #EEF0F6",
-                boxShadow: on ? `0 6px 16px ${t.color}33` : "0 4px 14px rgba(40,60,120,0.05)",
+                border: on ? `1.5px solid ${t.color}66` : "1px solid #EEF0F6",
+                boxShadow: "0 4px 14px rgba(40,60,120,0.05)",
               }}
             >
               {/* 모서리 원 장식 — 버튼 안쪽 틀에서만 보이게 (버튼 밖으로 넘치지 않게) */}
@@ -4059,42 +4139,18 @@ function CalculatorToolkit({ onBack }) {
                 <span className="absolute -right-5 -top-6 w-16 h-16 rounded-full" style={{ background: `${t.color}10` }} />
                 <span className="absolute -right-4 -bottom-7 w-14 h-14 rounded-full" style={{ background: `${t.color}0A` }} />
               </span>
+              {on && (
+                <span className="absolute top-1.5 left-1.5 z-10 text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: t.color }}>최근</span>
+              )}
               <img src={t.img} alt="" className="relative w-[54px] h-[54px] md:w-[64px] md:h-[64px] shrink-0 object-contain" />
               <span className="relative flex items-center gap-0.5 md:flex-1 md:justify-between min-w-0">
-                <span className="text-[12.5px] md:text-[14px] font-bold whitespace-nowrap" style={{ color: on ? t.color : TEXT, letterSpacing: "-0.02em" }}>{t.short}</span>
-                <ChevronRight size={14} color={on ? t.color : "#A9AFBE"} className="hidden md:block shrink-0" />
+                <span className="text-[12.5px] md:text-[14px] font-bold whitespace-nowrap" style={{ color: TEXT, letterSpacing: "-0.02em" }}>{t.short}</span>
+                <ChevronRight size={14} color="#A9AFBE" className="hidden md:block shrink-0" />
               </span>
             </button>
           );
         })}
       </div>
-
-      <div ref={cardRef} key={tab} className="rounded-[22px] p-4 scroll-mt-4" style={{ ...CARD, animation: "calcFadeIn 0.2s ease" }}>
-        <style>{`@keyframes calcFadeIn { 0% { opacity: 0; transform: translateY(6px); } 100% { opacity: 1; transform: translateY(0); } }`}</style>
-        <div className="flex items-center gap-2 mb-4">
-          <img src={active.img} alt="" className="w-10 h-10 shrink-0 object-contain -my-1" />
-          <p className="text-[16px] font-bold" style={{ color: TEXT }}>{active.label}</p>
-        </div>
-        <Active />
-      </div>
-
-      {tips.length > 0 && (
-        <div className="relative overflow-hidden rounded-[20px] p-4 mt-3" style={{ background: "#FFFBF0" }}>
-          <div className="absolute -right-6 -bottom-8 w-24 h-24 rounded-full" style={{ background: "rgba(217,166,46,0.08)" }} />
-          <div className="relative flex items-center gap-1.5 mb-2.5">
-            <Lightbulb size={14} color="#B8862A" />
-            <p className="text-[13px] font-bold" style={{ color: "#8A6520" }}>알아두면 좋아요</p>
-          </div>
-          <ul className="relative space-y-2">
-            {tips.map((t, i) => (
-              <li key={i} className="text-[12.5px] leading-relaxed flex items-start gap-1.5 break-keep" style={{ color: "#6B5220" }}>
-                <span className="mt-2 w-1 h-1 rounded-full shrink-0" style={{ background: "#B8862A" }} />
-                <span>{t}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
 
       <p className="text-[11px] mt-5 leading-relaxed" style={{ color: MUTED }}>
         * 계산 결과는 참고용 추정치예요. 세금·인건비처럼 법령이 자주 바뀌는 항목은 신고·지급 전에 세무사나 관련 기관에서 꼭 확인하세요.
@@ -4543,7 +4599,7 @@ export default function App() {
   if (screen.view === "exchange") {
     return (
       <Shell>
-        <RateAndExchangeScreen onBack={() => setScreen({ view: "home" })} onOpenCalculator={() => setScreen({ view: "calculator" })} rateAlertOn={rateAlertOn} onToggleRateAlert={toggleRateAlert} />
+        <RateAndExchangeScreen onBack={() => setScreen({ view: "home" })} onOpenCalculator={() => setScreen({ view: "calculator", tab: "loan", from: "exchange" })} rateAlertOn={rateAlertOn} onToggleRateAlert={toggleRateAlert} />
       </Shell>
     );
   }
@@ -4771,7 +4827,7 @@ export default function App() {
   if (screen.view === "calculator") {
     return (
       <Shell>
-        <CalculatorToolkit onBack={() => setScreen({ view: "home" })} />
+        <CalculatorToolkit key={screen.tab || "list"} initialTab={screen.tab} onBack={() => setScreen({ view: screen.from || "home" })} />
       </Shell>
     );
   }
@@ -4896,7 +4952,7 @@ export default function App() {
           style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.25)" }}
         >
           {/* 초록 점: 몇 번만 깜박이고 멈춰요 (계속 깜박이면 화면을 쉬지 않고 다시 그려요) */}
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#81F5BE", boxShadow: "0 0 6px #81F5BE", animation: "dotPulse 2s cubic-bezier(0.4, 0, 0.6, 1) 4" }} />
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#81F5BE", boxShadow: "0 0 6px #81F5BE", animation: "dotPulse 2s cubic-bezier(0.4, 0, 0.6, 1) 2s 4" }} />
           <span className="text-[12px] font-semibold text-white" style={{ lineHeight: 1.5 }}>
             지금 신청할 수 있는 지원금 <b className="text-[14px] font-extrabold tabular-nums" style={{ color: "#FFE680" }}>{ALL_PROGRAMS.filter((p) => !isExpired(p)).length}</b>건
           </span>
@@ -4932,7 +4988,8 @@ export default function App() {
               background: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.12) 25%, rgba(255,255,255,0.45) 50%, rgba(255,255,255,0.12) 75%, rgba(255,255,255,0) 100%)",
               willChange: "transform, opacity",
               // 화면을 계속 다시 그리면 느린 폰·배터리에 부담 → 홈에 들어올 때 3번만 지나가고 멈춰요
-              animation: "shimmerSweep 4.5s ease-in-out 0.6s 3 both",
+              // 앱이 막 켜질 때는 화면 그리기가 바쁘니 2.5초 뒤에 시작해요
+              animation: "shimmerSweep 4.5s ease-in-out 2.5s 3 both",
             }}
           />
         </div>
