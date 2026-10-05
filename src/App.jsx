@@ -56,9 +56,9 @@ import tileAllImg from "./assets/home-tiles/all.webp";
 import tileCenterImg from "./assets/home-tiles/center.webp";
 import tileExchangeImg from "./assets/home-tiles/exchange.webp";
 import tileNewsImg from "./assets/home-tiles/news.webp";
-import toolTaxImg from "./assets/home-tiles/tool-tax.webp";
-import toolFaqImg from "./assets/home-tiles/tool-faq.webp";
-import toolDocsImg from "./assets/home-tiles/tool-docs.webp";
+import toolTaxImg from "./assets/home-tiles/tool-tax-icon.webp";
+import toolFaqImg from "./assets/home-tiles/tool-faq-icon.webp";
+import toolDocsImg from "./assets/home-tiles/tool-docs-icon.webp";
 import calcArtImg from "./assets/home-tiles/calc-art.webp";
 import noticeImg from "./assets/home-tiles/notice.webp";
 import heroMegaImg from "./assets/home-tiles/hero-mega.webp";
@@ -294,11 +294,15 @@ function alertBaseId(key) {
   return 100000 + h * 10;
 }
 function deadlineAlertText(name, days, what) {
+  if (what === "일정") {
+    if (days === 0) return { title: `오늘 · ${name}`, body: `오늘 '${name}' 일정이 있어요.` };
+    return { title: `D-${days} · ${name}`, body: `'${name}'까지 ${days}일 남았어요. 미리 준비하세요.` };
+  }
   if (days === 0) return { title: `오늘 마감 · ${name}`, body: `오늘이 ${what} 마지막 날이에요. 놓치지 마세요!` };
   return { title: `마감 D-${days} · ${name}`, body: `${what}까지 ${days}일 남았어요. 눌러서 확인하세요.` };
 }
 // 설정에 맞는 알림 목록을 만들어요 (시간순)
-function buildAlertList({ programs, taxOn, taxStaff, rateOn, plan, hour }) {
+function buildAlertList({ programs, taxOn, taxStaff, rateOn, plan, hour, events = [] }) {
   const now = new Date();
   const days = (ALERT_PLANS[plan] || ALERT_PLANS.normal).days;
   const list = [];
@@ -313,6 +317,7 @@ function buildAlertList({ programs, taxOn, taxStaff, rateOn, plan, hour }) {
     });
   };
   programs.forEach((p) => addDeadline(`p:${p.id}`, p.name, p.deadline, "신청 마감", { programId: p.id }));
+  events.filter((ev) => ev.alert).forEach((ev) => eventOccurrences(ev).forEach((d) => addDeadline(`e:${ev.id}:${d}`, ev.title, d, "일정", { screen: "taxSchedule" })));
   if (taxOn) {
     // 세금은 60일 안의 일정만 (매달 돌아오는 원천세 등이 너무 많이 쌓이지 않게)
     const limit = new Date(now.getTime() + 60 * 864e5);
@@ -401,6 +406,54 @@ function buildTaxSchedule() {
   return TAX_SCHEDULE_BASE.map((t) => ({ ...t, ...shiftWeekend(nextOccurrenceDate(t)) }));
 }
 let TAX_SCHEDULE = buildTaxSchedule();
+
+// ---- 사장님 일정 (내 일정 + 세금 + 즐겨찾기 지원금 마감) ----
+const EVENT_PRESETS = [
+  { title: "월급날", emoji: "💰", repeat: "monthly", day: 10 },
+  { title: "임대료", emoji: "🏠", repeat: "monthly", day: 25 },
+  { title: "대출 상환", emoji: "🏦", repeat: "monthly", day: 15 },
+  { title: "카드대금", emoji: "💳", repeat: "monthly", day: 14 },
+  { title: "공과금", emoji: "💡", repeat: "monthly", day: 25 },
+  { title: "직접 입력", emoji: "📌", repeat: "once" },
+];
+const MY_ACCENT = "#E8890C";
+// 매달 반복 일정의 다음 날짜 (31일처럼 없는 날은 그 달 마지막 날로)
+function eventDateIn(year, month, day) {
+  const last = new Date(year, month + 1, 0).getDate();
+  return new Date(year, month, Math.min(day, last));
+}
+function eventOccurrences(ev, withinDays = 60) {
+  const today = startOfToday();
+  if (ev.repeat === "once") {
+    const d = parseLocalDate(ev.date);
+    return d >= today ? [formatLocalDate(d)] : [];
+  }
+  const out = [];
+  const limit = new Date(today.getTime() + withinDays * 864e5);
+  for (let m = 0; m < 4; m++) {
+    const d = eventDateIn(today.getFullYear(), today.getMonth() + m, ev.day);
+    if (d >= today && d <= limit) out.push(formatLocalDate(d));
+  }
+  if (!out.length) out.push(formatLocalDate(eventDateIn(today.getFullYear(), today.getMonth() + 1, ev.day)));
+  return out;
+}
+function eventRepeatLabel(ev) {
+  if (ev.repeat === "once") return "한 번";
+  return ev.day >= 31 ? "매달 말일" : `매달 ${ev.day}일`;
+}
+// 화면에 보여줄 일정 목록 (가까운 순)
+function buildScheduleItems({ favorites, myEvents }) {
+  const items = [];
+  myEvents.forEach((ev) => {
+    const [d] = eventOccurrences(ev);
+    if (d) items.push({ key: `my:${ev.id}`, type: "my", name: ev.title, deadline: d, who: eventRepeatLabel(ev), note: ev.alert ? "알림 켜짐" : "알림 꺼짐", ev, emoji: ev.emoji || "📌" });
+  });
+  TAX_SCHEDULE.forEach((t) => items.push({ key: `tax:${t.name}:${t.deadline}`, type: "tax", ...t }));
+  ALL_PROGRAMS.filter((p) => favorites.has(p.id) && !p.recurring && getDday(p.deadline) >= 0).forEach((p) =>
+    items.push({ key: `p:${p.id}`, type: "subsidy", name: p.name, deadline: p.deadline, note: p.amountLabel, who: "내 즐겨찾기", programId: p.id })
+  );
+  return items.sort(byDeadline);
+}
 
 const REGIONS = ["전체", "전국", "서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
 
@@ -1796,7 +1849,7 @@ const FAQ_DATA = [
   { category: "신청 방법", q: "온라인 신청이 어려워요. 직접 방문해도 되나요?", a: "네. 가까운 소상공인시장진흥공단 지역센터를 방문하면 신청을 도와드려요. 홈 화면의 '지역센터 찾기'에서 주소와 전화번호를 확인할 수 있어요. 일부 지자체 지원금은 시·군·구청이나 신용보증재단 지점에서 접수해요." },
   { category: "신청 방법", q: "예산 소진 시 마감이라는 게 무슨 뜻이에요?", a: "정해진 예산이 다 쓰이면 마감일 전이라도 접수가 끝난다는 뜻이에요. 선착순인 경우가 많으니, 관심 있는 지원금은 공고가 나오면 빨리 신청하는 게 좋아요." },
   { category: "신청 방법", q: "신청했는데 떨어졌어요. 다시 신청할 수 있나요?", a: "탈락 사유(서류 미비, 요건 미충족, 예산 소진 등)에 따라 달라요. 서류 문제라면 보완 후 다음 회차에 다시 신청할 수 있는 경우가 많아요. 운영 기관 콜센터에 탈락 사유를 문의해 보세요." },
-  { category: "세금", q: "간이과세자와 일반과세자는 뭐가 달라요?", a: "연 매출 1억 400만원 미만이면 간이과세자가 될 수 있고, 부가세를 1년에 한 번(1월) 신고해요. 일반과세자는 1월·7월 두 번 확정신고해요. 홈의 '세금·마감 일정'에서 날짜를 확인할 수 있어요." },
+  { category: "세금", q: "간이과세자와 일반과세자는 뭐가 달라요?", a: "연 매출 1억 400만원 미만이면 간이과세자가 될 수 있고, 부가세를 1년에 한 번(1월) 신고해요. 일반과세자는 1월·7월 두 번 확정신고해요. 홈의 '사장님 일정'에서 날짜를 확인할 수 있어요." },
   { category: "세금", q: "세금 신고 날짜를 놓치면 어떻게 돼요?", a: "가산세가 붙어요. 늦었더라도 빨리 신고할수록 가산세가 줄어드니 바로 홈택스에서 '기한 후 신고'를 하세요. 국세청 상담센터(국번 없이 126)에서 도움을 받을 수 있어요." },
   { category: "앱 이용", q: "지원금 정보는 얼마나 자주 바뀌어요?", a: "공식 공고를 확인해서 주기적으로 업데이트해요. 지원사업은 예산 상황에 따라 자주 바뀌니, 신청 전에는 반드시 공식 사이트에서 최종 확인하세요. 접수가 끝난 지원금은 '접수마감' 탭에 따로 모아둬요." },
   { category: "앱 이용", q: "내 지역은 어떻게 바꾸나요?", a: "MY 탭 > '내 지역'을 누르면 시·도와 시·군·구를 고를 수 있어요. 한 번 정하면 지원금 목록이 내 지역 기준으로 열리고, 전국 지원금도 함께 보여요." },
@@ -2106,53 +2159,150 @@ function DocumentsScreen({ onBack }) {
   );
 }
 
-// 세금·마감 일정 화면 — 세금 신고일 + 즐겨찾기한 지원금 마감일을 월별로 보여줘요
+// 세금·마감 일정 화면 → "사장님 일정": 내 일정 + 세금 신고일 + 즐겨찾기 지원금 마감일을 월별로 보여줘요
 const TAX_GREEN = "#2C9F6B";
-function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, planDesc }) {
-  const [filter, setFilter] = useState("all"); // all | tax | mine
-  const taxItems = TAX_SCHEDULE.map((t) => ({ ...t, type: "tax" }));
-  // 상시접수(마감일 없음)·이미 끝난 지원금은 일정에서 빼요
-  const favoritePrograms = ALL_PROGRAMS.filter((p) => favorites.has(p.id) && !p.recurring && getDday(p.deadline) >= 0).map((p) => ({
-    name: p.name,
-    deadline: p.deadline,
-    note: p.amountLabel,
-    who: "내 즐겨찾기",
-    type: "subsidy",
-  }));
-  const all = [...(filter !== "mine" ? taxItems : []), ...(filter !== "tax" ? favoritePrograms : [])].sort(byDeadline);
-  const next = all.find((x) => getDday(x.deadline) >= 0);
+const WEEK = ["일", "월", "화", "수", "목", "금", "토"];
 
-  // 월별로 묶기
+// 내 일정 추가·수정 창 (아래에서 올라오는 시트)
+function EventEditor({ initial, onSave, onDelete, onClose }) {
+  const editing = !!initial?.id;
+  const [title, setTitle] = useState(initial?.title || "");
+  const [emoji, setEmoji] = useState(initial?.emoji || "📌");
+  const [repeat, setRepeat] = useState(initial?.repeat || "monthly");
+  const [day, setDay] = useState(initial?.day || 10);
+  const [date, setDate] = useState(initial?.date || formatLocalDate(new Date(TODAY.getTime() + 7 * 864e5)));
+  const [alertOn, setAlertOn] = useState(initial ? initial.alert !== false : true);
+  const pickPreset = (p) => {
+    setEmoji(p.emoji);
+    setTitle(p.title === "직접 입력" ? "" : p.title);
+    setRepeat(p.repeat);
+    if (p.day) setDay(p.day);
+  };
+  const ok = title.trim().length > 0 && (repeat === "monthly" || date);
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-end justify-center" style={{ zIndex: 60 }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="bg-white w-full max-w-md md:max-w-xl rounded-t-[24px] p-5 pb-7 max-h-[88%] overflow-y-auto">
+        <div className="w-9 h-1 bg-[#E5E7EE] rounded-full mx-auto mb-4" />
+        <p className="text-[17px] font-bold mb-4" style={{ color: TEXT }}>{editing ? "일정 수정" : "내 일정 추가"}</p>
+
+        {!editing && (
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {EVENT_PRESETS.map((p) => {
+              const on = (p.title === "직접 입력" && emoji === p.emoji) || title === p.title;
+              return (
+                <button key={p.title} onClick={() => pickPreset(p)} className="px-3 py-1.5 rounded-full text-[12.5px] font-semibold" style={on ? CHIP_ON : CHIP_OFF}>
+                  {p.emoji} {p.title}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        <p className="text-[13px] font-semibold mb-1.5" style={{ color: TEXT }}>일정 이름</p>
+        <div className="flex items-center rounded-xl px-3.5 py-3 mb-4" style={{ background: INPUT_BG }}>
+          <span className="mr-2 text-[16px]">{emoji}</span>
+          <input value={title} onChange={(e) => setTitle(e.target.value.slice(0, 20))} placeholder="예: 직원 월급날" className="flex-1 min-w-0 bg-transparent outline-none text-[15px] font-semibold" style={{ color: TEXT }} />
+        </div>
+
+        <p className="text-[13px] font-semibold mb-1.5" style={{ color: TEXT }}>반복</p>
+        <CalcModeSwitch value={repeat} onChange={setRepeat} options={[{ key: "monthly", label: "매달 반복" }, { key: "once", label: "한 번만" }]} />
+
+        {repeat === "monthly" ? (
+          <>
+            <p className="text-[13px] font-semibold mb-1.5" style={{ color: TEXT }}>매달 며칠?</p>
+            <div className="grid grid-cols-7 gap-1.5 mb-4">
+              {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                <button key={d} onClick={() => setDay(d)} className="aspect-square rounded-lg text-[12.5px] font-semibold tabular-nums" style={day === d ? CHIP_ON : { background: "#F5F6FA", color: TEXT }}>
+                  {d === 31 ? "말일" : d}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-[13px] font-semibold mb-1.5" style={{ color: TEXT }}>날짜</p>
+            <input
+              type="date"
+              value={date}
+              min={formatLocalDate(TODAY)}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full rounded-xl px-3.5 py-3 mb-4 text-[15px] font-semibold outline-none"
+              style={{ background: INPUT_BG, color: TEXT }}
+            />
+          </>
+        )}
+
+        <div className="flex items-center justify-between rounded-xl px-3.5 py-3 mb-5" style={{ background: "#F7F8FB" }}>
+          <div>
+            <p className="text-[13px] font-semibold" style={{ color: TEXT }}>미리 알림 받기</p>
+            <p className="text-[11px]" style={{ color: MUTED }}>알림 시점·시각은 MY 탭 알림 설정을 따라요</p>
+          </div>
+          <Switch checked={alertOn} onChange={() => setAlertOn(!alertOn)} />
+        </div>
+
+        <button
+          disabled={!ok}
+          onClick={() => onSave({ id: initial?.id || `e${Date.now()}`, title: title.trim(), emoji, repeat, day, date: repeat === "once" ? date : undefined, alert: alertOn })}
+          className="w-full py-4 rounded-2xl text-[14.5px] font-bold"
+          style={ok ? BTN_PRIMARY : { background: "#E7E9F0", color: MUTED }}
+        >
+          {editing ? "저장하기" : "일정 추가하기"}
+        </button>
+        {editing && (
+          <button onClick={() => onDelete(initial.id)} className="w-full py-3 mt-2 rounded-2xl text-[13px] font-semibold" style={{ color: RED }}>
+            이 일정 삭제
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, planDesc, myEvents = [], onSaveEvent, onDeleteEvent, onSelectProgram }) {
+  const [filter, setFilter] = useState("all"); // all | my | tax | subsidy
+  const [editing, setEditing] = useState(null); // null | {} (새로) | 이벤트
+  const all = buildScheduleItems({ favorites, myEvents });
+  const shown = all.filter((x) => filter === "all" || x.type === filter);
+  const next = all.find((x) => getDday(x.deadline) >= 0);
+  const counts = { my: all.filter((x) => x.type === "my").length, subsidy: all.filter((x) => x.type === "subsidy").length };
+
   const groups = [];
-  for (const item of all) {
+  for (const item of shown) {
     const d = parseLocalDate(item.deadline);
     const key = `${d.getFullYear()}년 ${d.getMonth() + 1}월`;
     let g = groups.find((x) => x.key === key);
     if (!g) groups.push((g = { key, items: [] }));
     g.items.push(item);
   }
+  const tone = (t) => (t === "my" ? { accent: MY_ACCENT, soft: "#FFF3E0" } : t === "tax" ? { accent: TAX_GREEN, soft: "#E7F7EF" } : { accent: BLUE, soft: BLUE_SOFT });
 
   return (
     <div>
-      <HeroHeader icon={CalendarCheck} color={TAX_GREEN} title="세금·마감 일정" subtitle="세금 신고일과 즐겨찾기한 지원금 마감일을 한눈에 확인해요" onBack={onBack} />
+      <HeroHeader icon={CalendarCheck} color={TAX_GREEN} title="사장님 일정" subtitle="월급날·임대료 같은 내 일정과 세금 신고일, 지원금 마감일을 한눈에 챙겨요" onBack={onBack} />
 
-      {/* 가장 가까운 일정 */}
       {next && (
-        <div className="relative overflow-hidden rounded-[24px] p-4 mb-4" style={{ background: "linear-gradient(135deg, #3DBB82 0%, #2C9F6B 100%)" }}>
+        <div className="relative overflow-hidden rounded-[24px] p-4 mb-3" style={{ background: "linear-gradient(135deg, #3DBB82 0%, #2C9F6B 100%)" }}>
           <div className="absolute -right-8 -top-10 w-32 h-32 rounded-full" style={{ background: "rgba(255,255,255,0.1)" }} />
           <p className="relative text-[12px] font-semibold text-white/80">가장 가까운 일정</p>
           <div className="relative flex items-end justify-between gap-3 mt-1">
             <div className="min-w-0">
-              <p className="text-[17px] font-extrabold text-white leading-snug break-keep">{next.name}</p>
+              <p className="text-[17px] font-extrabold text-white leading-snug break-keep">
+                {next.type === "my" && <span className="mr-1">{next.emoji}</span>}
+                {next.name}
+              </p>
               <p className="text-[12px] text-white/85 mt-0.5">
-                {parseLocalDate(next.deadline).getMonth() + 1}월 {parseLocalDate(next.deadline).getDate()}일 ({["일", "월", "화", "수", "목", "금", "토"][parseLocalDate(next.deadline).getDay()]}) · {next.who}
+                {parseLocalDate(next.deadline).getMonth() + 1}월 {parseLocalDate(next.deadline).getDate()}일 ({WEEK[parseLocalDate(next.deadline).getDay()]}) · {next.who}
               </p>
             </div>
-            <span className="text-[20px] font-black text-white shrink-0 tabular-nums">
-              {getDday(next.deadline) === 0 ? "오늘" : `D-${getDday(next.deadline)}`}
-            </span>
+            <span className="text-[20px] font-black text-white shrink-0 tabular-nums">{getDday(next.deadline) === 0 ? "오늘" : `D-${getDday(next.deadline)}`}</span>
           </div>
         </div>
+      )}
+
+      {onSaveEvent && (
+        <button onClick={() => setEditing({})} className="w-full flex items-center justify-center gap-1.5 py-3.5 rounded-2xl mb-3 text-[13.5px] font-bold active:scale-[0.99] transition-transform" style={{ background: "#FFF3E0", color: MY_ACCENT, border: "1.5px dashed #F5C27A" }}>
+          + 내 일정 추가 <span className="font-medium opacity-80">(월급날·임대료·대출 상환 등)</span>
+        </button>
       )}
 
       {onToggleTaxAlert && (
@@ -2172,13 +2322,14 @@ function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, pl
         </div>
       )}
 
-      <div className="flex gap-1.5 mb-4">
+      <div className="grid grid-cols-4 gap-1.5 mb-4">
         {[
           { key: "all", label: "전체" },
+          { key: "my", label: `내 일정 ${counts.my}` },
           { key: "tax", label: "세금·보험" },
-          { key: "mine", label: `내 지원금 ${favoritePrograms.length}` },
+          { key: "subsidy", label: `지원금 ${counts.subsidy}` },
         ].map((t) => (
-          <button key={t.key} onClick={() => setFilter(t.key)} className="flex-1 py-2 rounded-xl text-xs font-semibold" style={filter === t.key ? CHIP_ON : CHIP_OFF}>
+          <button key={t.key} onClick={() => setFilter(t.key)} className="py-2 rounded-xl text-[11.5px] font-semibold whitespace-nowrap" style={filter === t.key ? CHIP_ON : CHIP_OFF}>
             {t.label}
           </button>
         ))}
@@ -2191,28 +2342,36 @@ function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, pl
             {g.items.map((item, i) => {
               const d = parseLocalDate(item.deadline);
               const dday = getDday(item.deadline);
-              const tax = item.type === "tax";
-              const accent = tax ? TAX_GREEN : BLUE;
+              const { accent, soft } = tone(item.type);
+              const clickable = item.type === "my" || item.type === "subsidy";
               return (
-                <div key={item.name + item.deadline} className="flex items-center gap-3 px-3.5 py-3" style={{ borderTop: i > 0 ? "1px solid #F1F2F6" : "none" }}>
-                  <div className="w-11 shrink-0 rounded-xl py-1.5 text-center" style={{ background: tax ? "#E7F7EF" : BLUE_SOFT }}>
+                <div
+                  key={item.key}
+                  role={clickable ? "button" : undefined}
+                  onClick={() => (item.type === "my" ? setEditing(item.ev) : item.type === "subsidy" && onSelectProgram ? onSelectProgram(item.programId) : null)}
+                  className="flex items-center gap-3 px-3.5 py-3"
+                  style={{ borderTop: i > 0 ? "1px solid #F1F2F6" : "none", cursor: clickable ? "pointer" : "default" }}
+                >
+                  <div className="w-11 shrink-0 rounded-xl py-1.5 text-center" style={{ background: soft }}>
                     <p className="text-[16px] font-extrabold leading-none tabular-nums" style={{ color: accent }}>{d.getDate()}</p>
-                    <p className="text-[10px] font-semibold mt-1" style={{ color: accent }}>{["일", "월", "화", "수", "목", "금", "토"][d.getDay()]}요일</p>
+                    <p className="text-[10px] font-semibold mt-1" style={{ color: accent }}>{WEEK[d.getDay()]}요일</p>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <p className="text-[13.5px] font-bold truncate" style={{ color: TEXT }}>{item.name}</p>
-                      {!tax && <Heart size={11} color={BLUE} fill={BLUE} className="shrink-0" />}
+                      <p className="text-[13.5px] font-bold truncate" style={{ color: TEXT }}>
+                        {item.type === "my" && <span className="mr-1">{item.emoji}</span>}
+                        {item.name}
+                      </p>
+                      {item.type === "subsidy" && <Heart size={11} color={BLUE} fill={BLUE} className="shrink-0" />}
+                      {item.type === "my" && item.ev.alert && <Bell size={11} color={MY_ACCENT} className="shrink-0" />}
                     </div>
                     <p className="text-[11.5px] mt-0.5 leading-snug line-clamp-2" style={{ color: MUTED }}>
-                      <span className="font-semibold" style={{ color: accent }}>{item.who}</span> · {item.note}
+                      <span className="font-semibold" style={{ color: accent }}>{item.who}</span>
+                      {item.type !== "my" && <> · {item.note}</>}
                       {item.shifted && <span className="font-semibold" style={{ color: "#B45309" }}> · 원래 날짜가 주말이라 이날까지</span>}
                     </p>
                   </div>
-                  <span
-                    className="text-[11px] font-bold px-2 py-1 rounded-lg shrink-0 tabular-nums"
-                    style={dday <= 7 ? { background: RED, color: "white" } : { background: tax ? "#E7F7EF" : BLUE_SOFT, color: accent }}
-                  >
+                  <span className="text-[11px] font-bold px-2 py-1 rounded-lg shrink-0 tabular-nums" style={dday <= 3 ? { background: RED, color: "white" } : { background: soft, color: accent }}>
                     {dday === 0 ? "오늘" : `D-${dday}`}
                   </span>
                 </div>
@@ -2222,8 +2381,18 @@ function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, pl
         </div>
       ))}
 
-      {filter === "mine" && favoritePrograms.length === 0 && (
-        <div className="rounded-[20px] p-5 text-center" style={{ background: "#F6F7FA" }}>
+      {filter === "my" && counts.my === 0 && (
+        <div className="rounded-[20px] p-5 text-center mb-4" style={{ background: "#FFF8EE" }}>
+          <p className="text-[24px] mb-1">🗓️</p>
+          <p className="text-[12.5px] leading-relaxed" style={{ color: "#8A5A12" }}>
+            월급날·임대료·대출 상환일을 등록하면
+            <br />
+            며칠 전에 미리 알려드려요.
+          </p>
+        </div>
+      )}
+      {filter === "subsidy" && counts.subsidy === 0 && (
+        <div className="rounded-[20px] p-5 text-center mb-4" style={{ background: "#F6F7FA" }}>
           <Heart size={20} color="#C3C8D4" className="mx-auto mb-2" />
           <p className="text-[12.5px] leading-relaxed" style={{ color: MUTED }}>
             마감일이 있는 지원금을 ♡ 즐겨찾기 하면
@@ -2233,18 +2402,28 @@ function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, pl
         </div>
       )}
 
-      <a
-        href="https://www.hometax.go.kr"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="w-full flex items-center justify-center gap-1.5 py-3.5 mt-2 rounded-2xl text-[13px] font-bold"
-        style={{ background: "#E7F7EF", color: TAX_GREEN }}
-      >
+      <a href="https://www.hometax.go.kr" target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-center gap-1.5 py-3.5 mt-2 rounded-2xl text-[13px] font-bold" style={{ background: "#E7F7EF", color: TAX_GREEN }}>
         홈택스에서 신고·납부하기 <ExternalLink size={13} />
       </a>
       <p className="text-[11px] mt-4 leading-relaxed" style={{ color: MUTED }}>
-        * 개인사업자 기준 일정이에요. 마감일이 주말·공휴일이면 다음 평일까지 신고할 수 있어요. 법인이나 특수한 경우는 기한이 다를 수 있으니 홈택스 또는 국세청 상담센터(국번 없이 126)에서 꼭 확인하세요.
+        * 세금 일정은 개인사업자 기준이에요. 마감일이 주말·공휴일이면 다음 평일까지 신고할 수 있어요. 법인이나 특수한 경우는 기한이 다를 수 있으니 홈택스 또는 국세청 상담센터(국번 없이 126)에서 꼭 확인하세요. 내 일정은 이 휴대폰에만 저장돼요.
       </p>
+
+      {editing && (
+        <EventEditor
+          initial={editing.id ? editing : null}
+          onClose={() => setEditing(null)}
+          onSave={(ev) => {
+            onSaveEvent(ev);
+            setEditing(null);
+            setFilter("my");
+          }}
+          onDelete={(id) => {
+            onDeleteEvent(id);
+            setEditing(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -2898,6 +3077,44 @@ function ProgramRow({ p, onClick, actions, reason, highlight }) {
         <p className="flex items-center gap-1 text-[11.5px] font-semibold mt-2 pt-2" style={{ color: BLUE, borderTop: "1px dashed #E6E9F2" }}>
           <CheckCircle2 size={12} /> {reason}
         </p>
+      )}
+    </div>
+  );
+}
+
+// 홈 '사장님 일정' — 가까운 일정 3개, 내 일정이 없으면 등록 안내
+function HomeScheduleList({ favorites, myEvents, taxStaff, onOpen }) {
+  // 직원 관련 세금(원천세·4대보험)은 "직원이 있어요"를 체크한 사장님께만 보여줘요
+  const items = buildScheduleItems({ favorites, myEvents })
+    .filter((x) => getDday(x.deadline) >= 0 && (taxStaff || x.type !== "tax" || !STAFF_TAX.includes(x.name)))
+    .slice(0, 3);
+  const tones = { my: { bg: "#FFF3E0", fg: MY_ACCENT }, tax: { bg: "#E7F7EF", fg: "#2C9F6B" }, subsidy: { bg: BLUE_SOFT, fg: BLUE } };
+  return (
+    <div>
+      {items.map((x, i) => {
+        const d = getDday(x.deadline);
+        const t = tones[x.type];
+        const dt = parseLocalDate(x.deadline);
+        return (
+          <button key={x.key} onClick={onOpen} className="w-full flex items-center gap-3 py-3" style={{ borderTop: i > 0 ? "1px solid #F1F2F6" : "none" }}>
+            <span className="w-8 h-8 rounded-full flex items-center justify-center text-[14px] shrink-0" style={{ background: t.bg }}>
+              {x.type === "my" ? x.emoji : x.type === "tax" ? "🧾" : "💙"}
+            </span>
+            <span className="flex-1 min-w-0 text-left">
+              <span className="block text-[13.5px] font-semibold truncate" style={{ color: TEXT }}>{x.name}</span>
+              <span className="block text-[11px]" style={{ color: MUTED }}>{dt.getMonth() + 1}월 {dt.getDate()}일 · {x.who}</span>
+            </span>
+            <span className="text-[11.5px] font-bold px-2 py-1 rounded-lg shrink-0 tabular-nums" style={d <= 3 ? { background: RED, color: "white" } : { background: t.bg, color: t.fg }}>
+              {d === 0 ? "오늘" : `D-${d}`}
+            </span>
+          </button>
+        );
+      })}
+      {myEvents.length === 0 && (
+        <button onClick={onOpen} className="w-full flex items-center gap-2 py-3 text-left" style={{ borderTop: items.length ? "1px solid #F1F2F6" : "none" }}>
+          <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[15px] font-bold" style={{ background: "#FFF3E0", color: MY_ACCENT }}>+</span>
+          <span className="text-[12.5px] font-semibold" style={{ color: MY_ACCENT }}>월급날·임대료를 등록하면 미리 알려드려요</span>
+        </button>
       )}
     </div>
   );
@@ -3704,6 +3921,22 @@ export default function App() {
   const [alertPlan, setAlertPlan] = useState("normal"); // 마감 며칠 전부터 알릴지
   const [alertHour, setAlertHour] = useState(9); // 몇 시에 알릴지
   const [scheduledAlerts, setScheduledAlerts] = useState([]); // MY 화면 미리보기용
+  const [homeUpcoming, setHomeUpcoming] = useState(() => {
+    try {
+      return localStorage.getItem("homeUpcoming") === "mine" ? "mine" : "subsidy";
+    } catch (e) {
+      return "subsidy";
+    }
+  });
+  const setHomeUpcomingSaved = (v) => {
+    setHomeUpcoming(v);
+    try {
+      localStorage.setItem("homeUpcoming", v);
+    } catch (e) {
+      // 저장이 안 돼도 괜찮아요
+    }
+  };
+  const [myEvents, setMyEvents] = useState([]); // 사장님이 직접 등록한 일정 (월급날·임대료 등)
   const [notifyIds, setNotifyIds] = useState(new Set());
   const [diagnosis, setDiagnosis] = useState(null); // { region, revenueBand, yearsBand } | null
   const [diagStep, setDiagStep] = useState(0);
@@ -3765,6 +3998,7 @@ export default function App() {
           if (typeof data.taxStaff === "boolean") setTaxStaff(data.taxStaff);
           if (ALERT_PLANS[data.alertPlan]) setAlertPlan(data.alertPlan);
           if (ALERT_HOURS.some((x) => x.h === data.alertHour)) setAlertHour(data.alertHour);
+          if (Array.isArray(data.myEvents)) setMyEvents(data.myEvents);
           if (data.region) setRegion(data.region);
           if (data.diagnosis) setDiagnosis(data.diagnosis);
         }
@@ -3792,6 +4026,7 @@ export default function App() {
             taxStaff,
             alertPlan,
             alertHour,
+            myEvents,
             region,
             diagnosis,
           }),
@@ -3801,7 +4036,7 @@ export default function App() {
         // 저장 실패해도 앱 사용에는 지장 없도록 조용히 넘어가요
       }
     })();
-  }, [favorites, notifyIds, notifyEnabled, rateAlertOn, taxAlertOn, taxStaff, alertPlan, alertHour, region, diagnosis, prefsLoaded]);
+  }, [favorites, notifyIds, notifyEnabled, rateAlertOn, taxAlertOn, taxStaff, alertPlan, alertHour, myEvents, region, diagnosis, prefsLoaded]);
 
   // 실제 휴대폰 알림 예약: 설정이 바뀔 때마다 기존 예약을 모두 지우고 다시 예약해요
   useEffect(() => {
@@ -3813,6 +4048,7 @@ export default function App() {
       rateOn: rateAlertOn,
       plan: alertPlan,
       hour: alertHour,
+      events: myEvents,
     });
     setScheduledAlerts(list);
     if (!Capacitor.isNativePlatform()) return;
@@ -3840,7 +4076,7 @@ export default function App() {
         // 알림 예약에 실패해도 앱 사용에는 지장 없도록 조용히 넘어가요
       }
     })();
-  }, [notifyEnabled, rateAlertOn, taxAlertOn, taxStaff, alertPlan, alertHour, notifyIds, favorites, prefsLoaded, dayKey]);
+  }, [notifyEnabled, rateAlertOn, taxAlertOn, taxStaff, alertPlan, alertHour, myEvents, notifyIds, favorites, prefsLoaded, dayKey]);
 
   // 알림을 누르면 해당 지원금 상세 화면으로 바로 이동해요
   useEffect(() => {
@@ -3877,6 +4113,11 @@ export default function App() {
   const toggleNotifyEnabled = makeToggle(notifyEnabled, setNotifyEnabled);
   const toggleRateAlert = makeToggle(rateAlertOn, setRateAlertOn);
   const toggleTaxAlert = makeToggle(taxAlertOn, setTaxAlertOn);
+  const saveEvent = async (ev) => {
+    if (ev.alert && !(await ensureNotifyPermission())) ev = { ...ev, alert: false };
+    setMyEvents((prev) => (prev.some((x) => x.id === ev.id) ? prev.map((x) => (x.id === ev.id ? ev : x)) : [...prev, ev]));
+  };
+  const deleteEvent = (id) => setMyEvents((prev) => prev.filter((x) => x.id !== id));
 
   const toggleFavoriteId = (id) => {
     const adding = !favorites.has(id);
@@ -4007,7 +4248,17 @@ export default function App() {
   if (screen.view === "taxSchedule") {
     return (
       <Shell>
-        <TaxScheduleScreen onBack={() => setScreen({ view: "home" })} favorites={favorites} taxAlertOn={taxAlertOn} onToggleTaxAlert={toggleTaxAlert} planDesc={ALERT_PLANS[alertPlan].desc} />
+        <TaxScheduleScreen
+          onBack={() => setScreen({ view: "home" })}
+          favorites={favorites}
+          taxAlertOn={taxAlertOn}
+          onToggleTaxAlert={toggleTaxAlert}
+          planDesc={ALERT_PLANS[alertPlan].desc}
+          myEvents={myEvents}
+          onSaveEvent={saveEvent}
+          onDeleteEvent={deleteEvent}
+          onSelectProgram={(id) => setScreen({ view: "detail", id })}
+        />
       </Shell>
     );
   }
@@ -4223,18 +4474,29 @@ export default function App() {
       </button>
 
 
-      {/* 마감 임박 지원금 */}
+      {/* 다가오는 일정: 지원금 마감 / 사장님 일정 */}
       <div className="flex items-center justify-between mt-4 mb-2.5">
         <div className="flex items-center gap-1.5">
-          <p className="text-[16px] font-bold" style={{ color: TEXT }}>마감 임박 지원금</p>
+          <p className="text-[16px] font-bold" style={{ color: TEXT }}>다가오는 마감·일정</p>
           <Clock size={15} color="#F0567A" strokeWidth={2.4} />
         </div>
-        <button onClick={() => setHomeScreen("list")} className="text-[11px] font-medium flex items-center gap-0.5" style={{ color: MUTED }}>
+        <button
+          onClick={() => (homeUpcoming === "subsidy" ? setHomeScreen("list") : setScreen({ view: "taxSchedule" }))}
+          className="text-[11px] font-medium flex items-center gap-0.5"
+          style={{ color: MUTED }}
+        >
           전체보기 <ChevronRight size={12} />
         </button>
       </div>
-      <div className="rounded-[22px] mb-6 px-3.5 py-1 bg-white" style={{ border: "1px solid #F0F1F6", boxShadow: "0 6px 20px rgba(40,60,120,0.06)" }}>
-        <DeadlineSoonList key={dayKey} onSelect={(id) => setScreen({ view: "detail", id })} />
+      <div className="rounded-[22px] mb-6 px-3.5 pt-3 pb-1 bg-white" style={{ border: "1px solid #F0F1F6", boxShadow: "0 6px 20px rgba(40,60,120,0.06)" }}>
+        <CalcModeSwitch value={homeUpcoming} onChange={setHomeUpcomingSaved} options={[{ key: "subsidy", label: "지원금 마감" }, { key: "mine", label: "사장님 일정" }]} />
+        {homeUpcoming === "subsidy" ? (
+          <div className="-mt-3">
+            <DeadlineSoonList key={dayKey} onSelect={(id) => setScreen({ view: "detail", id })} />
+          </div>
+        ) : (
+          <HomeScheduleList key={dayKey} favorites={favorites} myEvents={myEvents} taxStaff={taxStaff} onOpen={() => setScreen({ view: "taxSchedule" })} />
+        )}
       </div>
 
       {/* 많이 찾는 서비스 */}
@@ -4262,18 +4524,23 @@ export default function App() {
       {/* 자주 쓰는 도구 */}
       <div className="grid grid-cols-3 gap-2.5 mb-4">
         {[
-          { key: "tax", label: "세금·마감 일정", bg: "#E7F7EF", img: toolTaxImg, onClick: () => setScreen({ view: "taxSchedule" }) },
-          { key: "faq", label: "도움말 Q&A", bg: "#F1ECFC", img: toolFaqImg, onClick: () => setScreen({ view: "faq" }) },
-          { key: "docs", label: "서류·양식 자료실", bg: "#FFF0E6", img: toolDocsImg, onClick: () => setScreen({ view: "documents" }) },
+          { key: "tax", label: "사장님\n일정", bg: "#E7F7EF", img: toolTaxImg, onClick: () => setScreen({ view: "taxSchedule" }) },
+          { key: "faq", label: "도움말\nQ&A", bg: "#F1ECFC", img: toolFaqImg, onClick: () => setScreen({ view: "faq" }) },
+          { key: "docs", label: "서류·양식\n자료실", bg: "#FFF0E6", img: toolDocsImg, onClick: () => setScreen({ view: "documents" }) },
         ].map((tile) => (
           <button
             key={tile.key}
             onClick={tile.onClick}
-            aria-label={tile.label}
+            aria-label={tile.label.replace("\n", " ")}
             className="relative overflow-hidden rounded-[20px] active:scale-[0.97] transition-transform"
             style={{ background: tile.bg, aspectRatio: "298 / 305" }}
           >
             <img src={tile.img} alt="" draggable={false} className="absolute inset-0 w-full h-full object-cover" />
+            {/* 제목은 글자로 — 나중에 이름을 바꾸기 쉬워요 */}
+            <span className="absolute left-[11%] right-[20%] bottom-[11%] text-left font-extrabold whitespace-pre-line" style={{ color: "#1A1F2C", fontSize: "clamp(13px, 4.1vw, 17px)", lineHeight: 1.3, letterSpacing: "-0.02em" }}>
+              {tile.label}
+            </span>
+            <ChevronRight size={15} color="#6B7385" className="absolute right-[9%] bottom-[22%]" />
           </button>
         ))}
       </div>
