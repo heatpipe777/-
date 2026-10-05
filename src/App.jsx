@@ -1384,141 +1384,156 @@ function ExchangeRateContent() {
 }
 
 // 금리 정보 — 한국은행 기준금리 및 소상공인 정책자금 금리 (2026년 9월 기준 실제 수치)
+const BOK_RATE = { rate: 3.0, date: "2026.08.27", change: "+0.25" };
+const BOK_HISTORY = [
+  { date: "~26.06", rate: 2.5, note: "유지" },
+  { date: "26.07.16", rate: 2.75, note: "3년 9개월 만에 인상" },
+  { date: "26.08.27", rate: 3.0, note: "2회 연속 인상" },
+];
+// 2026년 남은 통화정책방향 결정회의 (한국은행 발표 일정)
+const BOK_MEETINGS = ["2026-10-22", "2026-11-26"];
+// 은행 공식 로고는 상표라 쓰지 않고, 은행 대표색 배지로 보여줘요
+const BANKS = [
+  { name: "KB국민", mark: "KB", bg: "linear-gradient(135deg, #FFCD3C, #FFB300)", fg: "#5C4A2E", url: "https://www.kbstar.com" },
+  { name: "신한", mark: "신한", bg: "linear-gradient(135deg, #2F6BFF, #0046FF)", fg: "white", url: "https://www.shinhan.com" },
+  { name: "하나", mark: "하나", bg: "linear-gradient(135deg, #1AA39A, #00857C)", fg: "white", url: "https://www.kebhana.com" },
+  { name: "우리", mark: "우리", bg: "linear-gradient(135deg, #2486D1, #0067AC)", fg: "white", url: "https://www.wooribank.com" },
+  { name: "NH농협", mark: "NH", bg: "linear-gradient(135deg, #2BBF6C, #00A651)", fg: "white", url: "https://banking.nonghyup.com" },
+  { name: "IBK기업", mark: "IBK", bg: "linear-gradient(135deg, #2F86D6, #0D5FA6)", fg: "white", url: "https://www.ibk.co.kr" },
+];
+
 function InterestRateContent({ onOpenCalculator }) {
-  const [rateAlertOn, setRateAlertOn] = useState(false);
-  const history = [
-    { date: "2026.06 이전", rate: "2.50%", note: "8차례 연속 동결", direction: "hold" },
-    { date: "2026.07.16", rate: "2.75%", note: "3년 6개월 만에 인상 ▲0.25%p", direction: "up" },
-    { date: "2026.08.27", rate: "3.00%", note: "2연속 인상 ▲0.25%p", direction: "up" },
-  ];
-  const trendColor = (d) => (d === "up" ? RED : d === "down" ? BLUE : GREEN);
-  const maxRate = 4;
+  const next = BOK_MEETINGS.find((d) => getDday(d) >= 0);
+  const nextD = next ? getDday(next) : null;
+  const nextDate = next ? parseLocalDate(next) : null;
+  const maxRate = 3.5;
   const policyRates = [
-    { label: "대표자금 (일반경영안정자금 등)", value: "연 2.96%~" },
-    { label: "자금별 범위", value: "연 2~4%대" },
-    { label: "비수도권 우대금리", value: "-0.2%p" },
-    { label: "중·저신용자 대출 (NCB 839점 이하)", value: "정책자금 기준금리 +1.6%p" },
+    { label: "대표 정책자금", sub: "일반경영안정자금 등", value: "연 2.96%~", tone: BLUE },
+    { label: "자금별 금리 범위", sub: "자금 종류에 따라", value: "연 2~4%대", tone: TEXT },
+    { label: "비수도권 우대", sub: "수도권 밖 사업장", value: "-0.2%p", tone: GREEN },
+    { label: "중·저신용자 자금", sub: "NCB 839점 이하", value: "+1.6%p", tone: RED },
   ];
+
   return (
     <div>
-      <div className="rounded-2xl p-6 mb-5" style={{ background: "linear-gradient(135deg, #3D63DD 0%, #6B8AFB 100%)" }}>
-        <div className="flex items-start justify-between mb-3">
-          <p className="font-bold" style={{ color: "rgba(255,255,255,0.95)", fontSize: 17 }}>한국은행 기준금리</p>
-          <p className="text-right leading-snug" style={{ color: "rgba(255,255,255,0.75)", fontSize: 11 }}>2026.08.27 발표<br />2연속 인상</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <p className="font-extrabold leading-none tracking-tight" style={{ color: "white", fontSize: 68 }}>3.00%</p>
-          <span className="font-bold px-2.5 py-1 rounded-full" style={{ background: "white", color: RED, fontSize: 13 }}>▲0.25%p</span>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between mb-2.5">
-        <p className="font-bold" style={{ color: TEXT, fontSize: 15 }}>최근 변동 추이</p>
-        <button
-          onClick={() => setRateAlertOn((v) => !v)}
-          className="flex items-center gap-1.5 pl-2.5 pr-1 py-1 rounded-full"
-          style={{ background: rateAlertOn ? BLUE_SOFT : "#F2F3F7" }}
-        >
-          <Bell size={11} color={rateAlertOn ? BLUE : MUTED} />
-          <span className="text-[10.5px] font-semibold" style={{ color: rateAlertOn ? BLUE : MUTED }}>발표 알림</span>
-          <Switch checked={rateAlertOn} onChange={() => setRateAlertOn((v) => !v)} />
-        </button>
-      </div>
-      <div className="rounded-2xl overflow-hidden mb-5" style={{ border: `1px solid ${BORDER}` }}>
-        {history.map((h, i) => (
-          <div key={h.date} className="px-4 py-3.5" style={i > 0 ? { borderTop: `1px solid ${BORDER}` } : {}}>
-            <div className="flex items-center gap-3 mb-2">
-              <span className="shrink-0 w-[78px] font-semibold" style={{ color: TEXT, fontSize: 14 }}>{h.date}</span>
-              <span className="flex-1 font-semibold leading-snug" style={{ color: trendColor(h.direction), fontSize: 14 }}>{h.note}</span>
-              <span className="font-extrabold tabular-nums shrink-0" style={{ color: TEXT, fontSize: 18 }}>{h.rate}</span>
-            </div>
-            <div className="h-1.5 rounded-full" style={{ background: "#F2F3F7" }}>
-              <div
-                className="h-1.5 rounded-full"
-                style={{ width: `${(parseFloat(h.rate) / maxRate) * 100}%`, background: trendColor(h.direction) }}
-              />
-            </div>
+      {/* 기준금리 */}
+      <div className="relative overflow-hidden rounded-[24px] p-5 mb-5" style={{ background: "linear-gradient(135deg, #5B8DF7 0%, #3D63DD 100%)" }}>
+        <div className="absolute -right-10 -top-12 w-40 h-40 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
+        <div className="relative flex items-start justify-between gap-2">
+          <div>
+            <p className="text-[13px] font-semibold text-white/85">한국은행 기준금리</p>
+            <p className="text-[11.5px] text-white/70 mt-0.5">{BOK_RATE.date} 발표</p>
           </div>
-        ))}
-      </div>
-
-      <p className="font-bold mb-2.5" style={{ color: TEXT, fontSize: 15 }}>소상공인 정책자금 평균 금리</p>
-      <div className="rounded-[20px] p-4 mb-5" style={CARD}>
-        {policyRates.map((r, i) => (
-          <div key={r.label} className="py-2.5" style={i > 0 ? { borderTop: `1px solid ${BORDER}` } : {}}>
-            <p className="mb-1 leading-snug font-semibold" style={{ color: TEXT, fontSize: 15 }}>{r.label}</p>
-            <p className="font-extrabold leading-snug tabular-nums" style={{ color: RED, fontSize: 19 }}>{r.value}</p>
-          </div>
-        ))}
-      </div>
-
-      <p className="font-bold mb-2.5" style={{ color: TEXT, fontSize: 15 }}>은행별 대출금리 비교</p>
-      <div className="rounded-[20px] p-4 mb-5" style={CARD}>
-        <p className="text-[12px] leading-relaxed mb-3" style={{ color: MUTED }}>
-          은행마다 신용등급·산정 방식이 달라서, 은행별 정확한 금리는 은행연합회가 매달 공시하는 공식 자료에서 바로 비교하는 게 가장 정확해요.
+          {next && (
+            <span className="text-[11px] font-bold px-2.5 py-1 rounded-full text-white shrink-0" style={{ background: "rgba(255,255,255,0.18)" }}>
+              다음 발표 {nextDate.getMonth() + 1}/{nextDate.getDate()} · D-{nextD}
+            </span>
+          )}
+        </div>
+        <div className="relative flex items-end gap-2.5 mt-3">
+          <p className="font-black text-white leading-none tabular-nums" style={{ fontSize: 56, letterSpacing: "-0.03em" }}>
+            {BOK_RATE.rate.toFixed(2)}<span style={{ fontSize: 30 }}>%</span>
+          </p>
+          <span className="mb-1.5 text-[12px] font-bold px-2 py-0.5 rounded-full bg-white" style={{ color: RED }}>▲ {BOK_RATE.change.slice(1)}%p</span>
+        </div>
+        <p className="relative text-[12px] text-white/80 mt-3 leading-relaxed break-keep">
+          기준금리가 오르면 변동금리 대출 이자도 따라 오를 수 있어요. 정책자금은 상승 폭이 작은 편이에요.
         </p>
-        <div className="flex flex-wrap gap-x-2 gap-y-3 mb-3.5">
-          {[
-            { name: "KB국민", initial: "KB", bg: "#FFB300" },
-            { name: "신한", initial: "신", bg: "#0046FF" },
-            { name: "하나", initial: "하", bg: "#00857C" },
-            { name: "우리", initial: "우", bg: "#0067AC" },
-            { name: "NH농협", initial: "NH", bg: "#00A651" },
-            { name: "IBK기업", initial: "IBK", bg: "#0075C9" },
-          ].map((bank) => (
-            <div key={bank.name} className="flex flex-col items-center w-[62px]">
-              <div
-                className="w-11 h-11 rounded-full flex items-center justify-center font-extrabold text-white mb-1"
-                style={{ background: bank.bg, fontSize: bank.initial.length > 2 ? 11 : 13 }}
-              >
-                {bank.initial}
+      </div>
+
+      {/* 변동 추이 */}
+      <p className="font-bold mb-2.5" style={{ color: TEXT, fontSize: 15 }}>최근 변동 추이</p>
+      <div className="rounded-[20px] p-4 mb-5" style={CARD}>
+        <div className="flex items-end justify-around gap-3 h-[150px]">
+          {BOK_HISTORY.map((h, i) => {
+            const last = i === BOK_HISTORY.length - 1;
+            return (
+              <div key={h.date} className="flex-1 flex flex-col items-center justify-end h-full">
+                <span className="text-[14px] font-extrabold tabular-nums mb-1.5" style={{ color: last ? BLUE : TEXT }}>{h.rate.toFixed(2)}%</span>
+                <div
+                  className="w-full max-w-[56px] rounded-t-xl"
+                  style={{ height: `${(h.rate / maxRate) * 100}px`, background: last ? "linear-gradient(180deg, #5B8DF7, #3D63DD)" : i === 0 ? "#E3E7F0" : "#B9C9F5" }}
+                />
               </div>
-              <span className="text-[11px] font-semibold text-center leading-snug" style={{ color: TEXT }}>{bank.name}</span>
+            );
+          })}
+        </div>
+        <div className="flex justify-around gap-3 mt-2 pt-2" style={{ borderTop: "1px solid #F1F2F6" }}>
+          {BOK_HISTORY.map((h, i) => (
+            <div key={h.date} className="flex-1 text-center">
+              <p className="text-[11.5px] font-semibold tabular-nums" style={{ color: TEXT }}>{h.date}</p>
+              <p className="text-[10.5px] mt-0.5 break-keep leading-snug" style={{ color: i === 0 ? MUTED : RED }}>{h.note}</p>
             </div>
           ))}
         </div>
+      </div>
+
+      {/* 정책자금 금리 */}
+      <p className="font-bold mb-2.5" style={{ color: TEXT, fontSize: 15 }}>소상공인 정책자금 금리</p>
+      <div className="grid grid-cols-2 gap-2.5 mb-5">
+        {policyRates.map((r) => (
+          <div key={r.label} className="rounded-[18px] p-3.5" style={CARD}>
+            <p className="text-[12.5px] font-bold" style={{ color: TEXT }}>{r.label}</p>
+            <p className="text-[10.5px] mt-0.5" style={{ color: MUTED }}>{r.sub}</p>
+            <p className="text-[19px] font-extrabold tabular-nums mt-2" style={{ color: r.tone }}>{r.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* 은행별 비교 */}
+      <p className="font-bold mb-2.5" style={{ color: TEXT, fontSize: 15 }}>은행별 대출금리 비교</p>
+      <div className="rounded-[20px] p-4 mb-5" style={CARD}>
         <a
           href="https://portal.kfb.or.kr/compare/loan_snmindustry.php"
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full py-3 rounded-xl text-center text-[12.5px] font-bold flex items-center justify-center gap-1"
-          style={{ background: BLUE_SOFT, color: BLUE }}
+          className="w-full py-3.5 rounded-2xl text-center text-[13px] font-bold flex items-center justify-center gap-1.5 mb-3"
+          style={BTN_PRIMARY}
         >
-          은행연합회 개인사업자대출 금리 비교 보기 <ExternalLink size={12} />
+          은행연합회에서 개인사업자 대출금리 비교 <ExternalLink size={13} />
         </a>
+        <p className="text-[11.5px] leading-relaxed mb-3.5 break-keep" style={{ color: MUTED }}>
+          은행연합회가 매달 공시하는 공식 자료라 가장 정확해요. 아래 은행을 누르면 각 은행 홈페이지로 이동해요.
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {BANKS.map((b) => (
+            <a key={b.name} href={b.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-xl active:scale-[0.97] transition-transform" style={{ background: "#F7F8FB" }}>
+              <span
+                className="w-8 h-8 rounded-[10px] flex items-center justify-center font-black shrink-0"
+                style={{ background: b.bg, color: b.fg, fontSize: b.mark.length > 2 ? 9.5 : 11, letterSpacing: "-0.03em", boxShadow: "inset 0 -2px 4px rgba(0,0,0,0.08)" }}
+              >
+                {b.mark}
+              </span>
+              <span className="text-[11.5px] font-semibold truncate" style={{ color: TEXT }}>{b.name}</span>
+            </a>
+          ))}
+        </div>
       </div>
 
+      {/* 정책자금이 유리한 이유 */}
       <p className="font-bold mb-2.5" style={{ color: TEXT, fontSize: 15 }}>정책자금이 시중은행보다 유리한 이유</p>
-      <div className="rounded-2xl p-4 mb-5 space-y-2.5" style={{ background: GREEN_SOFT }}>
+      <div className="rounded-[20px] p-4 mb-5 space-y-2.5" style={{ background: GREEN_SOFT }}>
         {[
-          "정책자금 기준금리는 한국은행 기준금리와 별도로 산정돼서, 기준금리가 올라도 시중은행 대출보다 상승 폭이 작은 편이에요.",
-          "신용도가 낮아 시중은행에서 거절되기 쉬운 중·저신용 소상공인도, 가산금리만 더 붙는 방식이라 정책자금은 상대적으로 문턱이 낮아요.",
-          "비수도권 사업장은 우대금리(-0.2%p)까지 더해져서 지역별로 유리한 조건이 따로 있어요.",
+          "정책자금 금리는 한국은행 기준금리와 따로 정해져서, 기준금리가 올라도 시중은행보다 덜 올라요.",
+          "신용점수가 낮아 은행에서 거절되기 쉬운 사장님도 가산금리만 붙이면 신청할 수 있어 문턱이 낮아요.",
+          "수도권 밖 사업장은 우대금리(-0.2%p)를 더 받아요.",
         ].map((t, i) => (
           <div key={i} className="flex items-start gap-2">
             <CheckCircle2 size={15} color={GREEN} className="shrink-0 mt-0.5" />
-            <p className="text-[12.5px] leading-relaxed" style={{ color: TEXT }}>{t}</p>
+            <p className="text-[12.5px] leading-relaxed break-keep" style={{ color: TEXT }}>{t}</p>
           </div>
         ))}
       </div>
 
       {onOpenCalculator && (
-        <button
-          onClick={onOpenCalculator}
-          className="w-full py-3.5 rounded-2xl mb-5 flex items-center justify-center gap-2 font-bold"
-          style={{ ...BTN_PRIMARY, fontSize: 13.5 }}
-        >
-          지금 금리로 내 대출이자 계산해보기 <ChevronRight size={15} />
+        <button onClick={onOpenCalculator} className="w-full py-3.5 rounded-2xl mb-5 flex items-center justify-center gap-2 font-bold" style={{ background: BLUE_SOFT, color: BLUE, fontSize: 13.5 }}>
+          <Calculator size={15} /> 지금 금리로 내 대출이자 계산해보기 <ChevronRight size={15} />
         </button>
       )}
 
-      <div className="rounded-2xl border p-3.5 flex items-start gap-2 mb-2" style={{ borderColor: BORDER, background: BLUE_SOFT }}>
-        <Info size={14} color={BLUE} className="shrink-0 mt-0.5" />
-        <p className="text-[12px] leading-relaxed" style={{ color: BLUE }}>
-          다음 통화정책방향 결정회의: 2026.10.22, 11.26 예정. 정책자금 금리는 분기별로 조정될 수 있으니 신청 전 소상공인정책자금 홈페이지에서 최신 공고를 확인하세요.
-        </p>
-      </div>
-      <p className="text-[11px] text-center" style={{ color: MUTED }}>출처: 한국은행, 소상공인시장진흥공단 (2026.09 기준)</p>
+      <p className="text-[11px] leading-relaxed" style={{ color: MUTED }}>
+        * 남은 금리 결정회의: 2026년 10월 22일, 11월 26일. 정책자금 금리는 분기마다 바뀔 수 있으니 신청 전 소상공인정책자금 누리집에서 최신 공고를 확인하세요. 출처: 한국은행, 소상공인시장진흥공단 (2026.09 기준)
+      </p>
     </div>
   );
 }
@@ -1527,22 +1542,8 @@ function RateAndExchangeScreen({ onBack, onOpenCalculator }) {
   const [tab, setTab] = useState("rate");
   return (
     <div>
-      <HeroHeader icon={Landmark} color={BLUE} title="금리·환율 정보" subtitle="한국은행 기준금리와 환율을 한눈에 확인해요" onBack={onBack} />
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        {[
-          { key: "rate", label: "금리 정보" },
-          { key: "exchange", label: "환율 정보" },
-        ].map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className="px-3 py-2.5 rounded-xl text-[13px] font-semibold text-center"
-            style={tab === t.key ? CHIP_ON : CHIP_OFF}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <HeroHeader icon={Landmark} color={BLUE} title="금리·환율 정보" subtitle="기준금리·정책자금 금리와 환율을 한눈에 확인해요" onBack={onBack} />
+      <CalcModeSwitch value={tab} onChange={setTab} options={[{ key: "rate", label: "금리 정보" }, { key: "exchange", label: "환율 정보" }]} />
       {tab === "rate" ? <InterestRateContent onOpenCalculator={onOpenCalculator} /> : <ExchangeRateContent />}
     </div>
   );
