@@ -47,12 +47,26 @@ import {
   Copy,
   BarChart3,
   ShieldCheck,
+  Sparkles,
+  Hourglass,
+  CalendarX,
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Share } from "@capacitor/share";
 import tileAllImg from "./assets/home-tiles/all.webp";
+import catEmploy from "./assets/cat/employ.webp";
+import catFixed from "./assets/cat/fixed.webp";
+import catEnergy from "./assets/cat/energy.webp";
+import catManage from "./assets/cat/manage.webp";
+import catDigital from "./assets/cat/digital.webp";
+import catGuarantee from "./assets/cat/guarantee.webp";
+import catRent from "./assets/cat/rent.webp";
+import catStartup from "./assets/cat/startup.webp";
+import catCredit from "./assets/cat/credit.webp";
+import catRestart from "./assets/cat/restart.webp";
+import listHeroImg from "./assets/cat/list-hero.webp";
 import tileCenterImg from "./assets/home-tiles/center.webp";
 import tileExchangeImg from "./assets/home-tiles/exchange.webp";
 import tileNewsImg from "./assets/home-tiles/news.webp";
@@ -824,6 +838,19 @@ const CATEGORY_ICON = {
   신용: Wallet,
   재기: Rocket,
 };
+// 분야별 입체 그림 (지원금 카드 왼쪽)
+const CATEGORY_IMAGES = {
+  고용: catEmploy,
+  고정비: catFixed,
+  에너지: catEnergy,
+  경영: catManage,
+  디지털전환: catDigital,
+  보증: catGuarantee,
+  임차료: catRent,
+  창업: catStartup,
+  신용: catCredit,
+  재기: catRestart,
+};
 const CATEGORY_COLORS = {
   고정비: { color: "white", bg: "#22B573", bg2: "#3DDB94" },
   에너지: { color: "white", bg: "#EA9A1E", bg2: "#FBC15B" },
@@ -917,7 +944,7 @@ function SectionHeader({ title, onBack, right }) {
 }
 
 // 목록형 화면 상단용 — 그라디언트 배너 + 아이콘으로 심심한 뒤로가기 헤더를 꾸며줘요
-function HeroHeader({ icon: Icon, color, subtitle, title, onBack, right }) {
+function HeroHeader({ icon: Icon, color, subtitle, title, onBack, right, image, headline }) {
   return (
     <div className="mb-5">
       <div className="flex items-center gap-2 mb-3">
@@ -933,7 +960,10 @@ function HeroHeader({ icon: Icon, color, subtitle, title, onBack, right }) {
       >
         <div className="absolute -right-8 -top-10 w-32 h-32 rounded-full" style={{ background: `${color}12` }} />
         <div className="absolute right-10 -bottom-12 w-24 h-24 rounded-full" style={{ background: `${color}0C` }} />
-        {/* 광택 있는 입체 느낌 아이콘 */}
+        {image ? (
+          <img src={image} alt="" className="relative w-[78px] h-[78px] -my-3 -ml-2 shrink-0 object-contain" />
+        ) : (
+        /* 광택 있는 입체 느낌 아이콘 */
         <div
           className="relative w-[52px] h-[52px] rounded-[18px] flex items-center justify-center shrink-0 overflow-hidden"
           style={{
@@ -944,7 +974,16 @@ function HeroHeader({ icon: Icon, color, subtitle, title, onBack, right }) {
           <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full" style={{ background: "rgba(255,255,255,0.28)" }} />
           <Icon size={24} color="white" strokeWidth={2.2} className="relative" />
         </div>
-        {subtitle && <p className="relative text-[13px] leading-relaxed font-medium break-keep" style={{ color: "#5E6577" }}>{subtitle}</p>}
+        )}
+        {headline ? (
+          <div className="relative flex-1 min-w-0">
+            <p className="text-[12.5px] font-medium break-keep" style={{ color: "#5E6577" }}>{subtitle}</p>
+            <p className="text-[17px] font-extrabold break-keep mt-0.5" style={{ color: TEXT, letterSpacing: "-0.3px" }}>{headline}</p>
+          </div>
+        ) : (
+          subtitle && <p className="relative text-[13px] leading-relaxed font-medium break-keep" style={{ color: "#5E6577" }}>{subtitle}</p>
+        )}
+        {headline && <Sparkles size={18} className="relative shrink-0 self-start mt-1" color={color} fill={color} style={{ opacity: 0.55 }} />}
       </div>
     </div>
   );
@@ -3252,51 +3291,66 @@ function ClosedNotice() {
 // 지원금 목록 카드 — 목록·즐겨찾기·맞춤진단 결과에서 같이 써요
 function ProgramRow({ p, onClick, actions, reason, highlight }) {
   const dday = getDday(p.deadline);
-  const color = urgencyColor(dday);
   const cat = CATEGORY_COLORS[p.category] || { bg: BLUE };
+  const img = CATEGORY_IMAGES[p.category];
+  const CatIcon = CATEGORY_ICON[p.category] || FileText;
   const urgent = !p.recurring && dday >= 0 && dday <= 7;
+  const closed = dday < 0 && !p.recurring;
+  const AmountIcon = p.category === "고용" ? User : Coins;
   return (
     <div
       role="button"
       tabIndex={0}
       onClick={onClick}
-      className="w-full text-left rounded-[20px] px-4 py-3.5 active:scale-[0.99] transition-transform cursor-pointer"
+      className="w-full text-left rounded-[22px] pl-3 pr-3.5 py-3.5 active:scale-[0.99] transition-transform cursor-pointer flex items-center gap-3"
       style={{
         ...(highlight ? { ...CARD, border: `1.5px solid ${BLUE}55`, boxShadow: "0 6px 18px rgba(61,99,221,0.12)" } : CARD),
-        ...(dday < 0 && !p.recurring ? { opacity: 0.6 } : {}),
+        ...(closed ? { opacity: 0.6 } : {}),
       }}
     >
-      <div className="flex items-center gap-1.5 mb-1.5">
-        <span className="text-[11px] font-bold px-2 py-0.5 rounded-md shrink-0" style={{ background: `${cat.bg}1A`, color: cat.bg }}>
-          {p.category}
+      {img ? (
+        <img src={img} alt="" className="w-[60px] h-[60px] shrink-0 object-contain" style={closed ? { filter: "grayscale(0.6)" } : undefined} />
+      ) : (
+        <span className="w-[60px] h-[60px] rounded-full flex items-center justify-center shrink-0" style={{ background: `${cat.bg}1A` }}>
+          <CatIcon size={26} color={cat.bg} />
         </span>
-        <span className="text-[11.5px] truncate" style={{ color: MUTED }}>{regionLabel(p)}</span>
-        <span className="flex-1" />
-        <span
-          className="text-[11px] font-bold px-2 py-0.5 rounded-md shrink-0 tabular-nums"
-          style={
-            p.recurring
-              ? { background: GREEN_SOFT, color: GREEN }
-              : dday < 0
-              ? { background: "#F1F2F5", color: MUTED }
-              : urgent
-              ? { background: RED, color: "white" }
-              : { background: `${color}1A`, color }
-          }
-        >
-          {p.recurring ? "상시접수" : dday < 0 ? "마감" : dday === 0 ? "오늘 마감" : `D-${dday}`}
-        </span>
-      </div>
-      <p className="text-[15px] font-bold leading-snug line-clamp-2 break-keep" style={{ color: TEXT }}>{p.name}</p>
-      <div className="flex items-center gap-2 mt-1.5">
-        <p className="text-[12px] truncate flex-1" style={{ color: MUTED }}>{p.amountLabel}</p>
-        {actions}
-      </div>
-      {reason && (
-        <p className="flex items-center gap-1 text-[11.5px] font-semibold mt-2 pt-2" style={{ color: BLUE, borderTop: "1px dashed #E6E9F2" }}>
-          <CheckCircle2 size={12} /> {reason}
-        </p>
       )}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0" style={{ background: `${cat.bg}1A`, color: cat.bg }}>
+            {p.category}
+          </span>
+          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full truncate min-w-0" style={{ background: "#F1F3F9", color: MUTED }}>{regionLabel(p)}</span>
+          <span className="flex-1" />
+          <span
+            className="flex items-center gap-1 text-[11.5px] font-bold px-2 py-0.5 rounded-full shrink-0 tabular-nums"
+            style={
+              p.recurring
+                ? { background: GREEN_SOFT, color: GREEN }
+                : closed
+                ? { background: "#F1F2F5", color: MUTED }
+                : urgent
+                ? { background: RED, color: "white" }
+                : { background: `${cat.bg}17`, color: cat.bg }
+            }
+          >
+            <Clock size={11} strokeWidth={2.6} />
+            {p.recurring ? "상시접수" : closed ? "마감" : dday === 0 ? "오늘 마감" : `D-${dday}`}
+          </span>
+          <ChevronRight size={16} color="#B5BAC8" className="shrink-0 -mr-1" />
+        </div>
+        <p className="text-[15px] font-bold leading-snug line-clamp-2 break-keep" style={{ color: TEXT }}>{p.name}</p>
+        <div className="flex items-center gap-1.5 mt-1">
+          <AmountIcon size={13} color="#9AA1B2" className="shrink-0" />
+          <p className="text-[12px] truncate flex-1" style={{ color: MUTED }}>{p.amountLabel}</p>
+          {actions}
+        </div>
+        {reason && (
+          <p className="flex items-center gap-1 text-[11.5px] font-semibold mt-2 pt-2" style={{ color: BLUE, borderTop: "1px dashed #E6E9F2" }}>
+            <CheckCircle2 size={12} /> {reason}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -4194,6 +4248,8 @@ export default function App() {
     });
   };
   const [favorites, setFavorites] = useState(new Set());
+  // 데이터에서 빠진 지원금이 즐겨찾기에 남아 있어도 개수에는 안 세요
+  const favCount = useMemo(() => ALL_PROGRAMS.filter((p) => favorites.has(p.id)).length, [favorites]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
 
@@ -5022,24 +5078,26 @@ export default function App() {
         </>
       ) : (
         <>
-      <HeroHeader icon={List} color={BLUE} title="지원금 목록" subtitle="조건에 맞는 지원금을 검색·필터링해서 찾아보세요" onBack={() => setHomeScreen("hub")} />
+      <HeroHeader icon={List} color="#6B6FE8" image={listHeroImg} title="지원금 목록" subtitle={"조건에 맞는 지원금을 검색⁠·⁠필터링해서"} headline="원하는 지원금을 찾아보세요!" onBack={() => setHomeScreen("hub")} />
 
       {/* Status filter */}
       <div className="flex gap-1.5 mb-4">
         {[
-          { key: "available", label: "신청가능", count: availableCount },
-          { key: "urgent", label: "마감임박", count: urgentCount },
-          { key: "closed", label: "접수마감", count: closedCount },
+          { key: "available", label: "신청가능", count: availableCount, icon: CheckCircle2 },
+          { key: "urgent", label: "마감임박", count: urgentCount, icon: Hourglass },
+          { key: "closed", label: "접수마감", count: closedCount, icon: CalendarX },
         ].map((s) => {
           const active = statusFilter === s.key;
+          const SIcon = s.icon;
           return (
             <button
               key={s.key}
               onClick={() => setStatusFilter(s.key)}
-              className="flex-1 py-2 rounded-xl text-xs font-semibold"
+              className="flex-1 min-w-0 flex items-center justify-center gap-1 py-2.5 rounded-full text-[12.5px] font-semibold whitespace-nowrap"
               style={active ? CHIP_ON : CHIP_OFF}
             >
-              {s.label} <span style={{ opacity: 0.75 }}>({s.count})</span>
+              <SIcon size={14} strokeWidth={2.4} className="shrink-0" />
+              {s.label} <span className="tabular-nums" style={{ opacity: 0.8 }}>({s.count})</span>
             </button>
           );
         })}
@@ -5047,8 +5105,8 @@ export default function App() {
 
       {/* Search + region */}
       <div className="flex items-center gap-2 mb-3">
-        <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: INPUT_BG }}>
-          <Search size={16} color={MUTED} />
+        <div className="flex-1 min-w-0 flex items-center gap-2 px-3.5 py-3 rounded-2xl" style={{ background: INPUT_BG }}>
+          <Search size={18} color="#8A91A3" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -5060,11 +5118,12 @@ export default function App() {
         </div>
         <button
           onClick={openPicker}
-          className="flex items-center gap-1 px-3 py-2.5 rounded-xl shrink-0"
+          className="flex items-center gap-1 px-3 py-3 rounded-2xl shrink-0"
           style={{ background: INPUT_BG }}
         >
-          <MapPin size={15} color={TEXT} />
-          <span className="text-[13px] font-medium" style={{ color: TEXT }}>{region}</span>
+          <MapPin size={16} color={TEXT} />
+          <span className="text-[13px] font-semibold" style={{ color: TEXT }}>{region}</span>
+          <ChevronDown size={14} color={MUTED} />
         </button>
       </div>
 
@@ -5076,7 +5135,7 @@ export default function App() {
             <button
               key={c}
               onClick={() => setCategory(c)}
-              className="px-3 py-1.5 rounded-full text-xs whitespace-nowrap shrink-0"
+              className="px-4 py-2 rounded-full text-[12.5px] font-semibold whitespace-nowrap shrink-0"
               style={active ? CHIP_ON : CHIP_OFF}
             >
               {c}
@@ -5087,40 +5146,44 @@ export default function App() {
       </div>
 
       <div className="flex items-center justify-between mb-2.5">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2.5">
           {[
-            { key: "deadline", label: "마감임박순" },
-            { key: "amount", label: "금액순" },
-          ].map((s) => {
+            { key: "deadline", label: "마감임박순", icon: Clock },
+            { key: "amount", label: "금액순", icon: Coins },
+          ].map((s, i) => {
             const active = sortBy === s.key;
+            const SIcon = s.icon;
             return (
-              <button
-                key={s.key}
-                onClick={() => setSortBy(s.key)}
-                className="text-xs font-semibold pb-0.5"
-                style={{
-                  color: active ? BLUE : MUTED,
-                  borderBottom: active ? `2px solid ${BLUE}` : "2px solid transparent",
-                }}
-              >
-                {s.label}
-              </button>
+              <React.Fragment key={s.key}>
+                {i > 0 && <span className="w-px h-3" style={{ background: "#DADDE6" }} />}
+                <button
+                  onClick={() => setSortBy(s.key)}
+                  className="flex items-center gap-1 pb-1"
+                  style={{
+                    color: active ? TEXT : MUTED,
+                    borderBottom: active ? `2px solid ${BLUE}` : "2px solid transparent",
+                  }}
+                >
+                  <span className={active ? "text-[14.5px] font-bold" : "text-[13px] font-medium"}>{s.label}</span>
+                  {active && <SIcon size={14} color="#7B6CF0" strokeWidth={2.4} />}
+                </button>
+              </React.Fragment>
             );
           })}
         </div>
         <button
           onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-          className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11.5px] font-medium"
-          style={showFavoritesOnly ? { background: "#FDEDED", color: RED } : CHIP_OFF}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-medium"
+          style={showFavoritesOnly ? { background: "#FDEDED", color: RED, border: "1px solid #F8CFCF" } : { background: "#FFFFFF", color: MUTED, border: "1px solid #E6E9F2" }}
         >
-          <Heart size={12} fill={showFavoritesOnly ? RED : "none"} color={showFavoritesOnly ? RED : MUTED} />
-          즐겨찾기 {favorites.size > 0 && `(${favorites.size})`}
+          <Heart size={13} fill={showFavoritesOnly ? RED : "none"} color={showFavoritesOnly ? RED : MUTED} />
+          즐겨찾기 {favCount > 0 && `(${favCount})`}
         </button>
       </div>
       {statusFilter === "closed" && <ClosedNotice />}
       <p className="text-xs mb-2.5" style={{ color: MUTED }}>총 {filtered.length}건</p>
 
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         {filtered.length === 0 && (
           <div className="text-center py-14 text-sm" style={{ color: MUTED }}>
             조건에 맞는 지원금이 없어요.
@@ -5148,13 +5211,13 @@ export default function App() {
       {mainTab === "favorites" && (
         <>
           <h1 className="text-[19px] font-bold mb-1" style={{ color: TEXT }}>즐겨찾기</h1>
-          {favorites.size > 0 && (
+          {favCount > 0 && (
             <p className="text-[11.5px] mb-4" style={{ color: MUTED }}>
               <Bell size={11} className="inline -mt-0.5 mr-0.5" /> 종 아이콘을 눌러 마감 알림을 켜고 끌 수 있어요 (알림 시점은 MY에서 설정)
               {!notifyEnabled && " · MY 탭에서 '지원금 마감 알림'을 먼저 켜주세요"}
             </p>
           )}
-          {favorites.size === 0 ? (
+          {favCount === 0 ? (
             <div className="text-center py-20 text-sm" style={{ color: MUTED }}>
               <Heart size={28} color="#D8DBE3" className="mx-auto mb-3" />
               아직 저장한 지원금이 없어요.
@@ -5425,7 +5488,7 @@ export default function App() {
                 {[
                   { key: "home", label: "홈", icon: Home, active: mainTab === "home" && homeScreen === "hub", go: () => { setMainTab("home"); setHomeScreen("hub"); } },
                   { key: "list", label: "지원금", icon: List, active: mainTab === "home" && homeScreen === "list", go: () => { setMainTab("home"); setStatusFilter("available"); setHomeScreen("list"); } },
-                  { key: "favorites", label: "즐겨찾기", icon: Heart, badge: favorites.size, active: mainTab === "favorites", go: () => setMainTab("favorites") },
+                  { key: "favorites", label: "즐겨찾기", icon: Heart, badge: favCount, active: mainTab === "favorites", go: () => setMainTab("favorites") },
                   { key: "news", label: "뉴스", icon: Newspaper, active: mainTab === "news", go: () => setMainTab("news") },
                   { key: "my", label: "MY", icon: User, active: mainTab === "my", go: () => setMainTab("my") },
                 ].map((t) => (
