@@ -4131,19 +4131,19 @@ export default function App() {
     const program = ALL_PROGRAMS.find((p) => p.id === id);
     if (adding && program && canNotify(program)) setNotifyIds((prev) => new Set(prev).add(id));
   };
-  const [regionOpen, setRegionOpen] = useState(false);
   const [pickerStep, setPickerStep] = useState("province");
   const [tempProvince, setTempProvince] = useState(null);
 
+  // 지역 선택은 다른 화면처럼 전체 화면으로 열려요 (뒤로가기 = 원래 화면)
   const openPicker = () => {
-    setRegionOpen(true);
     setPickerStep("province");
+    setScreen({ view: "regionPicker" });
   };
+  const closePicker = () => setScreen({ view: "home" });
 
   const selectProvince = (p) => {
     if (p === "전체" || p === "전국" || !DISTRICTS[p]) {
       setRegion(p);
-      setRegionOpen(false);
       return;
     }
     setTempProvince(p);
@@ -4152,7 +4152,6 @@ export default function App() {
 
   const selectDistrict = (d) => {
     setRegion(d === "전체" ? tempProvince : `${tempProvince} ${d}`);
-    setRegionOpen(false);
   };
 
   const filtered = useMemo(() => {
@@ -4182,7 +4181,7 @@ export default function App() {
   // 안드로이드 뒤로가기 버튼: 열린 창 닫기 → 이전 화면 → 홈 탭 → 그래도 홈이면 앱 종료
   const backRef = useRef(null);
   backRef.current = () => {
-    if (regionOpen) return setRegionOpen(false);
+    if (screen.view === "regionPicker" && pickerStep === "district") return setPickerStep("province");
     if (screen.view !== "home") return setScreen({ view: "home" });
     if (homeScreen !== "hub") return setHomeScreen("hub");
     if (mainTab !== "home") return setMainTab("home");
@@ -4241,6 +4240,77 @@ export default function App() {
     return (
       <Shell>
         <RegionalCentersScreen onBack={() => setScreen({ view: "home" })} initialProvince={matchedGroup ? matchedGroup.label : "전체"} />
+      </Shell>
+    );
+  }
+
+  if (screen.view === "regionPicker") {
+    const regionText = region === "전체" ? "지역 상관없이 모든 지원금" : region === "전국" ? "전국 지원금만" : region;
+    return (
+      <Shell>
+        <HeroHeader
+          icon={MapPin}
+          color={BLUE}
+          title={pickerStep === "province" ? "내 지역 선택" : `${tempProvince} 세부 지역`}
+          subtitle={pickerStep === "province" ? "고른 지역의 지원금과 전국 지원금을 함께 보여드려요. 다음에도 이 지역으로 열려요." : "시·군·구를 고르거나, 도 전체로 볼 수 있어요."}
+          onBack={() => (pickerStep === "district" ? setPickerStep("province") : closePicker())}
+        />
+
+        <div className="rounded-[18px] px-4 py-3 mb-4 flex items-center gap-2" style={{ background: BLUE_SOFT }}>
+          <CheckCircle2 size={15} color={BLUE} className="shrink-0" />
+          <p className="text-[13px] font-semibold flex-1 min-w-0 truncate" style={{ color: BLUE }}>현재 선택: {regionText}</p>
+        </div>
+
+        {pickerStep === "province" ? (
+          <>
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {[
+                { key: "전체", label: "지역 상관없이", sub: "모든 지원금 보기" },
+                { key: "전국", label: "전국 지원금만", sub: "지역 전용 제외" },
+              ].map((o) => {
+                const on = region === o.key;
+                return (
+                  <button key={o.key} onClick={() => selectProvince(o.key)} className="py-3 rounded-2xl text-center active:scale-[0.98] transition-transform" style={on ? CHIP_ON : { ...CARD, color: TEXT }}>
+                    <span className="block text-[14px] font-bold">{o.label}</span>
+                    <span className="block text-[11px] mt-0.5" style={{ color: on ? "rgba(255,255,255,0.85)" : MUTED }}>{o.sub}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[12px] font-bold mb-2 px-0.5" style={{ color: MUTED }}>시·도</p>
+            <div className="grid grid-cols-4 gap-2">
+              {REGIONS.filter((r) => r !== "전체" && r !== "전국").map((r) => {
+                const on = region === r || region.startsWith(r + " ");
+                return (
+                  <button key={r} onClick={() => selectProvince(r)} className="py-3 rounded-xl text-[14px] font-semibold active:scale-[0.97] transition-transform" style={on ? CHIP_ON : { background: "#F5F6FA", color: TEXT }}>
+                    {r}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <>
+            <button onClick={() => selectDistrict("전체")} className="w-full py-3 rounded-2xl text-[14px] font-bold mb-3" style={region === tempProvince ? CHIP_ON : { background: BLUE_SOFT, color: BLUE }}>
+              {tempProvince} 전체
+            </button>
+            <div className="grid grid-cols-3 gap-2">
+              {DISTRICTS[tempProvince].map((d) => {
+                const on = region === `${tempProvince} ${d}`;
+                return (
+                  <button key={d} onClick={() => selectDistrict(d)} className="py-3 rounded-xl text-[13.5px] font-semibold active:scale-[0.97] transition-transform" style={on ? CHIP_ON : { background: "#F5F6FA", color: TEXT }}>
+                    {d}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] mt-4" style={{ color: MUTED }}>* 2026년 기준 행정구역이에요.</p>
+          </>
+        )}
+
+        <button onClick={closePicker} className="w-full py-4 mt-6 rounded-2xl text-[14.5px] font-bold" style={BTN_PRIMARY}>
+          완료
+        </button>
       </Shell>
     );
   }
@@ -5064,80 +5134,6 @@ export default function App() {
           <p className="text-[11.5px] text-center mt-8" style={{ color: MUTED }}>지원금알리미 v1.0</p>
           <p className="text-[11px] text-center mt-1 leading-relaxed" style={{ color: MUTED }}>정부·공공기관의 공식 앱이 아닌 민간 정보 서비스예요</p>
         </>
-      )}
-
-      {regionOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-end justify-center" style={{ zIndex: 60 }} onClick={() => setRegionOpen(false)}>
-          {/* 제목은 고정, 목록만 스크롤 — 마지막 줄(제주)까지 여유 있게 보여요 */}
-          <div onClick={(e) => e.stopPropagation()} className="bg-white w-full max-w-md md:max-w-xl rounded-t-[24px] flex flex-col" style={{ maxHeight: "86%" }}>
-            <div className="px-5 pt-3 pb-3 shrink-0">
-              <div className="w-9 h-1 bg-[#E5E7EE] rounded-full mx-auto mb-4" />
-              <div className="flex items-center gap-1">
-                {pickerStep === "district" && (
-                  <button onClick={() => setPickerStep("province")} aria-label="시·도 다시 고르기" className="w-8 h-8 -ml-2 rounded-full flex items-center justify-center active:bg-[#F2F3F7]">
-                    <ChevronLeft size={20} color={TEXT} />
-                  </button>
-                )}
-                <h2 className="text-[17px] font-bold flex-1" style={{ color: TEXT }}>{pickerStep === "province" ? "내 지역 선택" : `${tempProvince} 세부 지역`}</h2>
-                <button onClick={() => setRegionOpen(false)} aria-label="닫기" className="w-8 h-8 -mr-1 rounded-full flex items-center justify-center" style={{ background: "#F3F5FA" }}>
-                  <X size={16} color={MUTED} />
-                </button>
-              </div>
-              <p className="text-[12px] mt-1 leading-relaxed break-keep" style={{ color: MUTED }}>
-                {pickerStep === "province" ? "고른 지역의 지원금과 전국 지원금을 함께 보여드려요. 다음에도 이 지역으로 열려요." : "시·군·구를 고르거나, 도 전체로 볼 수 있어요."}
-              </p>
-            </div>
-
-            <div className="overflow-y-auto px-5 pb-8 pt-1">
-              {pickerStep === "province" ? (
-                <>
-                  <div className="grid grid-cols-2 gap-2 mb-3">
-                    {[
-                      { key: "전체", label: "지역 상관없이", sub: "모든 지원금 보기" },
-                      { key: "전국", label: "전국 지원금만", sub: "지역 전용 제외" },
-                    ].map((o) => {
-                      const on = region === o.key;
-                      return (
-                        <button key={o.key} onClick={() => selectProvince(o.key)} className="py-3 rounded-2xl text-center" style={on ? CHIP_ON : { ...CARD, color: TEXT }}>
-                          <span className="block text-[14px] font-bold">{o.label}</span>
-                          <span className="block text-[11px] mt-0.5" style={{ opacity: on ? 0.85 : 1, color: on ? "white" : MUTED }}>{o.sub}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="text-[12px] font-bold mb-2 px-0.5" style={{ color: MUTED }}>시·도</p>
-                  <div className="grid grid-cols-4 gap-2">
-                    {REGIONS.filter((r) => r !== "전체" && r !== "전국").map((r) => {
-                      const on = region === r || region.startsWith(r + " ");
-                      return (
-                        <button key={r} onClick={() => selectProvince(r)} className="py-3 rounded-xl text-[14px] font-semibold active:scale-[0.97] transition-transform" style={on ? CHIP_ON : { background: "#F5F6FA", color: TEXT }}>
-                          {r}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <button onClick={() => selectDistrict("전체")} className="w-full py-3 rounded-2xl text-[14px] font-bold mb-3" style={region === tempProvince ? CHIP_ON : { background: BLUE_SOFT, color: BLUE }}>
-                    {tempProvince} 전체
-                  </button>
-                  <div className="grid grid-cols-3 gap-2">
-                    {DISTRICTS[tempProvince].map((d) => {
-                      const on = region === `${tempProvince} ${d}`;
-                      return (
-                        <button key={d} onClick={() => selectDistrict(d)} className="py-3 rounded-xl text-[13.5px] font-semibold active:scale-[0.97] transition-transform" style={on ? CHIP_ON : { background: "#F5F6FA", color: TEXT }}>
-                          {d}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="text-[11px] mt-4" style={{ color: MUTED }}>* 2026년 기준 행정구역이에요.</p>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Bottom tab bar */}

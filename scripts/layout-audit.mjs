@@ -143,7 +143,7 @@ const SCREENS = [
   { name: "알림 설정", steps: [["click", "알림 설정"]] },
   { name: "내 지역 선택 창", steps: [["home"], ["click", "MY"], ["click", "내 지역"]] },
   { name: "세부 지역 선택", steps: [["click", "경북"]] },
-  { name: "홈 복귀", steps: [["click", "닫기"], ["home"]] },
+  { name: "지역 선택 완료", steps: [["click", "완료"]] },
   { name: "맞춤 진단 1단계", steps: [["home"], ["click", "맞춤"]] },
 ];
 
