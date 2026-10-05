@@ -2249,6 +2249,103 @@ const WEEK = ["일", "월", "화", "수", "목", "금", "토"];
 // 달마다 다른 색 — 일정이 많아도 어느 달인지 한눈에 보여요 (1월~12월)
 const MONTH_COLORS = ["#3D63DD", "#7A46D6", "#2C9F6B", "#D6478E", "#0E9AA7", "#E8890C", "#2F86D6", "#C2410C", "#8B62D9", "#E5674D", "#A0701A", "#1F7A5C"];
 
+// '한 번만' 날짜 고르기 — 매달 반복과 같은 칸 모양, 위에서 년·월을 고르고 요일에 맞춰 날짜를 보여줘요
+function DatePickGrid({ value, onChange }) {
+  const today = startOfToday();
+  const sel = parseLocalDate(value);
+  const [view, setView] = useState({ y: sel.getFullYear(), m: sel.getMonth() });
+  const [pickMonth, setPickMonth] = useState(false);
+  const minYear = today.getFullYear();
+  const canPrev = view.y > minYear || view.m > today.getMonth();
+  const move = (d) => {
+    const t = new Date(view.y, view.m + d, 1);
+    setView({ y: t.getFullYear(), m: t.getMonth() });
+  };
+  const first = new Date(view.y, view.m, 1).getDay();
+  const last = new Date(view.y, view.m + 1, 0).getDate();
+  const cells = [...Array(first).fill(null), ...Array.from({ length: last }, (_, i) => i + 1)];
+  const navBtn = "w-9 h-9 rounded-full flex items-center justify-center";
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-2">
+        <button onClick={() => canPrev && move(-1)} aria-label="이전 달" className={navBtn} style={{ background: "#F5F6FA", opacity: canPrev ? 1 : 0.35 }}>
+          <ChevronLeft size={18} color={TEXT} />
+        </button>
+        <button onClick={() => setPickMonth(!pickMonth)} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[15px] font-bold" style={{ background: pickMonth ? BLUE_SOFT : "transparent", color: pickMonth ? BLUE : TEXT }}>
+          {view.y}년 {view.m + 1}월 <ChevronDown size={15} style={{ transform: pickMonth ? "rotate(180deg)" : "none" }} />
+        </button>
+        <button onClick={() => move(1)} aria-label="다음 달" className={navBtn} style={{ background: "#F5F6FA" }}>
+          <ChevronRight size={18} color={TEXT} />
+        </button>
+      </div>
+
+      {pickMonth ? (
+        <>
+          {/* 년 고르기 */}
+          <div className="grid grid-cols-3 gap-1.5 mb-2">
+            {[minYear, minYear + 1, minYear + 2].map((y) => (
+              <button key={y} onClick={() => setView({ y, m: y === minYear ? Math.max(view.m, today.getMonth()) : view.m })} className="py-2.5 rounded-lg text-[13.5px] font-semibold" style={view.y === y ? CHIP_ON : { background: "#F5F6FA", color: TEXT }}>
+                {y}년
+              </button>
+            ))}
+          </div>
+          {/* 월 고르기 */}
+          <div className="grid grid-cols-4 gap-1.5">
+            {Array.from({ length: 12 }, (_, m) => {
+              const past = view.y === minYear && m < today.getMonth();
+              return (
+                <button
+                  key={m}
+                  disabled={past}
+                  onClick={() => {
+                    setView({ y: view.y, m });
+                    setPickMonth(false);
+                  }}
+                  className="py-2.5 rounded-lg text-[13.5px] font-semibold"
+                  style={view.m === m ? CHIP_ON : { background: "#F5F6FA", color: past ? "#C3C8D4" : TEXT }}
+                >
+                  {m + 1}월
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+            {WEEK.map((w, i) => (
+              <span key={w} className="text-center text-[11.5px] font-semibold" style={{ color: i === 0 ? RED : i === 6 ? BLUE : MUTED }}>{w}</span>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1.5">
+            {cells.map((d, i) => {
+              if (!d) return <span key={`e${i}`} />;
+              const dt = new Date(view.y, view.m, d);
+              const past = dt < today;
+              const on = formatLocalDate(dt) === value;
+              const isToday = dt.getTime() === today.getTime();
+              return (
+                <button
+                  key={d}
+                  disabled={past}
+                  onClick={() => onChange(formatLocalDate(dt))}
+                  className="aspect-square rounded-lg text-[12.5px] font-semibold tabular-nums"
+                  style={on ? CHIP_ON : { background: past ? "transparent" : "#F5F6FA", color: past ? "#C9CEDA" : TEXT, boxShadow: isToday && !on ? `inset 0 0 0 1.5px ${BLUE}` : "none" }}
+                >
+                  {d}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+      <p className="text-[12px] font-semibold mt-2.5 px-0.5" style={{ color: BLUE }}>
+        선택: {sel.getFullYear()}년 {sel.getMonth() + 1}월 {sel.getDate()}일 ({WEEK[sel.getDay()]})
+      </p>
+    </div>
+  );
+}
+
 // 내 일정 추가·수정 창 (아래에서 올라오는 시트)
 function EventEditor({ initial, onSave, onDelete, onClose }) {
   const editing = !!initial?.id;
@@ -2256,7 +2353,7 @@ function EventEditor({ initial, onSave, onDelete, onClose }) {
   const [emoji, setEmoji] = useState(initial?.emoji || "📌");
   const [repeat, setRepeat] = useState(initial?.repeat || "monthly");
   const [day, setDay] = useState(initial?.day || 10);
-  const [date, setDate] = useState(initial?.date || formatLocalDate(new Date(TODAY.getTime() + 7 * 864e5)));
+  const [date, setDate] = useState(initial?.date && parseLocalDate(initial.date) >= startOfToday() ? initial.date : formatLocalDate(new Date(TODAY.getTime() + 7 * 864e5)));
   const [alertOn, setAlertOn] = useState(initial ? initial.alert !== false : true);
   const pickPreset = (p) => {
     setEmoji(p.emoji);
@@ -2319,14 +2416,7 @@ function EventEditor({ initial, onSave, onDelete, onClose }) {
         ) : (
           <>
             <p className="text-[13px] font-semibold mb-1.5" style={{ color: TEXT }}>날짜</p>
-            <input
-              type="date"
-              value={date}
-              min={formatLocalDate(TODAY)}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-xl px-3.5 py-3 mb-4 text-[15px] font-semibold outline-none"
-              style={{ background: INPUT_BG, color: TEXT }}
-            />
+            <DatePickGrid value={date} onChange={setDate} />
           </>
         )}
 
