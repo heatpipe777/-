@@ -79,6 +79,8 @@ import heroCalcImg from "./assets/cat/hero-calc.webp";
 import heroRegionImg from "./assets/cat/hero-region.webp";
 import heroAlertImg from "./assets/cat/hero-alert.webp";
 import heroNewsImg from "./assets/cat/hero-news.webp";
+import heroFavImg from "./assets/cat/hero-fav.webp";
+import heroMyImg from "./assets/cat/hero-my.webp";
 import tileCenterImg from "./assets/home-tiles/center.webp";
 import tileExchangeImg from "./assets/home-tiles/exchange.webp";
 import tileNewsImg from "./assets/home-tiles/news.webp";
@@ -3246,39 +3248,6 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
 }
 
 // "경영" 카테고리용 커스텀 아이콘 — 막대그래프 + 상승 화살표를 합친 차트 느낌
-// 돈주머니 일러스트 — 맞춤 진단 CTA용. sharp 렌더링으로 큰/56px/40px 검증 완료
-function MoneyBagArt({ className = "w-20 h-20" }) {
-  return (
-    <svg viewBox="0 0 100 100" className={className}>
-      <defs>
-        <linearGradient id="coinFace" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#FFE566" />
-          <stop offset="100%" stopColor="#F2A72A" />
-        </linearGradient>
-        <linearGradient id="stackSide" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#F6CE6E" />
-          <stop offset="100%" stopColor="#D98F1E" />
-        </linearGradient>
-      </defs>
-
-      {/* 뒤쪽 동전 스택(옆에서 본 원통형) */}
-      <g>
-        <ellipse cx="72" cy="70" rx="24" ry="8.5" fill="url(#stackSide)" stroke="#8A5A1A" strokeWidth="1.8" />
-        <ellipse cx="72" cy="62" rx="24" ry="8.5" fill="url(#stackSide)" stroke="#8A5A1A" strokeWidth="1.8" />
-        <ellipse cx="72" cy="54" rx="24" ry="8.5" fill="url(#stackSide)" stroke="#8A5A1A" strokeWidth="1.8" />
-        <ellipse cx="72" cy="46" rx="24" ry="8.5" fill="url(#stackSide)" stroke="#8A5A1A" strokeWidth="1.8" />
-        <ellipse cx="72" cy="38" rx="24" ry="8.5" fill="url(#coinFace)" stroke="#8A5A1A" strokeWidth="2" />
-        <text x="72" y="43" textAnchor="middle" fontSize="18" fontWeight="800" fill="#8A5A1A">₩</text>
-      </g>
-
-      {/* 앞쪽 동전(정면) */}
-      <circle cx="34" cy="66" r="33" fill="url(#coinFace)" stroke="#8A5A1A" strokeWidth="2.4" />
-      <circle cx="34" cy="66" r="26" fill="none" stroke="#E8B93A" strokeWidth="1.8" opacity="0.6" />
-      <text x="34" y="79" textAnchor="middle" fontSize="46" fontWeight="800" fill="#8A5A1A">₩</text>
-    </svg>
-  );
-}
-
 function TrendChartIcon({ size = 24, color = "currentColor", strokeWidth = 2, className }) {
   return (
     <svg
@@ -5244,22 +5213,44 @@ export default function App() {
 
       {mainTab === "favorites" && (
         <>
-          <h1 className="text-[19px] font-bold mb-1" style={{ color: TEXT }}>즐겨찾기</h1>
+          <HeroHeader icon={Heart} color="#E0457A" image={heroFavImg} title="즐겨찾기" subtitle="관심 있는 지원금을 모아두고" headline="마감 전에 알림 받으세요!" onBack={() => setMainTab("home")} />
           {favCount > 0 && (
-            <p className="text-[11.5px] mb-4" style={{ color: MUTED }}>
-              <Bell size={11} className="inline -mt-0.5 mr-0.5" /> 종 아이콘을 눌러 마감 알림을 켜고 끌 수 있어요 (알림 시점은 MY에서 설정)
-              {!notifyEnabled && " · MY 탭에서 '지원금 마감 알림'을 먼저 켜주세요"}
-            </p>
+            <div className="rounded-[22px] p-4 mb-4 flex items-start gap-3" style={{ ...CARD, background: "linear-gradient(135deg, #FFF8E6 0%, #FFFFFF 70%)" }}>
+              <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "#FDEFC8" }}>
+                <Bell size={17} color="#C98A0B" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13.5px] font-bold" style={{ color: TEXT }}>종을 누르면 마감 알림을 켜고 꺼요</p>
+                <p className="text-[12px] mt-0.5 break-keep" style={{ color: MUTED }}>
+                  {notifyEnabled ? "알림 시점과 시각은 알림 설정에서 바꿀 수 있어요" : "지금은 지원금 마감 알림이 꺼져 있어요"}
+                </p>
+                <button
+                  onClick={() => setScreen({ view: "alertSettings" })}
+                  className="mt-2.5 px-3.5 py-2 rounded-full text-[12.5px] font-bold flex items-center gap-1"
+                  style={notifyEnabled ? { background: "#FFFFFF", color: TEXT, border: "1px solid #E6E9F2" } : BTN_PRIMARY}
+                >
+                  <Bell size={13} /> {notifyEnabled ? "알림 설정 보기" : "마감 알림 켜기"}
+                </button>
+              </div>
+            </div>
           )}
           {favCount === 0 ? (
-            <div className="text-center py-20 text-sm" style={{ color: MUTED }}>
-              <Heart size={28} color="#D8DBE3" className="mx-auto mb-3" />
-              아직 저장한 지원금이 없어요.
-              <br />
-              홈에서 하트를 눌러 저장해보세요.
+            <div className="rounded-[22px] px-5 py-8 text-center" style={CARD}>
+              <img src={heroFavImg} alt="" className="w-[88px] h-[88px] mx-auto mb-2 object-contain" />
+              <p className="text-[15px] font-bold" style={{ color: TEXT }}>아직 저장한 지원금이 없어요</p>
+              <p className="text-[12.5px] mt-1.5 break-keep" style={{ color: MUTED }}>지원금 목록에서 ♡를 누르면 여기에 모이고, 마감 전에 알림도 받을 수 있어요</p>
+              <button
+                onClick={() => { setMainTab("home"); setStatusFilter("available"); setHomeScreen("list"); }}
+                className="mt-5 px-6 py-3 rounded-full text-[13.5px] font-bold inline-flex items-center gap-1"
+                style={BTN_PRIMARY}
+              >
+                지원금 둘러보기 <ChevronRight size={15} />
+              </button>
             </div>
           ) : (
-            <div className="space-y-2">
+            <>
+            <p className="text-xs mb-2.5" style={{ color: MUTED }}>총 {favCount}건</p>
+            <div className="space-y-2.5">
               {ALL_PROGRAMS.filter((p) => favorites.has(p.id)).map((p) => (
                   <ProgramRow
                     key={p.id}
@@ -5280,6 +5271,7 @@ export default function App() {
                   />
               ))}
             </div>
+            </>
           )}
         </>
       )}
@@ -5406,36 +5398,24 @@ export default function App() {
 
       {mainTab === "my" && (
         <>
-          <div className="flex items-center gap-2 mb-4">
-            <button
-              onClick={() => setMainTab("home")}
-              className="navArrowBtn w-8 h-8 -ml-1.5 rounded-full flex items-center justify-center" aria-label="뒤로가기"
-            >
-              <ChevronLeft size={20} color={TEXT} />
-            </button>
-            <h1 className="text-[19px] font-bold" style={{ color: TEXT }}>MY</h1>
-          </div>
+          <HeroHeader icon={User} color="#5E57D9" image={heroMyImg} title="MY" subtitle="이름·지역·알림 설정을" headline="한곳에서 관리해요!" onBack={() => setMainTab("home")} />
 
-          <p className="text-[12px] font-bold mb-2 px-1" style={{ color: MUTED }}>내 정보</p>
-          <button onClick={() => setScreen({ view: "nickname" })} className="w-full text-left rounded-[20px] p-4 mb-3 flex items-center justify-between gap-3" style={CARD}>
+          <p className="text-[13px] font-bold mb-2.5 px-1" style={{ color: TEXT }}>내 정보</p>
+          <button onClick={() => setScreen({ view: "nickname" })} className="w-full text-left rounded-[22px] px-4 py-3.5 mb-2.5 flex items-center justify-between gap-3 active:scale-[0.99] transition-transform" style={CARD}>
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "#FFF3E0" }}>
-                <User size={17} color={MY_ACCENT} />
-              </div>
+              <img src={heroNameImg} alt="" className="w-11 h-11 shrink-0 object-contain" />
               <div className="min-w-0">
-                <p className="text-sm font-semibold" style={{ color: TEXT }}>내 이름</p>
+                <p className="text-[14.5px] font-bold" style={{ color: TEXT }}>내 이름</p>
                 <p className="text-[12px] truncate" style={{ color: MUTED }}>{nickname ? `${callName}으로 불러드려요` : "아직 설정 전이에요 · 지금은 '사장님'으로 불러요"}</p>
               </div>
             </div>
             <ChevronRight size={16} color="#C3C8D4" className="shrink-0" />
           </button>
-          <button onClick={openPicker} className="w-full text-left rounded-[20px] p-4 mb-3 flex items-center justify-between gap-3" style={CARD}>
+          <button onClick={openPicker} className="w-full text-left rounded-[22px] px-4 py-3.5 mb-2.5 flex items-center justify-between gap-3 active:scale-[0.99] transition-transform" style={CARD}>
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: BLUE_SOFT }}>
-                <MapPin size={17} color={BLUE} />
-              </div>
+              <img src={heroRegionImg} alt="" className="w-11 h-11 shrink-0 object-contain" />
               <div className="min-w-0">
-                <p className="text-sm font-semibold" style={{ color: TEXT }}>내 지역</p>
+                <p className="text-[14.5px] font-bold" style={{ color: TEXT }}>내 지역</p>
                 <p className="text-[12px] truncate" style={{ color: MUTED }}>
                   {region === "전체" || region === "전국" ? "아직 설정 전이에요 · 눌러서 정해 주세요" : `${region} · 지원금 목록이 이 지역 기준으로 열려요`}
                 </p>
@@ -5445,15 +5425,13 @@ export default function App() {
           </button>
           <button
             onClick={() => setScreen({ view: "diagnosis" })}
-            className="w-full text-left rounded-[20px] p-4 mb-3 flex items-center justify-between gap-3"
+            className="w-full text-left rounded-[22px] px-4 py-3.5 mb-2.5 flex items-center justify-between gap-3 active:scale-[0.99] transition-transform"
             style={CARD}
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "#FCEAC7" }}>
-                <MoneyBagArt className="w-7 h-7" />
-              </div>
+              <img src={ctaCoinImg} alt="" className="w-11 h-11 shrink-0 object-contain" />
               <div className="min-w-0">
-                <p className="text-sm font-semibold" style={{ color: TEXT }}>맞춤 진단</p>
+                <p className="text-[14.5px] font-bold" style={{ color: TEXT }}>맞춤 진단</p>
                 <p className="text-[12px] truncate" style={{ color: MUTED }}>
                   {diagnosis ? `${diagnosis.region} · 진단 완료 (다시 진단하기)` : "아직 진단 전이에요 · 1분이면 끝나요"}
                 </p>
@@ -5461,14 +5439,12 @@ export default function App() {
             </div>
             <ChevronRight size={16} color={MUTED} className="shrink-0" />
           </button>
-          <p className="text-[12px] font-bold mb-2 px-1 mt-5" style={{ color: MUTED }}>알림</p>
-          <button onClick={() => setScreen({ view: "alertSettings" })} className="w-full text-left rounded-[20px] p-4 mb-5 flex items-center justify-between gap-3" style={CARD}>
+          <p className="text-[13px] font-bold mb-2.5 px-1 mt-5" style={{ color: TEXT }}>알림</p>
+          <button onClick={() => setScreen({ view: "alertSettings" })} className="w-full text-left rounded-[22px] px-4 py-3.5 mb-5 flex items-center justify-between gap-3 active:scale-[0.99] transition-transform" style={CARD}>
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "#FDEEE9" }}>
-                <Bell size={17} color="#E5674D" />
-              </div>
+              <img src={heroAlertImg} alt="" className="w-11 h-11 shrink-0 object-contain" />
               <div className="min-w-0">
-                <p className="text-sm font-semibold" style={{ color: TEXT }}>알림 설정</p>
+                <p className="text-[14.5px] font-bold" style={{ color: TEXT }}>알림 설정</p>
                 <p className="text-[12px] truncate" style={{ color: MUTED }}>
                   {(() => {
                     const n = [notifyEnabled, taxAlertOn, rateAlertOn].filter(Boolean).length;
@@ -5481,8 +5457,8 @@ export default function App() {
             <ChevronRight size={16} color="#C3C8D4" className="shrink-0" />
           </button>
 
-          <p className="text-[12px] font-bold mb-2 px-1 mt-4" style={{ color: MUTED }}>약관·정보</p>
-          <div className="rounded-[20px] overflow-hidden mb-3" style={CARD}>
+          <p className="text-[13px] font-bold mb-2.5 px-1 mt-4" style={{ color: TEXT }}>약관·정보</p>
+          <div className="rounded-[22px] overflow-hidden mb-3" style={CARD}>
             {[
               { key: "privacy", label: "개인정보처리방침" },
               { key: "terms", label: "이용약관" },
