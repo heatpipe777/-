@@ -63,6 +63,15 @@ const go = async (steps) => {
       await click("홈");
     } else if (s.startsWith("scroll:")) {
       await ev(`window.scrollTo(0, ${s.slice(7)}); true`);
+    } else if (s === "diag:on" || s === "diag:off") {
+      // 맞춤 진단 결과 화면용 예시 진단 (찍고 나면 diag:off로 원래대로)
+      const diag = s === "diag:on" ? { region: "서울", industry: "food", revenueBand: "30to100", yearsBand: "1to3", employees: "1to4", needs: ["funds", "fixed"], situation: ["decline"], version: 2 } : null;
+      await ev(`(()=>{const p=JSON.parse(localStorage.getItem("prefs"));p.diagnosis=${JSON.stringify(diag)};localStorage.setItem("prefs",JSON.stringify(p));location.reload();return true})()`);
+      ws.close();
+      await sleep(5000);
+      ({ ws, ev } = await connect());
+    } else if (s === "calc:clear") {
+      await ev(`localStorage.removeItem("calcTab"); true`);
     } else {
       const ok = await click(s);
       if (!ok) console.log("못 찾음:", s);
@@ -80,11 +89,13 @@ const SHOTS = [
   ["02_list", ["home", "지원금"]],
   ["03_detail", ["고효율기기"]],
   ["04_schedule", ["home", "일정 열기"]],
-  ["05_calc", ["home", "계산기"]],
+  ["05_calc", ["calc:clear", "home", "계산기"]],
   ["06_rates", ["home", "금리·환율"]],
   ["07_center", ["home", "지역센터"]],
   ["08_alert", ["home", "MY", "알림 설정"]],
   ["09_diag", ["home", "맞춤"]],
+  ["09_diag_result", ["diag:on", "home", "결과 보기"]],
+  ["09_diag_reset", ["diag:off", "home"]],
   ["10_fav", ["home", "즐겨찾기"]],
   ["11_my", ["home", "MY"]],
   ["12_news", ["home", "뉴스"]],
