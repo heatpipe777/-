@@ -56,8 +56,8 @@ p{margin-top:28px;font-size:36px;font-weight:500;opacity:.92;letter-spacing:-.5p
   }
 
   // 2) 아이콘 512 (Play가 모서리를 직접 둥글게 해요 → 꽉 찬 정사각형, 32비트 PNG)
-  const fg = await sharp("assets/icon-foreground.png").resize(446, 446).toBuffer();
-  await sharp({ create: { width: 512, height: 512, channels: 4, background: "#3D63DD" } }).composite([{ input: fg, left: 33, top: 33 }]).png().toFile(path.join(OUT, "앱아이콘_512.png"));
+  // 앱 아이콘(꽉 찬 정사각형)은 app_icon.cjs가 만든 scripts/dev/mockups/app-icon-square.png를 써요
+  await sharp("scripts/dev/mockups/app-icon-square.png").resize(512, 512).ensureAlpha().png().toFile(path.join(OUT, "앱아이콘_512.png"));
   console.log("만듦 앱아이콘_512.png");
 
   // 3) 대표 그래픽 1024x500

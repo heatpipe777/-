@@ -1,6 +1,6 @@
 // 아주 단순한 앱 셸 캐싱 서비스워커예요.
 // 실제 서비스로 키우면서 캐시 전략(네트워크 우선/캐시 우선 등)을 더 정교하게 다듬어도 좋아요.
-const CACHE_NAME = "sosanggongin-cache-v1";
+const CACHE_NAME = "sosanggongin-cache-v2";
 const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
