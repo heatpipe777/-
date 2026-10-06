@@ -80,6 +80,8 @@ import heroRegionImg from "./assets/cat/hero-region.webp";
 import heroAlertImg from "./assets/cat/hero-alert.webp";
 import heroNewsImg from "./assets/cat/hero-news.webp";
 import heroFavImg from "./assets/cat/hero-fav.webp";
+import newsFigGeoje from "./assets/news/fig-geoje.webp";
+import newsFigOnnuri from "./assets/news/fig-onnuri.webp";
 import heroMyImg from "./assets/cat/hero-my.webp";
 import calc_marginImg from "./assets/calc/margin.webp";
 import calc_breakevenImg from "./assets/calc/breakeven.webp";
@@ -175,6 +177,7 @@ function NewsImage({ news, className, style }) {
 }
 
 // 정책 뉴스 — 정부 보도자료·공식 공고 위주 (마지막 확인: NEWS_UPDATED)
+// 이미지 규칙: 공공누리 제1유형(출처표시)만 앱에 넣어 써요. 언론사 사진(연합뉴스 등)·공공누리 4유형(상업적 이용·변경 금지)은 쓰지 않아요.
 // 새 소식은 앱 업데이트 때 추가해요. 날짜는 "YYYY.MM.DD" (최신순 정렬·NEW 표시에 써요)
 const NEWS_UPDATED = "2026.10.06";
 const NEWS = [
@@ -196,6 +199,7 @@ const NEWS = [
       { label: "소상공인 1533-0100", tel: "1533-0100" },
       { label: "중소기업 1811-3655", tel: "1811-3655" },
     ],
+    figure: { src: newsFigGeoje, caption: "소상공인·중소기업 긴급경영안정자금 우대 조건", url: "https://www.korea.kr/news/policyNewsView.do?newsId=148973061" },
     url: "https://www.mss.go.kr/site/smba/ex/bbs/View.do?cbIdx=86&bcIdx=1071601",
   },
   {
@@ -213,6 +217,7 @@ const NEWS = [
       "골목형상점가 지정 기준을 지방 재정 여건에 맞춰 완화 (재정자립도 하위 지역은 점포 15개 이상)",
       "기업형 슈퍼마켓(SSM) 등은 가맹점 등록·갱신을 제한해 영세 상인에게 혜택 집중",
     ],
+    figure: { src: newsFigOnnuri, caption: "2027년 디지털 온누리 전통시장·지방소비 차등환급(안)", url: "https://www.korea.kr/news/policyNewsView.do?newsId=148972815" },
     url: "https://www.mss.go.kr/site/smba/ex/bbs/View.do?cbIdx=86&bcIdx=1071532",
   },
   {
@@ -269,7 +274,6 @@ const NEWS = [
   },
   {
     id: "n4",
-    image: "https://www.korea.kr/newsWeb/resources/attaches/2026.07/01/633cc081876773dfc4caee297fdbc63e.jpg",
     title: "2026년 하반기부터 이렇게 달라져요 — 노란우산공제 납입한도 연 1,800만 원으로",
     source: "대한민국 정책브리핑",
     date: "2026.07.02",
@@ -303,10 +307,6 @@ const NEWS = [
   },
   {
     id: "n1",
-    // 기업마당 공고엔 사진이 없어서, 같은 공고를 소개한 정책브리핑 카드뉴스 대표 이미지를 써요
-    image: "https://www.korea.kr/newsWeb/resources/attaches/2025.12/30/9e6f350d84bd21ffd32562f993267431.jpg",
-    imageSource: "대한민국 정책브리핑",
-    imagePosition: "center top", // 이미지 위쪽 제목 글자가 잘리지 않게
     title: "2026년 중소벤처기업부 소상공인 정책자금 융자사업 공고",
     source: "중소벤처기업부",
     date: "2025.12.29",
@@ -4266,6 +4266,20 @@ function NewsDetailScreen({ news, allNews, onBack, onSelectNews, onSelectProgram
         </ul>
       </div>
 
+      {/* 기사 속 자료 — 공공누리 제1유형 표·그래픽 */}
+      {news.figure && (
+        <>
+          <p className="text-[13px] font-bold mb-2" style={{ color: TEXT }}>기사 속 자료</p>
+          <a href={news.figure.url} target="_blank" rel="noopener noreferrer" className="block rounded-[20px] p-3 mb-4" style={CARD}>
+            <p className="text-[12px] font-semibold mb-2 px-0.5 break-keep" style={{ color: "#5E6577" }}>{news.figure.caption}</p>
+            <img src={news.figure.src} alt={news.figure.caption} className="w-full h-auto rounded-xl" style={{ border: "1px solid #EEF0F6" }} />
+            <p className="text-[10.5px] mt-2 px-0.5 flex items-center gap-1" style={{ color: MUTED }}>
+              출처: 대한민국 정책브리핑 · 공공누리 제1유형(출처표시) <ExternalLink size={10} />
+            </p>
+          </a>
+        </>
+      )}
+
       {/* 앱에 있는 관련 지원금으로 바로 */}
       {(() => {
         const p = news.programId != null && ALL_PROGRAMS.find((x) => x.id === news.programId);
@@ -5714,7 +5728,7 @@ export default function App() {
 // 웹 버전(public/privacy.html)과 내용·이메일·시행일을 맞춰 둘 것
 function PrivacyPolicyScreen({ onBack }) {
   const CONTACT_EMAIL = "heatpipe777@gmail.com";
-  const EFFECTIVE_DATE = "2026-10-04";
+  const EFFECTIVE_DATE = "2026-10-06";
   const sections = [
     {
       title: "1. 수집하는 개인정보 항목",
@@ -5729,7 +5743,7 @@ function PrivacyPolicyScreen({ onBack }) {
     {
       title: "3. 외부 공개 데이터 호출",
       body:
-        "환율 정보 표시를 위해 공개 환율 API(open.er-api.com)를, 지도 표시를 위해 OpenStreetMap을, 뉴스 대표 사진 표시를 위해 각 기사 원문 사이트를 호출해요. 이 요청에는 개인을 식별할 수 있는 정보가 포함되지 않아요.",
+        "환율 정보 표시를 위해 공개 환율 API(open.er-api.com)를, 지도 표시를 위해 OpenStreetMap을 호출해요. 이 요청에는 개인을 식별할 수 있는 정보가 포함되지 않아요.",
     },
     {
       title: "4. 개인정보의 제3자 제공",
