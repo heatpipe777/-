@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">지원금알리미</string>
-    <string name="title_activity_main">지원금알리미</string>
+    <string name="app_name">사장줍줍</string>
+    <string name="title_activity_main">사장줍줍</string>
     <string name="package_name">com.goldenarchivew.sosanggongin</string>
     <string name="custom_url_scheme">com.goldenarchivew.sosanggongin</string>
 </resources>

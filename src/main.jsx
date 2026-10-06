@@ -30,8 +30,21 @@ if (Capacitor.isNativePlatform()) {
   });
 }
 
+// 시작 인트로: 이름·소개를 잠깐 보여주고 서서히 사라져요 (한 번만, 반복 효과 없음)
+const hideIntro = () => {
+  const el = document.getElementById("intro");
+  if (!el) return;
+  // 휴대폰 시작 화면에 가려져 있던 시간도 있으니, 앱이 준비된 뒤에도 최소 0.9초는 보여줘요
+  const wait = Math.max(900, 1500 - (performance.now() - (window.__introStart || 0)));
+  setTimeout(() => {
+    el.classList.add("hide");
+    setTimeout(() => el.remove(), 400);
+  }, wait);
+};
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
 );
+requestAnimationFrame(() => requestAnimationFrame(hideIntro));

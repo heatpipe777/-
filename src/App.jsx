@@ -1156,12 +1156,12 @@ async function shareProgram(p) {
   const d = getDday(p.deadline);
   const when = p.recurring ? "상시접수" : d < 0 ? "접수 마감" : `마감 ${p.deadline} (D-${d})`;
   const text = [
-    `[지원금알리미] ${p.name}`,
+    `[사장줍줍] ${p.name}`,
     `· 지역: ${regionLabel(p)}`,
     `· 지원: ${p.amountLabel}`,
     `· 접수: ${when}`,
     "",
-    "자세한 조건은 지원금알리미에서 확인하세요 👇",
+    "자세한 조건은 사장줍줍에서 확인하세요 👇",
   ].join("\n");
   const url = "https://sosanggongin.vercel.app";
   try {
@@ -3766,7 +3766,7 @@ function CalcNotice({ tone = "red", children }) {
 function CalcResultCard({ rows, title = "계산 결과" }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
-    const text = [`[지원금알리미 계산기] ${title}`, ...rows.map((r) => `· ${r.label}: ${r.value}`)].join("\n");
+    const text = [`[사장줍줍 계산기] ${title}`, ...rows.map((r) => `· ${r.label}: ${r.value}`)].join("\n");
     if (await copyText(text)) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
@@ -4746,7 +4746,7 @@ export default function App() {
       let perm = await LocalNotifications.checkPermissions();
       if (perm.display !== "granted") perm = await LocalNotifications.requestPermissions();
       if (perm.display === "granted") return true;
-      alert("알림 권한이 꺼져 있어요. 휴대폰 설정 → 애플리케이션 → 지원금알리미 → 알림에서 허용해 주세요.");
+      alert("알림 권한이 꺼져 있어요. 휴대폰 설정 → 애플리케이션 → 사장줍줍 → 알림에서 허용해 주세요.");
       return false;
     } catch (e) {
       return true;
@@ -5065,7 +5065,7 @@ export default function App() {
         <p className="text-[11px] mb-5 mt-2 px-1 leading-relaxed" style={{ color: MUTED }}>
           {Capacitor.isNativePlatform()
             ? "휴대폰 절전 상태에 따라 알림이 몇 분~1시간 늦게 올 수 있어요."
-            : "알림은 지원금알리미 앱(안드로이드)에서만 받을 수 있어요."}
+            : "알림은 사장줍줍 앱(안드로이드)에서만 받을 수 있어요."}
         </p>
       </Shell>
     );
@@ -5228,7 +5228,7 @@ export default function App() {
         <div className="relative z-10">
           <p className="text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.95)" }}>{callName}, 안녕하세요 👋</p>
           <h1 className="font-black mt-1 whitespace-nowrap" style={{ color: "white", fontSize: 21, lineHeight: 1.4, letterSpacing: "-0.03em" }}>
-            소상공인 정책자금 알리미
+            받을 혜택, 오늘도 줍줍!
           </h1>
         </div>
         {/* 안내용 표시 — 목록은 아래 '소상공인 지원금' 카드로 들어가요 */}
@@ -5844,7 +5844,7 @@ export default function App() {
             ))}
           </div>
 
-          <p className="text-[11.5px] text-center mt-8" style={{ color: MUTED }}>지원금알리미 v1.0</p>
+          <p className="text-[11.5px] text-center mt-8" style={{ color: MUTED }}>사장줍줍 v1.0</p>
           <p className="text-[11px] text-center mt-1 leading-relaxed" style={{ color: MUTED }}>정부·공공기관의 공식 앱이 아닌 민간 정보 서비스예요</p>
         </>
       )}
@@ -5969,7 +5969,7 @@ function TermsOfServiceScreen({ onBack }) {
     {
       title: "제1조 (목적)",
       body:
-        "이 약관은 소상공인 정책자금 알리미(이하 '이 앱')가 제공하는 서비스의 이용 조건과 절차, 이용자와 운영자의 권리·의무 및 책임사항을 정하는 것을 목적으로 해요.",
+        "이 약관은 사장줍줍(이하 '이 앱')가 제공하는 서비스의 이용 조건과 절차, 이용자와 운영자의 권리·의무 및 책임사항을 정하는 것을 목적으로 해요.",
     },
     {
       title: "제2조 (서비스의 성격)",
