@@ -177,12 +177,14 @@ function NewsImage({ news, className, style }) {
 }
 
 // 정책 뉴스 — 정부 보도자료·공식 공고 위주 (마지막 확인: NEWS_UPDATED)
-// 이미지 규칙: 공공누리 제1유형(출처표시)만 앱에 넣어 써요. 언론사 사진(연합뉴스 등)·공공누리 4유형(상업적 이용·변경 금지)은 쓰지 않아요.
+// 이미지: 기사 원문의 대표 사진(og:image)을 그대로 불러오고, 화면에 사진 출처를 표시해요. 못 불러오면 분야 그림으로 대신해요.
 // 새 소식은 앱 업데이트 때 추가해요. 날짜는 "YYYY.MM.DD" (최신순 정렬·NEW 표시에 써요)
 const NEWS_UPDATED = "2026.10.06";
 const NEWS = [
   {
     id: "m1",
+    image: "https://www.korea.kr/newsWeb/resources/attaches/2026.10/06/9f448bb0920216f8f184af88a6bed7f1.jpg",
+    imageSource: "대한민국 정책브리핑",
     title: "거제·통영 특별재난지역 소상공인 정책자금, 금리 1.5%·한도 3억 원으로",
     source: "중소벤처기업부",
     date: "2026.10.06",
@@ -204,6 +206,8 @@ const NEWS = [
   },
   {
     id: "m2",
+    image: "https://www.korea.kr/newsWeb/resources/attaches/2026.09/30/b228f5ad0c0c543fc2ea3fc2f0be420c.jpg",
+    imageSource: "대한민국 정책브리핑",
     title: "온누리상품권 18년 만에 개편 — 전통시장·지방 골목상권 혜택 커진다",
     source: "중소벤처기업부",
     date: "2026.10.01",
@@ -222,6 +226,8 @@ const NEWS = [
   },
   {
     id: "m3",
+    image: "https://cdn.jungbunews.com/news/photo/202609/2740073_2742546_3518.jpg",
+    imageSource: "중부뉴스통신",
     title: "티메프 피해 소상공인, 정책자금 상환기간 최대 7년 연장",
     source: "중소벤처기업부",
     date: "2026.09.22",
@@ -242,6 +248,8 @@ const NEWS = [
   },
   {
     id: "m4",
+    image: "https://news.nateimg.co.kr/orgImg/yt/2026/09/22/PCM20230320000254990_P2.jpg",
+    imageSource: "연합뉴스",
     title: "「소상공인기본법」 개정안 국무회의 통과 — 진짜 영세 소상공인에게 지원 집중",
     source: "중소벤처기업부",
     date: "2026.09.22",
@@ -258,6 +266,7 @@ const NEWS = [
   },
   {
     id: "n5",
+    image: "https://www.hksisaeconomy.com/data/photos/portnews/202609/20260906201504-71428.jpg",
     title: "울산시, 중소기업·소상공인에 760억 원 규모 경영안정자금 지원",
     source: "한국시사경제",
     date: "2026.09.06",
@@ -274,6 +283,8 @@ const NEWS = [
   },
   {
     id: "n4",
+    image: "https://www.korea.kr/newsWeb/resources/attaches/2026.07/01/633cc081876773dfc4caee297fdbc63e.jpg",
+    imageSource: "대한민국 정책브리핑",
     title: "2026년 하반기부터 이렇게 달라져요 — 노란우산공제 납입한도 연 1,800만 원으로",
     source: "대한민국 정책브리핑",
     date: "2026.07.02",
@@ -289,6 +300,8 @@ const NEWS = [
   },
   {
     id: "n3",
+    image: "https://www.korea.kr/newsWeb/resources/attaches/2026.01/27/be9b8c5b6d3faf516e9c08f44bb0db03.jpg",
+    imageSource: "대한민국 정책브리핑",
     title: "영세 소상공인 고정비 부담 던다 — 경영안정 바우처 최대 25만 원",
     source: "중소벤처기업부",
     date: "2026.01.27",
@@ -307,6 +320,10 @@ const NEWS = [
   },
   {
     id: "n1",
+    // 기업마당 공고엔 사진이 없어서, 같은 공고를 소개한 정책브리핑 카드뉴스 대표 이미지를 써요
+    image: "https://www.korea.kr/newsWeb/resources/attaches/2025.12/30/9e6f350d84bd21ffd32562f993267431.jpg",
+    imageSource: "대한민국 정책브리핑",
+    imagePosition: "center top", // 이미지 위쪽 제목 글자가 잘리지 않게
     title: "2026년 중소벤처기업부 소상공인 정책자금 융자사업 공고",
     source: "중소벤처기업부",
     date: "2025.12.29",
@@ -5743,7 +5760,7 @@ function PrivacyPolicyScreen({ onBack }) {
     {
       title: "3. 외부 공개 데이터 호출",
       body:
-        "환율 정보 표시를 위해 공개 환율 API(open.er-api.com)를, 지도 표시를 위해 OpenStreetMap을 호출해요. 이 요청에는 개인을 식별할 수 있는 정보가 포함되지 않아요.",
+        "환율 정보 표시를 위해 공개 환율 API(open.er-api.com)를, 지도 표시를 위해 OpenStreetMap을, 뉴스 대표 사진 표시를 위해 각 기사 원문 사이트를 호출해요. 이 요청에는 개인을 식별할 수 있는 정보가 포함되지 않아요.",
     },
     {
       title: "4. 개인정보의 제3자 제공",
