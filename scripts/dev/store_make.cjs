@@ -74,7 +74,7 @@ p{margin-top:14px;font-size:26px;font-weight:500;line-height:1.5;opacity:.94;let
 .ph img{width:100%;height:100%;object-fit:cover;object-position:top;border-radius:26px;display:block}
 .deco{position:absolute;border-radius:50%;background:rgba(255,255,255,.08)}
 </style><div class="deco" style="width:520px;height:520px;right:-120px;top:-200px"></div>
-<div class="l"><img class="ic" src="${icon}"><h1>사장<span style="color:#FFD36B">줍줍</span></h1><p>소상공인 지원금 마감일·세금 신고일<br>놓치지 않게 미리 알려드려요</p></div>
+<div class="l"><img class="ic" src="${icon}"><h1>받아<span style="color:#FFD36B">가게</span></h1><p>소상공인 지원금 마감일·세금 신고일<br>놓치지 않게 미리 알려드려요</p></div>
 <div class="ph" style="right:250px;top:70px;transform:rotate(-4deg)"><img src="${sched}"></div>
 <div class="ph" style="right:40px;top:40px;transform:rotate(4deg)"><img src="${home}"></div>`;
   const fpng = render("feature", fhtml, 1024, 500);

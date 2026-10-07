@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">사장줍줍</string>
+    <string name="app_name">받아가게</string>
     <!-- AdMob 앱 ID (지금은 구글 테스트용, 계정 만들면 진짜 번호로) -->
     <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
-    <string name="title_activity_main">사장줍줍</string>
+    <string name="title_activity_main">받아가게</string>
     <string name="package_name">com.goldenarchivew.sosanggongin</string>
     <string name="custom_url_scheme">com.goldenarchivew.sosanggongin</string>
 </resources>

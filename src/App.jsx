@@ -524,7 +524,7 @@ function ReviewAskDialog({ callName, stats, onExit, onReview, onClose }) {
           ))}
         </div>
         <p className="text-[17px] font-extrabold mt-3 break-keep leading-snug" style={{ color: TEXT }}>
-          {callName}, 사장줍줍이 도움이 되셨다면
+          {callName}, 받아가게가 도움이 되셨다면
           <br />
           별점 한 번 부탁드려요 🙏
         </p>
@@ -532,7 +532,7 @@ function ReviewAskDialog({ callName, stats, onExit, onReview, onClose }) {
         {(stats.fav > 0 || stats.events > 0) && (
           <div className="flex justify-center flex-wrap gap-1.5 mt-3.5">
             {stats.fav > 0 && (
-              <span className="text-[12px] font-semibold px-2.5 py-1 rounded-full" style={{ background: "#FFF4DE", color: "#B26A00" }}>📌 줍줍한 지원금 {stats.fav}개</span>
+              <span className="text-[12px] font-semibold px-2.5 py-1 rounded-full" style={{ background: "#FFF4DE", color: "#B26A00" }}>📌 찜한 지원금 {stats.fav}개</span>
             )}
             {stats.events > 0 && (
               <span className="text-[12px] font-semibold px-2.5 py-1 rounded-full" style={{ background: "#FFF4DE", color: "#B26A00" }}>📅 챙긴 일정 {stats.events}개</span>
@@ -584,7 +584,7 @@ function ExitDialog({ onCancel, onExit }) {
         style={{ width: "min(340px, calc(100% - 32px))", top: `calc(50% - ${half + 116}px)`, bottom: `calc(50% - ${half + 128}px)`, boxShadow: "0 20px 50px rgba(0,0,0,0.25)" }}
       >
         <div className="absolute inset-x-0 top-0 flex flex-col items-center justify-center text-center px-5" style={{ height: 104 }}>
-          <p className="text-[17px] font-extrabold" style={{ color: TEXT }}>사장줍줍을 종료할까요?</p>
+          <p className="text-[17px] font-extrabold" style={{ color: TEXT }}>받아가게를 종료할까요?</p>
           <p className="text-[12.5px] mt-1 break-keep" style={{ color: MUTED }}>마감 알림은 앱을 닫아도 그대로 와요</p>
         </div>
         {/* 광고 자리 (광고는 이 위에 따로 떠요) */}
@@ -1371,12 +1371,12 @@ async function shareProgram(p) {
   const d = getDday(p.deadline);
   const when = p.recurring ? "상시접수" : d < 0 ? "접수 마감" : `마감 ${p.deadline} (D-${d})`;
   const text = [
-    `[사장줍줍] ${p.name}`,
+    `[받아가게] ${p.name}`,
     `· 지역: ${regionLabel(p)}`,
     `· 지원: ${p.amountLabel}`,
     `· 접수: ${when}`,
     "",
-    "자세한 조건은 사장줍줍에서 확인하세요 👇",
+    "자세한 조건은 받아가게에서 확인하세요 👇",
   ].join("\n");
   const url = "https://sosanggongin.vercel.app";
   try {
@@ -3981,7 +3981,7 @@ function CalcNotice({ tone = "red", children }) {
 function CalcResultCard({ rows, title = "계산 결과" }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
-    const text = [`[사장줍줍 계산기] ${title}`, ...rows.map((r) => `· ${r.label}: ${r.value}`)].join("\n");
+    const text = [`[받아가게 계산기] ${title}`, ...rows.map((r) => `· ${r.label}: ${r.value}`)].join("\n");
     if (await copyText(text)) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
@@ -4961,7 +4961,7 @@ export default function App() {
       let perm = await LocalNotifications.checkPermissions();
       if (perm.display !== "granted") perm = await LocalNotifications.requestPermissions();
       if (perm.display === "granted") return true;
-      alert("알림 권한이 꺼져 있어요. 휴대폰 설정 → 애플리케이션 → 사장줍줍 → 알림에서 허용해 주세요.");
+      alert("알림 권한이 꺼져 있어요. 휴대폰 설정 → 애플리케이션 → 받아가게 → 알림에서 허용해 주세요.");
       return false;
     } catch (e) {
       return true;
@@ -5291,7 +5291,7 @@ export default function App() {
         <p className="text-[11px] mb-5 mt-2 px-1 leading-relaxed" style={{ color: MUTED }}>
           {Capacitor.isNativePlatform()
             ? "휴대폰 절전 상태에 따라 알림이 몇 분~1시간 늦게 올 수 있어요."
-            : "알림은 사장줍줍 앱(안드로이드)에서만 받을 수 있어요."}
+            : "알림은 받아가게 앱(안드로이드)에서만 받을 수 있어요."}
         </p>
       </Shell>
     );
@@ -5454,7 +5454,7 @@ export default function App() {
         <div className="relative z-10">
           <p className="text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.95)" }}>{callName}, 안녕하세요 👋</p>
           <h1 className="font-black mt-1 whitespace-nowrap" style={{ color: "white", fontSize: 21, lineHeight: 1.4, letterSpacing: "-0.03em" }}>
-            받을 혜택, 오늘도 줍줍!
+            받을 혜택, 받아가게!
           </h1>
         </div>
         {/* 안내용 표시 — 목록은 아래 '소상공인 지원금' 카드로 들어가요 */}
@@ -6070,7 +6070,7 @@ export default function App() {
             ))}
           </div>
 
-          <p className="text-[11.5px] text-center mt-8" style={{ color: MUTED }}>사장줍줍 v1.0</p>
+          <p className="text-[11.5px] text-center mt-8" style={{ color: MUTED }}>받아가게 v1.0</p>
           <p className="text-[11px] text-center mt-1 leading-relaxed" style={{ color: MUTED }}>정부·공공기관의 공식 앱이 아닌 민간 정보 서비스예요</p>
         </>
       )}
@@ -6223,7 +6223,7 @@ function TermsOfServiceScreen({ onBack }) {
     {
       title: "제1조 (목적)",
       body:
-        "이 약관은 사장줍줍(이하 '이 앱')가 제공하는 서비스의 이용 조건과 절차, 이용자와 운영자의 권리·의무 및 책임사항을 정하는 것을 목적으로 해요.",
+        "이 약관은 받아가게(이하 '이 앱')가 제공하는 서비스의 이용 조건과 절차, 이용자와 운영자의 권리·의무 및 책임사항을 정하는 것을 목적으로 해요.",
     },
     {
       title: "제2조 (서비스의 성격)",

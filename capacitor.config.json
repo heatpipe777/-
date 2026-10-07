@@ -1,5 +1,9 @@
 {
   "appId": "com.goldenarchivew.sosanggongin",
-  "appName": "사장줍줍",
-  "webDir": "dist"
+  "appName": "받아가게",
+  "webDir": "dist",
+  "backgroundColor": "#FFF7E8",
+  "android": {
+    "backgroundColor": "#FFF7E8"
+  }
 }
