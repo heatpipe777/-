@@ -41,7 +41,9 @@ fi
 if [ $BUILD = 1 ]; then
   echo "▶ 빌드"
   (cd "$PROJ" && npm run android:sync 2>&1 | grep -iE "error|built in" ) || true
-  (cd "$PROJ/android" && ./gradlew.bat assembleDebug -q 2>&1 | grep -iE "error|failed" ) && { echo "빌드 실패"; exit 1; } || true
+  # Gradle 백그라운드 프로그램이 출력 창을 잡고 있지 않게 결과를 파일로 받아요
+  (cd "$PROJ/android" && ./gradlew.bat assembleDebug -q > "$TEMP/badagage_gradle.log" 2>&1 < /dev/null)
+  grep -iE "error|failed" "$TEMP/badagage_gradle.log" && { echo "빌드 실패"; exit 1; }
 fi
 for i in $(seq 1 60); do SERIAL=$(find_emu); [ -n "$SERIAL" ] && break; sleep 5; done
 [ -z "$SERIAL" ] && { echo "Pixel_Test를 찾지 못했어요"; exit 1; }

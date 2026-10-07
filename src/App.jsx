@@ -396,11 +396,11 @@ const NEWS = [
   },
 ];
 // ---- 광고 (AdMob) ----
-// ★ AdMob 계정을 만들면 아래 두 값만 바꾸면 돼요 (지금은 구글 공식 테스트 번호 → "Test Ad"가 보여요)
-//   1) 광고 단위 ID: BANNER_AD_ID  2) 앱 ID: android/app/src/main/res/values/strings.xml 의 admob_app_id
-//   진짜 번호로 바꾸면 AD_TESTING을 false로
-const BANNER_AD_ID = "ca-app-pub-3940256099942544/9214589741";
-const AD_TESTING = true;
+// AdMob 광고 단위 (앱 ID는 android/app/src/main/res/values/strings.xml 의 admob_app_id)
+// 에뮬레이터는 구글이 자동으로 테스트 광고를 보여줘요. 실제 폰으로 볼 때는 광고를 절대 누르지 마세요(부정 클릭).
+const BANNER_AD_ID = "ca-app-pub-9653756747871964/9870276186"; // 하단 배너
+const EXIT_AD_ID = "ca-app-pub-9653756747871964/7335612181"; // 종료 창
+const AD_TESTING = false;
 // 배너를 넣지 않는 화면: 하단 탭이 있는 화면(home)과 약관·개인정보처리방침
 const NO_AD_VIEWS = ["home", "privacy", "terms"];
 let adReady = null; // 광고 초기화는 앱이 켜질 때 한 번만
@@ -566,7 +566,7 @@ function ExitDialog({ onCancel, onExit }) {
         await removeAd(); // 숨겨 둔 하단 배너가 있으면 치워요
         if (cancelled) return;
         adState.kind = "exit";
-        await AdMob.showBanner({ adId: BANNER_AD_ID, adSize: BannerAdSize.MEDIUM_RECTANGLE, position: BannerAdPosition.CENTER, margin: 0, isTesting: AD_TESTING });
+        await AdMob.showBanner({ adId: EXIT_AD_ID, adSize: BannerAdSize.MEDIUM_RECTANGLE, position: BannerAdPosition.CENTER, margin: 0, isTesting: AD_TESTING });
         if (cancelled) await removeAd();
       } catch (e) {
         adState.kind = null;
