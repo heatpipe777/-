@@ -34,8 +34,8 @@ if (Capacitor.isNativePlatform()) {
 const hideIntro = () => {
   const el = document.getElementById("intro");
   if (!el) return;
-  // 휴대폰 시작 화면에 가려져 있던 시간도 있으니, 앱이 준비된 뒤에도 최소 1.3초는 보여줘요
-  const wait = Math.max(1300, 1800 - (performance.now() - (window.__introStart || 0)));
+  // 휴대폰 시작 화면에 가려져 있던 시간도 있으니, 앱이 준비된 뒤에도 최소 2초는 보여줘요 (이름·소개 화면에 비중)
+  const wait = Math.max(2000, 2600 - (performance.now() - (window.__introStart || 0)));
   setTimeout(() => {
     el.classList.add("hide");
     setTimeout(() => el.remove(), 400);

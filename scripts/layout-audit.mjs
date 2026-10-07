@@ -175,7 +175,21 @@ if (await evaluate(`document.body.innerText.includes("어떻게 불러드릴까�
   await evaluate(`__audit.click("건너뛰기")`);
   await sleep(900);
 }
-for (const sc of SCREENS) {
+// 바뀐 화면만 점검: AUDIT_ONLY="계산기,MY" (이름 일부만 써도 돼요)
+// 앞 화면에 이어서 들어가는 화면은, 홈에서 시작하는 화면까지 거슬러 올라가 함께 지나가요(점검 결과는 고른 것만)
+const only = (process.env.AUDIT_ONLY || "").split(",").map((x) => x.trim()).filter(Boolean);
+const picked = new Set();
+if (only.length) {
+  SCREENS.forEach((sc, i) => {
+    if (!only.some((o) => sc.name.includes(o))) return;
+    let k = i;
+    while (k > 0 && SCREENS[k].steps[0]?.[0] !== "home") k--;
+    for (let x = k; x <= i; x++) picked.add(x);
+  });
+}
+const wanted = (sc) => !only.length || only.some((o) => sc.name.includes(o));
+for (const [idx, sc] of SCREENS.entries()) {
+  if (only.length && !picked.has(idx)) continue;
   for (const [kind, arg] of sc.steps) {
     if (kind === "home") {
       // 뒤로가기 버튼을 여러 번 눌러 홈으로
@@ -194,7 +208,7 @@ for (const sc of SCREENS) {
   await evaluate(HELPERS);
   // 도구 검증용: AUDIT_SELFTEST=1이면 끝 여백을 일부러 지우고 검사해요 (잘림을 잡아내야 정상)
   if (process.env.AUDIT_SELFTEST) await evaluate(`document.querySelectorAll("[data-scroll-end]").forEach((e) => e.remove()); true`);
-  results.push(await evaluate(`__audit.check(${JSON.stringify(sc.name)})`));
+  if (wanted(sc)) results.push(await evaluate(`__audit.check(${JSON.stringify(sc.name)})`));
 }
 ws.close();
 
