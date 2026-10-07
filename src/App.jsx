@@ -50,6 +50,7 @@ import {
   Sparkles,
   Hourglass,
   CalendarX,
+  Star,
 } from "lucide-react";
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import { AdMob, BannerAdPosition, BannerAdSize, BannerAdPluginEvents } from "@capacitor-community/admob";
@@ -467,7 +468,14 @@ function useBottomBanner(show) {
 // 앱 종료 확인 창 — 가운데 광고(300x250), 광고와 버튼은 충분히 띄워서 실수로 누르지 않게 해요
 const EXIT_AD_W = 300;
 const EXIT_AD_H = 250;
-function ExitDialog({ onCancel, onExit }) {
+// Play 스토어 앱 페이지 (리뷰 남기기) — 출시 전에는 "찾을 수 없음"으로 보여요
+const STORE_WEB_URL = "https://play.google.com/store/apps/details?id=com.goldenarchivew.sosanggongin";
+const openStoreReview = () => {
+  // 앱에서는 이 주소를 열면 Play 스토어 앱으로 바로 가요 (Play 스토어가 없는 기기는 브라우저로)
+  if (Capacitor.isNativePlatform()) window.location.href = STORE_WEB_URL;
+  else window.open(STORE_WEB_URL, "_blank");
+};
+function ExitDialog({ onCancel, onExit, onReview }) {
   const native = Capacitor.isNativePlatform();
   useEffect(() => {
     if (!native) return;
@@ -509,12 +517,16 @@ function ExitDialog({ onCancel, onExit }) {
         >
           <span className="text-[11px]" style={{ color: "#B5BAC8" }}>{native ? "광고" : ""}</span>
         </div>
+        {/* 나가기 · 취소 · 리뷰하기 */}
         <div className="absolute inset-x-0 bottom-0 flex gap-2 px-4 pb-4" style={{ height: 76, alignItems: "flex-end" }}>
-          <button onClick={onCancel} className="flex-1 py-3.5 rounded-2xl text-[14.5px] font-bold" style={{ background: "#F1F3F8", color: TEXT }}>
-            계속 이용
+          <button onClick={onExit} className="flex-1 min-w-0 py-3.5 rounded-2xl text-[14px] font-bold whitespace-nowrap" style={{ background: "#F1F3F8", color: MUTED }}>
+            나가기
           </button>
-          <button onClick={onExit} className="flex-1 py-3.5 rounded-2xl text-[14.5px] font-bold" style={BTN_PRIMARY}>
-            종료하기
+          <button onClick={onCancel} className="flex-1 min-w-0 py-3.5 rounded-2xl text-[14px] font-bold whitespace-nowrap" style={{ background: "#F1F3F8", color: TEXT }}>
+            취소
+          </button>
+          <button onClick={onReview} className="flex-1 min-w-0 py-3.5 rounded-2xl text-[14px] font-bold whitespace-nowrap flex items-center justify-center gap-1" style={BTN_PRIMARY}>
+            <Star size={14} fill="white" strokeWidth={0} /> 리뷰하기
           </button>
         </div>
       </div>
@@ -5985,6 +5997,10 @@ export default function App() {
       {exitOpen && (
         <ExitDialog
           onCancel={() => setExitOpen(false)}
+          onReview={() => {
+            setExitOpen(false);
+            openStoreReview();
+          }}
           onExit={async () => {
             await removeAd();
             CapApp.exitApp();
