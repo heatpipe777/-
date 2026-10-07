@@ -52,6 +52,7 @@ import {
   CalendarX,
 } from "lucide-react";
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
+import { AdMob, BannerAdPosition, BannerAdSize, BannerAdPluginEvents } from "@capacitor-community/admob";
 import { App as CapApp } from "@capacitor/app";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Share } from "@capacitor/share";
@@ -393,6 +394,63 @@ const NEWS = [
     url: "https://www.bizinfo.go.kr/web/lay1/bbs/S1T122C128/AS/74/view.do?pblancId=PBLN_000000000117021",
   },
 ];
+// ---- 광고 (AdMob) ----
+// ★ AdMob 계정을 만들면 아래 두 값만 바꾸면 돼요 (지금은 구글 공식 테스트 번호 → "Test Ad"가 보여요)
+//   1) 광고 단위 ID: BANNER_AD_ID  2) 앱 ID: android/app/src/main/res/values/strings.xml 의 admob_app_id
+//   진짜 번호로 바꾸면 AD_TESTING을 false로
+const BANNER_AD_ID = "ca-app-pub-3940256099942544/9214589741";
+const AD_TESTING = true;
+// 배너를 넣지 않는 화면: 하단 탭이 있는 화면(home)과 약관·개인정보처리방침
+const NO_AD_VIEWS = ["home", "privacy", "terms"];
+let adReady = null; // 광고 초기화는 앱이 켜질 때 한 번만
+const initAds = () =>
+  (adReady ||= AdMob.initialize({ initializeForTesting: AD_TESTING }).catch(() => {
+    adReady = null;
+  }));
+// 하단 배너 보이기/숨기기 — 배너 높이만큼 화면 아래 여백을 늘려서 내용이 가려지지 않게 해요
+function useBottomBanner(show) {
+  const shown = useRef(false);
+  const created = useRef(false);
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const sub = AdMob.addListener(BannerAdPluginEvents.SizeChanged, (size) => {
+      const h = shown.current ? Math.round(size?.height || 0) : 0;
+      // 배너와 화면 내용 사이 24px 띄워서 실수로 누르지 않게 해요 (AdMob 실수 클릭 정책)
+      document.body.style.paddingBottom = h ? `${h + 24}px` : "";
+    });
+    return () => {
+      sub.then((x) => x.remove());
+    };
+  }, []);
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        if (show) {
+          await initAds();
+          if (cancelled) return;
+          shown.current = true;
+          if (!created.current) {
+            created.current = true;
+            await AdMob.showBanner({ adId: BANNER_AD_ID, adSize: BannerAdSize.ADAPTIVE_BANNER, position: BannerAdPosition.BOTTOM_CENTER, margin: 0, isTesting: AD_TESTING });
+          } else await AdMob.resumeBanner();
+        } else if (created.current) {
+          shown.current = false;
+          document.body.style.paddingBottom = "";
+          await AdMob.hideBanner();
+        }
+      } catch (e) {
+        // 광고를 못 불러와도 앱은 그대로 써요
+        if (show) created.current = false;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [show]);
+}
+
 // 중기부 보도자료 RSS — 최신 20건 중 소상공인 관련만 보여줘요 (앱에서는 네이티브 통신이라 사이트 제한 없이 받아요)
 const MSS_RSS_URL = "https://www.mss.go.kr/rss/smba/board/86.do";
 const MSS_LIST_URL = "https://www.mss.go.kr/site/smba/ex/bbs/List.do?cbIdx=86";
@@ -4848,6 +4906,8 @@ export default function App() {
 
   // 입력창에 포커스(키보드 올라옴) 중에는 하단 탭바를 숨겨서 키보드 위로 떠오르지 않게 해요
   const [typing, setTyping] = useState(false);
+  // 하단 탭이 없는 화면에만 광고 배너 (키보드가 올라와 있을 때는 숨겨요)
+  useBottomBanner(!NO_AD_VIEWS.includes(screen.view) && !typing);
   useEffect(() => {
     const isField = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA");
     const onIn = (e) => isField(e.target) && setTyping(true);
@@ -5912,7 +5972,7 @@ export default function App() {
 // 웹 버전(public/privacy.html)과 내용·이메일·시행일을 맞춰 둘 것
 function PrivacyPolicyScreen({ onBack }) {
   const CONTACT_EMAIL = "heatpipe777@gmail.com";
-  const EFFECTIVE_DATE = "2026-10-06";
+  const EFFECTIVE_DATE = "2026-10-07";
   const sections = [
     {
       title: "1. 수집하는 개인정보 항목",
@@ -5930,20 +5990,25 @@ function PrivacyPolicyScreen({ onBack }) {
         "환율 정보 표시를 위해 공개 환율 API(open.er-api.com)를, 지도 표시를 위해 OpenStreetMap을, 뉴스 대표 사진 표시를 위해 각 기사 원문 사이트를, 최신 보도자료 목록을 위해 중소벤처기업부 RSS(mss.go.kr)를 호출해요. 이 요청에는 개인을 식별할 수 있는 정보가 포함되지 않아요.",
     },
     {
-      title: "4. 개인정보의 제3자 제공",
-      body: "이 앱은 어떤 개인정보도 수집하지 않으므로, 제3자에게 제공하거나 판매하지 않아요.",
+      title: "4. 광고",
+      body:
+        "무료로 운영하기 위해 Google AdMob 광고를 보여줘요. 이때 Google이 광고 ID, 기기 정보, IP 주소(대략적인 위치), 광고 노출·클릭 기록을 광고 표시·성과 측정·부정 클릭 방지에 이용할 수 있어요. 운영자는 이 정보를 받거나 저장하지 않아요. 휴대폰 설정 → Google → 광고에서 광고 ID를 삭제하거나 재설정할 수 있어요.",
     },
     {
-      title: "5. 이용자의 권리",
+      title: "5. 개인정보의 제3자 제공",
+      body: "이 앱은 개인정보를 수집하지 않으므로, 제3자에게 제공하거나 판매하지 않아요. 광고를 위해 Google이 직접 수집하는 정보에는 Google의 개인정보처리방침이 적용돼요.",
+    },
+    {
+      title: "6. 이용자의 권리",
       body:
         "기기에 저장된 즐겨찾기·설정 정보는 앱 내 초기화 기능이나 브라우저 설정에서 언제든지 직접 삭제할 수 있어요.",
     },
     {
-      title: "6. 문의처",
+      title: "7. 문의처",
       body: `개인정보 관련 문의사항은 아래 이메일로 연락해주세요.\n${CONTACT_EMAIL}`,
     },
     {
-      title: "7. 시행일자",
+      title: "8. 시행일자",
       body: `이 개인정보처리방침은 ${EFFECTIVE_DATE}부터 적용돼요. 내용이 변경되는 경우 앱 내 공지를 통해 안내할게요.`,
     },
   ];

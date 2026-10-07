@@ -8,7 +8,7 @@
 const PORT = process.env.AUDIT_PORT || 9333;
 
 const pages = await (await fetch(`http://127.0.0.1:${PORT}/json`)).json();
-const page = pages.find((p) => p.type === "page");
+const page = pages.find((p) => p.type === "page" && p.url.startsWith("https://localhost"));
 if (!page) throw new Error("앱 화면을 찾지 못했어요. 앱이 켜져 있는지 확인하세요.");
 
 const ws = new WebSocket(page.webSocketDebuggerUrl);
