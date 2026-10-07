@@ -32,11 +32,14 @@ find_emu() {
   return 0
 }
 
-# 1) 빌드 (에뮬레이터 켜는 동안 같이)
+# adb 서버가 이 창의 출력을 붙잡지 않게 먼저 따로 띄워요
+$ADB start-server </dev/null >/dev/null 2>&1
+
+# 1) 빌드 (에뮬레이터 켜는 동안 같이) — 빠른 부팅(스냅샷) 사용: 끌 때 상태 저장, 다음에 몇 초 만에 켜짐
 SERIAL=$(find_emu)
 if [ -z "$SERIAL" ]; then
   echo "▶ Pixel_Test 켜는 중"
-  (cd /c/Users/미미 && ANDROID_AVD_HOME="C:/Android/avd" nohup /c/Android/Sdk/emulator/emulator.exe -avd Pixel_Test -no-snapshot -no-boot-anim >/dev/null 2>&1 &)
+  (cd /c/Users/미미 && ANDROID_AVD_HOME="C:/Android/avd" nohup /c/Android/Sdk/emulator/emulator.exe -avd Pixel_Test -no-boot-anim -gpu host </dev/null >/dev/null 2>&1 &)
 fi
 if [ $BUILD = 1 ]; then
   echo "▶ 빌드"

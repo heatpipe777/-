@@ -57,7 +57,6 @@ import { AdMob, BannerAdPosition, BannerAdSize, BannerAdPluginEvents } from "@ca
 import { App as CapApp } from "@capacitor/app";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Share } from "@capacitor/share";
-import tileAllImg from "./assets/home-tiles/all.webp";
 import catEmploy from "./assets/cat/employ.webp";
 import catFixed from "./assets/cat/fixed.webp";
 import catEnergy from "./assets/cat/energy.webp";
@@ -96,7 +95,6 @@ import calc_cardfeeImg from "./assets/calc/cardfee.webp";
 import calc_minwageImg from "./assets/calc/minwage.webp";
 import tileCenterImg from "./assets/home-tiles/center.webp";
 import tileExchangeImg from "./assets/home-tiles/exchange.webp";
-import tileNewsImg from "./assets/home-tiles/news.webp";
 import toolTaxImg from "./assets/home-tiles/tool-tax-icon.webp";
 import toolFaqImg from "./assets/home-tiles/tool-faq-icon.webp";
 import toolDocsImg from "./assets/home-tiles/tool-docs-icon.webp";
@@ -5574,14 +5572,12 @@ export default function App() {
         )}
       </div>
 
-      {/* 많이 찾는 서비스 */}
+      {/* 많이 찾는 서비스 — 지원금·뉴스는 하단 탭에 있어서 여기엔 탭에 없는 것만 */}
       <p className="text-[16px] font-bold mb-2.5" style={{ color: TEXT }}>많이 찾는 서비스</p>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 gap-3 mb-6">
         {[
-          { key: "all", label: "소상공인\n지원금", bg: "#FDEEDC", img: tileAllImg, onClick: () => { setStatusFilter("available"); setHomeScreen("list"); } },
           { key: "center", label: "지역센터\n찾기", bg: "#FCEAF3", img: tileCenterImg, onClick: () => setScreen({ view: "centers" }) },
           { key: "exchange", label: "금리·환율\n정보", bg: "#E7F7EF", img: tileExchangeImg, onClick: () => setScreen({ view: "exchange" }) },
-          { key: "news", label: "정책뉴스\n확인", bg: "#F1ECFC", img: tileNewsImg, onClick: () => setMainTab("news") },
         ].map((tile) => (
           <button
             key={tile.key}
@@ -6085,7 +6081,7 @@ export default function App() {
             <span className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-[22px]" style={{ background: "#FFE7B3" }}>📣</span>
             <span className="flex-1 min-w-0">
               <span className="block text-[14.5px] font-bold" style={{ color: TEXT }}>동료 사장님께 알려주기</span>
-              <span className="block text-[12px] break-keep" style={{ color: MUTED }}>카카오톡·문자로 받아가게를 추천해요</span>
+              <span className="block text-[12px] break-keep" style={{ color: MUTED }}>카카오톡·문자 등으로 받아가게를 추천해요</span>
             </span>
             <Share2 size={17} color="#C98A0B" className="shrink-0" />
           </button>
