@@ -409,7 +409,7 @@ const initAds = () =>
     adReady = null;
   }));
 // 광고는 화면에 한 개만 — 지금 떠 있는 광고 종류: null | "bottom"(하단 배너) | "exit"(종료 창)
-const adState = { kind: null, hidden: false };
+const adState = { kind: null, size: null, hidden: false };
 const removeAd = async () => {
   if (!adState.kind) return;
   adState.kind = null;
@@ -421,11 +421,13 @@ const removeAd = async () => {
   }
 };
 // 하단 배너 보이기/숨기기 — 배너 높이만큼 화면 아래 여백을 늘려서 내용이 가려지지 않게 해요
-function useBottomBanner(show) {
+// size: "banner"(얇은 하단 배너) | "rect"(아래 빈 공간이 넉넉한 화면용 300x250) | null(숨김)
+function useBottomBanner(size) {
+  const show = !!size;
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const sub = AdMob.addListener(BannerAdPluginEvents.SizeChanged, (size) => {
-      const h = adState.kind === "bottom" && !adState.hidden ? Math.round(size?.height || 0) : 0;
+      const h = adState.kind === "bottom" && !adState.hidden ? Math.round(size?.height || 0) + (adState.size === "rect" ? 16 : 0) : 0;
       // 배너와 화면 내용 사이 24px 띄워서 실수로 누르지 않게 해요 (AdMob 실수 클릭 정책)
       document.body.style.paddingBottom = h ? `${h + 24}px` : "";
     });
@@ -441,13 +443,22 @@ function useBottomBanner(show) {
         if (show) {
           await initAds();
           if (cancelled || adState.kind === "exit") return;
-          if (adState.kind === "bottom") {
+          if (adState.kind === "bottom" && adState.size === size) {
             adState.hidden = false;
             await AdMob.resumeBanner();
           } else {
+            if (adState.kind === "bottom") await removeAd(); // 크기가 바뀌면 새로 띄워요
+            if (cancelled) return;
             adState.kind = "bottom";
+            adState.size = size;
             adState.hidden = false;
-            await AdMob.showBanner({ adId: BANNER_AD_ID, adSize: BannerAdSize.ADAPTIVE_BANNER, position: BannerAdPosition.BOTTOM_CENTER, margin: 0, isTesting: AD_TESTING });
+            await AdMob.showBanner({
+              adId: BANNER_AD_ID,
+              adSize: size === "rect" ? BannerAdSize.MEDIUM_RECTANGLE : BannerAdSize.ADAPTIVE_BANNER,
+              position: BannerAdPosition.BOTTOM_CENTER,
+              margin: size === "rect" ? 16 : 0,
+              isTesting: AD_TESTING,
+            });
           }
         } else if (adState.kind === "bottom" && !adState.hidden) {
           adState.hidden = true;
@@ -462,7 +473,7 @@ function useBottomBanner(show) {
     return () => {
       cancelled = true;
     };
-  }, [show]);
+  }, [size]);
 }
 
 // 앱 종료 확인 창 — 가운데 광고(300x250), 광고와 버튼은 충분히 띄워서 실수로 누르지 않게 해요
@@ -4491,7 +4502,7 @@ const CALC_TIPS = {
 };
 const CALC_TAB_KEY = "calcTab";
 
-function CalculatorToolkit({ onBack, initialTab }) {
+function CalculatorToolkit({ onBack, initialTab, onOpenChange }) {
   // 마지막으로 쓴 계산기 (목록에 '최근' 표시)
   const [lastTab, setLastTab] = useState(() => {
     try {
@@ -4503,6 +4514,10 @@ function CalculatorToolkit({ onBack, initialTab }) {
   });
   // 지금 열려 있는 계산기 (없으면 목록) — 다른 화면에서 특정 계산기로 바로 들어오면 그 계산기부터
   const [open, setOpen] = useState(initialTab || null);
+  useEffect(() => {
+    onOpenChange?.(!!open);
+    return () => onOpenChange?.(false);
+  }, [open]);
   const direct = useRef(!!initialTab);
   const listScroll = useRef(0);
   const openCalc = (k) => {
@@ -5098,7 +5113,9 @@ export default function App() {
     recordAppOpen();
   }, []);
   // 하단 탭이 없는 화면에만 광고 배너 (키보드가 올라와 있을 때는 숨겨요)
-  useBottomBanner(!NO_AD_VIEWS.includes(screen.view) && !typing);
+  const [calcOpen, setCalcOpen] = useState(false);
+  // 계산기 목록은 아래가 많이 비어서 큰 광고, 그 밖의 화면은 얇은 하단 배너
+  useBottomBanner(NO_AD_VIEWS.includes(screen.view) || typing ? null : screen.view === "calculator" && !calcOpen ? "rect" : "banner");
   useEffect(() => {
     const isField = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA");
     const onIn = (e) => isField(e.target) && setTyping(true);
@@ -5362,7 +5379,7 @@ export default function App() {
   if (screen.view === "calculator") {
     return (
       <Shell>
-        <CalculatorToolkit key={screen.tab || "list"} initialTab={screen.tab} onBack={() => setScreen({ view: screen.from || "home" })} />
+        <CalculatorToolkit key={screen.tab || "list"} initialTab={screen.tab} onOpenChange={setCalcOpen} onBack={() => setScreen({ view: screen.from || "home" })} />
       </Shell>
     );
   }

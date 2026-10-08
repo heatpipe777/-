@@ -59,7 +59,8 @@ if [ $BUILD = 1 ]; then $ADB install -r "$PROJ/android/app/build/outputs/apk/deb
 connect() {
   s am force-stop $PKG; s monkey -p $PKG 1 >/dev/null 2>&1; sleep 12
   local S=$(s cat /proc/net/unix | grep -o "webview_devtools_remote_[0-9]*" | tail -1)
-  $ADB forward --remove-all; $ADB forward tcp:9333 localabstract:$S >/dev/null
+  # 받아가게 전용 포트 9444 (다른 작업방은 9333 — 건드리지 않아요)
+  $ADB forward --remove tcp:9444 >/dev/null 2>&1; $ADB forward tcp:9444 localabstract:$S >/dev/null
 }
 connect
 echo "▶ 실행 완료 ($SERIAL)"

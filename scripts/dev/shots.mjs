@@ -8,7 +8,7 @@ const adb = (a) => execSync(`"${ADB}" ${a}`, { cwd: "C:/Users/미미", env: { ..
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function connect() {
-  const pages = await (await fetch("http://127.0.0.1:9333/json")).json();
+  const pages = await (await fetch("http://127.0.0.1:9444/json")).json();
   const page = pages.find((p) => p.type === "page" && p.url.startsWith("https://localhost"));
   const ws = new WebSocket(page.webSocketDebuggerUrl);
   await new Promise((r) => ws.addEventListener("open", r, { once: true }));

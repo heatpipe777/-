@@ -3,9 +3,9 @@
 // ① 화면 밖으로 삐져나간 요소 ② 옆으로 넘기는 줄의 마지막 칸이 잘리는지 ③ 말줄임 없이 잘린 글자를 찾아요.
 //
 // 사용법 (프로젝트 폴더 밖에서 adb 실행):
-//   adb forward tcp:9333 localabstract:webview_devtools_remote_<번호>
+//   adb forward tcp:9444 localabstract:webview_devtools_remote_<번호>
 //   node scripts/layout-audit.mjs
-const PORT = process.env.AUDIT_PORT || 9333;
+const PORT = process.env.AUDIT_PORT || 9444; // 받아가게 전용 포트 (다른 작업방은 9333 사용)
 
 const pages = await (await fetch(`http://127.0.0.1:${PORT}/json`)).json();
 const page = pages.find((p) => p.type === "page" && p.url.startsWith("https://localhost"));

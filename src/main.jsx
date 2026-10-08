@@ -50,7 +50,10 @@ const hideIntro = async () => {
   await introShown;
   setTimeout(() => {
     el.classList.add("hide");
-    setTimeout(() => el.remove(), 400);
+    setTimeout(() => {
+      el.remove();
+      document.documentElement.style.background = "#FFFFFF"; // 시작 때만 크림색, 이후엔 흰 배경
+    }, 400);
   }, 2000);
 };
 
