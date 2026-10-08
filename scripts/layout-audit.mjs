@@ -198,7 +198,6 @@ for (const [idx, sc] of SCREENS.entries()) {
         if (!ok) break;
         await sleep(400);
       }
-      await evaluate(`__audit.click("홈")`);
     } else {
       const ok = await evaluate(`__audit.click(${JSON.stringify(arg)})`);
       if (!ok) results.push({ screen: sc.name, issues: [{ type: "이동 실패", el: arg }] });

@@ -401,8 +401,8 @@ const NEWS = [
 const BANNER_AD_ID = "ca-app-pub-9653756747871964/9870276186"; // 하단 배너
 const EXIT_AD_ID = "ca-app-pub-9653756747871964/7335612181"; // 종료 창
 const AD_TESTING = false;
-// 배너를 넣지 않는 화면: 하단 탭이 있는 화면(home)과 약관·개인정보처리방침
-const NO_AD_VIEWS = ["home", "privacy", "terms"];
+// 배너를 넣지 않는 화면: 약관·개인정보처리방침 (하단 탭은 없앴어요)
+const NO_AD_VIEWS = ["privacy", "terms"];
 let adReady = null; // 광고 초기화는 앱이 켜질 때 한 번만
 const initAds = () =>
   (adReady ||= AdMob.initialize({ initializeForTesting: AD_TESTING }).catch(() => {
@@ -5463,6 +5463,24 @@ export default function App() {
       <>
       {homeScreen === "hub" ? (
         <>
+      {/* 맨 위: 앱 이름 + 즐겨찾기·MY (하단 탭 대신) */}
+      <div className="flex items-center gap-2 -mt-2 mb-3">
+        <img src="/icons/icon-192.png" alt="" className="w-8 h-8 rounded-[10px]" />
+        <p className="flex-1 text-[19px] font-black" style={{ color: TEXT, letterSpacing: "-0.04em" }}>
+          받아<span style={{ color: "#F07A12" }}>가게</span>
+        </p>
+        <button onClick={() => setMainTab("favorites")} aria-label="즐겨찾기" className="relative w-10 h-10 rounded-full flex items-center justify-center active:bg-[#F3F5FA]">
+          <Heart size={23} color={TEXT} strokeWidth={2} />
+          {favCount > 0 && (
+            <span className="absolute top-0.5 right-0 min-w-[17px] h-[17px] px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center tabular-nums" style={{ background: RED, boxShadow: "0 0 0 2px white" }}>
+              {favCount > 99 ? "99+" : favCount}
+            </span>
+          )}
+        </button>
+        <button onClick={() => setMainTab("my")} aria-label="MY" className="w-10 h-10 rounded-full flex items-center justify-center active:bg-[#F3F5FA]">
+          <User size={23} color={TEXT} strokeWidth={2} />
+        </button>
+      </div>
       <div
         className="relative overflow-hidden mb-3 pl-5 pr-4 pt-5 pb-5"
         style={{ background: "linear-gradient(135deg, #6AAEFE 0%, #4E86FA 45%, #3E72F6 100%)", borderRadius: 28, boxShadow: "0 10px 24px rgba(62,114,246,0.25), inset 0 1px 0 rgba(255,255,255,0.35)" }}
@@ -6153,60 +6171,6 @@ export default function App() {
         />
       )}
 
-      {/* Bottom tab bar */}
-      {screen.view !== "detail" && (
-        <>
-          <div style={{ height: 100 }} />
-          {/* 하단 바 뒤를 흰 배경으로 채워서, 스크롤된 내용이 바 주변으로 비치거나 가려 보이지 않게 해요 */}
-          <div
-            className="fixed bottom-0 inset-x-0 flex justify-center px-4 pt-3 pb-3"
-            style={{ zIndex: 50, display: typing ? "none" : undefined, background: "linear-gradient(to bottom, rgba(255,255,255,0) 0, #fff 14px)" }}
-          >
-            <div className="w-full max-w-md md:max-w-xl">
-              {/* 하단 탭바 — 앱 전체 파란 톤에 맞춘 흰 바, 선택된 탭은 파란 아이콘 + 연한 파란 배경 */}
-              <div
-                className="flex rounded-[24px] px-1.5 py-1.5"
-                style={{ background: "rgba(255,255,255,0.96)", border: "1px solid #EEF0F6", boxShadow: "0 8px 28px rgba(40,60,120,0.12)" }}
-              >
-                {[
-                  // 지원금·뉴스는 홈 카드로 들어가요 (탭은 홈·즐겨찾기·MY 3개) — 지원금 목록·뉴스 화면에서는 홈이 켜져 보여요
-                  { key: "home", label: "홈", icon: Home, active: mainTab === "home" || mainTab === "news", go: () => { setMainTab("home"); setHomeScreen("hub"); } },
-                  { key: "favorites", label: "즐겨찾기", icon: Heart, badge: favCount, active: mainTab === "favorites", go: () => setMainTab("favorites") },
-                  { key: "my", label: "MY", icon: User, active: mainTab === "my", go: () => setMainTab("my") },
-                ].map((t) => (
-                  <button
-                    key={t.key}
-                    onClick={t.go}
-                    aria-label={t.label}
-                    className="flex-1 flex flex-col items-center gap-0.5 py-1.5 rounded-[18px] transition-colors"
-                    style={t.active ? { background: BLUE_SOFT } : {}}
-                  >
-                    <span className="relative">
-                      <t.icon
-                        size={20}
-                        color={t.active ? BLUE : "#9AA1B2"}
-                        strokeWidth={t.active ? 2.3 : 1.8}
-                        fill={t.key === "favorites" && t.active ? BLUE : "none"}
-                      />
-                      {t.badge > 0 && (
-                        <span
-                          className="absolute -top-2 -right-3.5 min-w-[16px] h-4 px-1 rounded-full text-[9.5px] font-bold text-white flex items-center justify-center tabular-nums"
-                          style={{ background: RED, boxShadow: "0 0 0 2px white" }}
-                        >
-                          {t.badge > 99 ? "99+" : t.badge}
-                        </span>
-                      )}
-                    </span>
-                    <span className="text-[10.5px]" style={{ color: t.active ? BLUE : "#9AA1B2", fontWeight: t.active ? 700 : 500 }}>
-                      {t.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
     </Shell>
   );
 }

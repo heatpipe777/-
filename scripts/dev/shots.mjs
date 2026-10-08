@@ -60,7 +60,6 @@ const go = async (steps) => {
   for (const s of steps) {
     if (s === "home") {
       for (let i = 0; i < 4; i++) if (!(await click("뒤로가기"))) break; else await sleep(700);
-      await click("홈");
     } else if (s.startsWith("scroll:")) {
       await ev(`window.scrollTo(0, ${s.slice(7)}); true`);
     } else if (s === "diag:on" || s === "diag:off") {
