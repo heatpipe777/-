@@ -53,7 +53,7 @@ import {
   Star,
 } from "lucide-react";
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
-import { AdMob, BannerAdPosition, BannerAdSize, BannerAdPluginEvents } from "@capacitor-community/admob";
+import { AdMob, BannerAdPosition, BannerAdSize, BannerAdPluginEvents, InterstitialAdPluginEvents } from "@capacitor-community/admob";
 import { App as CapApp } from "@capacitor/app";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Share } from "@capacitor/share";
@@ -401,6 +401,8 @@ const NEWS = [
 const BANNER_AD_ID = "ca-app-pub-9653756747871964/9870276186"; // 하단 배너
 const EXIT_AD_ID = "ca-app-pub-9653756747871964/7335612181"; // 종료 창
 const AD_TESTING = false;
+// 전면 광고 단위 — AdMob에서 '전면 광고' 단위를 만들면 번호를 넣어요 (null이면 전면 광고를 쓰지 않아요)
+const INTER_AD_ID = null;
 // 배너를 넣지 않는 화면: 약관·개인정보처리방침 (하단 탭은 없앴어요)
 const NO_AD_VIEWS = ["privacy", "terms"];
 let adReady = null; // 광고 초기화는 앱이 켜질 때 한 번만
@@ -421,6 +423,64 @@ const removeAd = async () => {
   }
 };
 // 하단 배너 보이기/숨기기 — 배너 높이만큼 화면 아래 여백을 늘려서 내용이 가려지지 않게 해요
+// ---- 전면 광고 (맞춤 진단 결과 직전에만) ----
+// 규칙: 처음 쓰는 날은 안 보여요 · 최소 3분 간격 · 하루 최대 5번
+const INTER_KEY = "interAd";
+const INTER_RULE = { gapMs: 3 * 60e3, maxPerDay: 5, minDays: 2 };
+const interAllowed = () => {
+  try {
+    const usedDays = (JSON.parse(localStorage.getItem("reviewAsk") || "{}").days || []).length;
+    if (usedDays < INTER_RULE.minDays) return false;
+    const r = JSON.parse(localStorage.getItem(INTER_KEY) || "{}");
+    const today = formatLocalDate(new Date());
+    const count = r.day === today ? r.count || 0 : 0;
+    return count < INTER_RULE.maxPerDay && Date.now() - (r.last || 0) > INTER_RULE.gapMs;
+  } catch (e) {
+    return false;
+  }
+};
+const recordInter = () => {
+  try {
+    const r = JSON.parse(localStorage.getItem(INTER_KEY) || "{}");
+    const today = formatLocalDate(new Date());
+    localStorage.setItem(INTER_KEY, JSON.stringify({ day: today, count: (r.day === today ? r.count || 0 : 0) + 1, last: Date.now() }));
+  } catch (e) {
+    // 저장 못 해도 괜찮아요
+  }
+};
+let interReady = false;
+// 미리 불러두기 (진단 화면에 들어올 때) — 끝났을 때 바로 보여줄 수 있게
+const prepareInter = async () => {
+  if (!Capacitor.isNativePlatform() || !INTER_AD_ID || interReady || !interAllowed()) return;
+  try {
+    await initAds();
+    await AdMob.prepareInterstitial({ adId: INTER_AD_ID, isTesting: AD_TESTING });
+    interReady = true;
+  } catch (e) {
+    interReady = false;
+  }
+};
+// 준비돼 있으면 보여주고, 사용자가 닫을 때까지 기다려요 (준비 안 됐으면 바로 넘어가요)
+const showInterIfReady = async () => {
+  if (!interReady || !interAllowed()) return;
+  interReady = false;
+  recordInter();
+  await new Promise((resolve) => {
+    let done = false;
+    const handles = [];
+    const finish = () => {
+      if (done) return;
+      done = true;
+      handles.forEach((h) => h.then((x) => x.remove()));
+      resolve();
+    };
+    handles.push(AdMob.addListener(InterstitialAdPluginEvents.Dismissed, finish));
+    handles.push(AdMob.addListener(InterstitialAdPluginEvents.FailedToShow, finish));
+    AdMob.showInterstitial().catch(finish);
+    setTimeout(finish, 90e3); // 혹시 닫힘 신호가 안 와도 멈추지 않게
+  });
+};
+
 // size: "banner"(얇은 하단 배너) | "rect"(아래 빈 공간이 넉넉한 화면용 300x250) | null(숨김)
 function useBottomBanner(size) {
   const show = !!size;
@@ -5114,6 +5174,9 @@ export default function App() {
   }, []);
   // 하단 탭이 없는 화면에만 광고 배너 (키보드가 올라와 있을 때는 숨겨요)
   const [calcOpen, setCalcOpen] = useState(false);
+  useEffect(() => {
+    if (screen.view === "diagnosis") prepareInter();
+  }, [screen.view]);
   // 계산기 목록은 아래가 많이 비어서 큰 광고, 그 밖의 화면은 얇은 하단 배너
   useBottomBanner(NO_AD_VIEWS.includes(screen.view) || typing ? null : screen.view === "calculator" && !calcOpen ? "rect" : "banner");
   useEffect(() => {
@@ -5405,10 +5468,11 @@ export default function App() {
       <Shell>
         <DiagnosisWizard
           onBack={() => setScreen({ view: "home" })}
-          onComplete={(answers) => {
+          onComplete={async (answers) => {
             setDiagnosis(answers);
             if (region === "전체" && answers.region) setRegion(answers.region);
             setStatusFilter("available");
+            await showInterIfReady(); // 결과를 보여주기 직전 (조건이 맞을 때만)
             setScreen({ view: "diagnosisResult" });
           }}
         />
