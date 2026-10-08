@@ -4,6 +4,7 @@ import App from "./App.jsx";
 import "./index.css";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
+import { SplashScreen } from "@capacitor/splash-screen";
 
 // window.storage는 Claude 아티팩트 전용이라, 일반 웹·앱에서는 localStorage로 대신 저장해요
 if (!window.storage) {
@@ -30,16 +31,27 @@ if (Capacitor.isNativePlatform()) {
   });
 }
 
-// 시작 인트로: 이름·소개를 잠깐 보여주고 서서히 사라져요 (한 번만, 반복 효과 없음)
-const hideIntro = () => {
+// 휴대폰 시작 화면(아이콘)은 인트로 그림까지 다 그려진 뒤에 닫아요 → 그 사이 빈 화면이 안 생겨요
+const introShown = (async () => {
+  const img = document.querySelector("#intro img");
+  try {
+    if (img) await img.decode();
+  } catch (e) {
+    // 그림을 못 불러와도 계속
+  }
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  if (Capacitor.isNativePlatform()) await SplashScreen.hide({ fadeOutDuration: 150 }).catch(() => {});
+})();
+
+// 시작 인트로: 이름·소개를 2초 보여주고 서서히 사라져요 (한 번만, 반복 효과 없음)
+const hideIntro = async () => {
   const el = document.getElementById("intro");
   if (!el) return;
-  // 휴대폰 시작 화면에 가려져 있던 시간도 있으니, 앱이 준비된 뒤에도 최소 2초는 보여줘요 (이름·소개 화면에 비중)
-  const wait = Math.max(2000, 2600 - (performance.now() - (window.__introStart || 0)));
+  await introShown;
   setTimeout(() => {
     el.classList.add("hide");
     setTimeout(() => el.remove(), 400);
-  }, wait);
+  }, 2000);
 };
 
 ReactDOM.createRoot(document.getElementById("root")).render(
