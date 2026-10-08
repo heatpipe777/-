@@ -402,7 +402,7 @@ const BANNER_AD_ID = "ca-app-pub-9653756747871964/9870276186"; // 하단 배너
 const EXIT_AD_ID = "ca-app-pub-9653756747871964/7335612181"; // 종료 창
 const AD_TESTING = false;
 // 전면 광고 단위 — AdMob에서 '전면 광고' 단위를 만들면 번호를 넣어요 (null이면 전면 광고를 쓰지 않아요)
-const INTER_AD_ID = null;
+const INTER_AD_ID = "ca-app-pub-9653756747871964/8973922092";
 // 배너를 넣지 않는 화면: 약관·개인정보처리방침 (하단 탭은 없앴어요)
 const NO_AD_VIEWS = ["privacy", "terms"];
 let adReady = null; // 광고 초기화는 앱이 켜질 때 한 번만
