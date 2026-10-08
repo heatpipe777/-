@@ -423,14 +423,20 @@ const removeAd = async () => {
   }
 };
 // 하단 배너 보이기/숨기기 — 배너 높이만큼 화면 아래 여백을 늘려서 내용이 가려지지 않게 해요
-// ---- 전면 광고 (맞춤 진단 결과 직전에만) ----
-// 규칙: 처음 쓰는 날은 안 보여요 · 최소 3분 간격 · 하루 최대 5번
+// ---- 전면 광고 ----
+// 위치: ① 맞춤 진단 결과 직전 ② 지원금 상세를 5개 볼 때마다 (목록으로 돌아올 때)
+// 규칙: 앱을 한 번 켤 때 최대 1번 · 5분 간격 · 하루 최대 2번 · 처음 쓰는 날은 ②만 안 나와요 (진단은 보통 첫날 한 번이라 허용)
+// 출시 후 평점·수익을 보고 숫자만 바꾸면 돼요
 const INTER_KEY = "interAd";
-const INTER_RULE = { gapMs: 3 * 60e3, maxPerDay: 5, minDays: 2 };
-const interAllowed = () => {
+const INTER_RULE = { gapMs: 5 * 60e3, maxPerDay: 2, minDays: 2, detailEvery: 5 };
+let interShownThisSession = false;
+const interAllowed = (kind) => {
+  if (interShownThisSession) return false;
   try {
-    const usedDays = (JSON.parse(localStorage.getItem("reviewAsk") || "{}").days || []).length;
-    if (usedDays < INTER_RULE.minDays) return false;
+    if (kind !== "diag") {
+      const usedDays = (JSON.parse(localStorage.getItem("reviewAsk") || "{}").days || []).length;
+      if (usedDays < INTER_RULE.minDays) return false;
+    }
     const r = JSON.parse(localStorage.getItem(INTER_KEY) || "{}");
     const today = formatLocalDate(new Date());
     const count = r.day === today ? r.count || 0 : 0;
@@ -440,18 +446,30 @@ const interAllowed = () => {
   }
 };
 const recordInter = () => {
+  interShownThisSession = true;
   try {
     const r = JSON.parse(localStorage.getItem(INTER_KEY) || "{}");
     const today = formatLocalDate(new Date());
-    localStorage.setItem(INTER_KEY, JSON.stringify({ day: today, count: (r.day === today ? r.count || 0 : 0) + 1, last: Date.now() }));
+    localStorage.setItem(INTER_KEY, JSON.stringify({ ...r, day: today, count: (r.day === today ? r.count || 0 : 0) + 1, last: Date.now() }));
   } catch (e) {
     // 저장 못 해도 괜찮아요
   }
 };
+// 지원금 상세 본 횟수 (5개마다 한 번 기회)
+const countDetailView = () => {
+  try {
+    const r = JSON.parse(localStorage.getItem(INTER_KEY) || "{}");
+    const n = (r.details || 0) + 1;
+    localStorage.setItem(INTER_KEY, JSON.stringify({ ...r, details: n }));
+    return n;
+  } catch (e) {
+    return 0;
+  }
+};
 let interReady = false;
-// 미리 불러두기 (진단 화면에 들어올 때) — 끝났을 때 바로 보여줄 수 있게
-const prepareInter = async () => {
-  if (!Capacitor.isNativePlatform() || !INTER_AD_ID || interReady || !interAllowed()) return;
+// 미리 불러두기 — 보여줄 순간에 기다림 없이 바로 뜨게
+const prepareInter = async (kind) => {
+  if (!Capacitor.isNativePlatform() || !INTER_AD_ID || interReady || !interAllowed(kind)) return;
   try {
     await initAds();
     await AdMob.prepareInterstitial({ adId: INTER_AD_ID, isTesting: AD_TESTING });
@@ -461,8 +479,8 @@ const prepareInter = async () => {
   }
 };
 // 준비돼 있으면 보여주고, 사용자가 닫을 때까지 기다려요 (준비 안 됐으면 바로 넘어가요)
-const showInterIfReady = async () => {
-  if (!interReady || !interAllowed()) return;
+const showInterIfReady = async (kind) => {
+  if (!interReady || !interAllowed(kind)) return;
   interReady = false;
   recordInter();
   await new Promise((resolve) => {
@@ -5174,8 +5192,22 @@ export default function App() {
   }, []);
   // 하단 탭이 없는 화면에만 광고 배너 (키보드가 올라와 있을 때는 숨겨요)
   const [calcOpen, setCalcOpen] = useState(false);
+  // 전면 광고: 진단 화면에 들어오면 미리 불러두고, 지원금 상세는 5개째에 미리 불러둔 뒤 목록으로 돌아올 때 보여줘요
+  const prevView = useRef(screen.view);
+  const detailInterDue = useRef(false);
   useEffect(() => {
-    if (screen.view === "diagnosis") prepareInter();
+    const prev = prevView.current;
+    prevView.current = screen.view;
+    if (screen.view === "diagnosis") prepareInter("diag");
+    if (screen.view === "detail" && prev !== "detail") {
+      const n = countDetailView();
+      detailInterDue.current = n > 0 && n % INTER_RULE.detailEvery === 0;
+      if (detailInterDue.current) prepareInter("detail");
+    }
+    if (prev === "detail" && screen.view !== "detail" && detailInterDue.current) {
+      detailInterDue.current = false;
+      showInterIfReady("detail");
+    }
   }, [screen.view]);
   // 계산기 목록은 아래가 많이 비어서 큰 광고, 그 밖의 화면은 얇은 하단 배너
   useBottomBanner(NO_AD_VIEWS.includes(screen.view) || typing ? null : screen.view === "calculator" && !calcOpen ? "rect" : "banner");
@@ -5472,7 +5504,7 @@ export default function App() {
             setDiagnosis(answers);
             if (region === "전체" && answers.region) setRegion(answers.region);
             setStatusFilter("available");
-            await showInterIfReady(); // 결과를 보여주기 직전 (조건이 맞을 때만)
+            await showInterIfReady("diag"); // 결과를 보여주기 직전 (조건이 맞을 때만)
             setScreen({ view: "diagnosisResult" });
           }}
         />
