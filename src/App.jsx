@@ -93,7 +93,9 @@ import calc_allowanceImg from "./assets/calc/allowance.webp";
 import calc_severanceImg from "./assets/calc/severance.webp";
 import calc_cardfeeImg from "./assets/calc/cardfee.webp";
 import calc_minwageImg from "./assets/calc/minwage.webp";
+import tileAllImg from "./assets/home-tiles/all.webp";
 import tileCenterImg from "./assets/home-tiles/center.webp";
+import tileNewsImg from "./assets/home-tiles/news.webp";
 import tileExchangeImg from "./assets/home-tiles/exchange.webp";
 import toolTaxImg from "./assets/home-tiles/tool-tax-icon.webp";
 import toolFaqImg from "./assets/home-tiles/tool-faq-icon.webp";
@@ -5572,12 +5574,14 @@ export default function App() {
         )}
       </div>
 
-      {/* 많이 찾는 서비스 — 지원금·뉴스는 하단 탭에 있어서 여기엔 탭에 없는 것만 */}
+      {/* 많이 찾는 서비스 */}
       <p className="text-[16px] font-bold mb-2.5" style={{ color: TEXT }}>많이 찾는 서비스</p>
-      <div className="grid grid-cols-2 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {[
+          { key: "all", label: "소상공인\n지원금", bg: "#FDEEDC", img: tileAllImg, onClick: () => { setStatusFilter("available"); setHomeScreen("list"); } },
           { key: "center", label: "지역센터\n찾기", bg: "#FCEAF3", img: tileCenterImg, onClick: () => setScreen({ view: "centers" }) },
           { key: "exchange", label: "금리·환율\n정보", bg: "#E7F7EF", img: tileExchangeImg, onClick: () => setScreen({ view: "exchange" }) },
+          { key: "news", label: "정책뉴스\n확인", bg: "#F1ECFC", img: tileNewsImg, onClick: () => setMainTab("news") },
         ].map((tile) => (
           <button
             key={tile.key}
@@ -6148,10 +6152,9 @@ export default function App() {
                 style={{ background: "rgba(255,255,255,0.96)", border: "1px solid #EEF0F6", boxShadow: "0 8px 28px rgba(40,60,120,0.12)" }}
               >
                 {[
-                  { key: "home", label: "홈", icon: Home, active: mainTab === "home" && homeScreen === "hub", go: () => { setMainTab("home"); setHomeScreen("hub"); } },
-                  { key: "list", label: "지원금", icon: List, active: mainTab === "home" && homeScreen === "list", go: () => { setMainTab("home"); setStatusFilter("available"); setHomeScreen("list"); } },
+                  // 지원금·뉴스는 홈 카드로 들어가요 (탭은 홈·즐겨찾기·MY 3개) — 지원금 목록·뉴스 화면에서는 홈이 켜져 보여요
+                  { key: "home", label: "홈", icon: Home, active: mainTab === "home" || mainTab === "news", go: () => { setMainTab("home"); setHomeScreen("hub"); } },
                   { key: "favorites", label: "즐겨찾기", icon: Heart, badge: favCount, active: mainTab === "favorites", go: () => setMainTab("favorites") },
-                  { key: "news", label: "뉴스", icon: Newspaper, active: mainTab === "news", go: () => setMainTab("news") },
                   { key: "my", label: "MY", icon: User, active: mainTab === "my", go: () => setMainTab("my") },
                 ].map((t) => (
                   <button
