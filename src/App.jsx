@@ -507,9 +507,17 @@ const showInterIfReady = async (kind) => {
   });
 };
 
+// 종료 창 등이 하단 배너를 치웠다가 닫히면 다시 띄우라고 알려요
+const restoreBottomAd = () => window.dispatchEvent(new Event("bottomAdRestore"));
 // size: "banner"(얇은 하단 배너) | "rect"(아래 빈 공간이 넉넉한 화면용 300x250) | null(숨김)
 function useBottomBanner(size) {
   const show = !!size;
+  const [restoreTick, setRestoreTick] = useState(0);
+  useEffect(() => {
+    const onRestore = () => setRestoreTick((t) => t + 1);
+    window.addEventListener("bottomAdRestore", onRestore);
+    return () => window.removeEventListener("bottomAdRestore", onRestore);
+  }, []);
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const sub = AdMob.addListener(BannerAdPluginEvents.SizeChanged, (size) => {
@@ -559,7 +567,7 @@ function useBottomBanner(size) {
     return () => {
       cancelled = true;
     };
-  }, [size]);
+  }, [size, restoreTick]);
 }
 
 // 앱 종료 확인 창 — 가운데 광고(300x250), 광고와 버튼은 충분히 띄워서 실수로 누르지 않게 해요
@@ -664,14 +672,18 @@ function ExitDialog({ onCancel, onExit }) {
         if (cancelled) return;
         adState.kind = "exit";
         await AdMob.showBanner({ adId: adId(EXIT_AD_ID, "banner"), adSize: BannerAdSize.MEDIUM_RECTANGLE, position: BannerAdPosition.CENTER, margin: 0, isTesting: AD_TESTING });
-        if (cancelled) await removeAd();
+        if (cancelled) {
+          await removeAd();
+          restoreBottomAd();
+        }
       } catch (e) {
         adState.kind = null;
       }
     })();
     return () => {
       cancelled = true;
-      if (adState.kind === "exit") removeAd();
+      // 창을 닫으면(취소·뒤로가기) 종료 창 광고를 치우고 하단 배너를 다시 띄워요
+      (adState.kind === "exit" ? removeAd() : Promise.resolve()).then(restoreBottomAd);
     };
   }, []);
   const half = EXIT_AD_H / 2;
