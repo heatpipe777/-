@@ -3,3 +3,9 @@ dist
 .DS_Store
 
 CLAUDE.local.md
+
+# Play 업로드 열쇠·서명 키는 절대 올리지 않기 (저장소 밖 문서 폴더에 보관)
+play-upload-key.json
+*service-account*.json
+*.jks
+*.keystore
