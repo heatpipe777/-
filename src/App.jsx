@@ -3701,6 +3701,10 @@ function DiagnosisWizard({ onBack, onComplete, intro = false }) {
   );
 }
 
+// 지금 목록 지역 필터가 진단 때문에 들어간 것인지 (예전 저장 결과엔 표시가 없어 지역이 같으면 진단 것으로 봐요)
+const diagRegionApplied = (diagnosis, region) =>
+  !!diagnosis && region !== "전체" && region === diagnosis.region && (diagnosis.regionApplied ?? true);
+
 function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, onSelectProgram, statusFilter, setStatusFilter, callName = "사장님" }) {
   const allOpenCount = ALL_PROGRAMS.filter((p) => !isExpired(p)).length;
   const results = ALL_PROGRAMS.map((p) => ({ p, r: diagnoseProgram(p, diagnosis) })).filter((x) => x.r.eligible);
@@ -5177,9 +5181,14 @@ export default function App() {
   };
   const closePicker = () => setScreen({ view: "home" });
 
+  // 사장님이 직접 고른 지역은 진단을 초기화해도 지우지 않아요
+  const pickRegion = (r) => {
+    setRegion(r);
+    setDiagnosis((d) => (d && d.regionApplied !== false ? { ...d, regionApplied: false } : d));
+  };
   const selectProvince = (p) => {
     if (p === "전체" || p === "전국" || !DISTRICTS[p]) {
-      setRegion(p);
+      pickRegion(p);
       return;
     }
     setTempProvince(p);
@@ -5187,7 +5196,7 @@ export default function App() {
   };
 
   const selectDistrict = (d) => {
-    setRegion(d === "전체" ? tempProvince : `${tempProvince} ${d}`);
+    pickRegion(d === "전체" ? tempProvince : `${tempProvince} ${d}`);
   };
 
   // 분야를 뺀 나머지 조건(상태·지역·검색·즐겨찾기)에 맞는 지원금 — 분야 칩 개수에도 써요
@@ -5563,8 +5572,10 @@ export default function App() {
           intro={screen.from === "onboard"}
           onBack={() => setScreen({ view: "home" })}
           onComplete={async (answers) => {
-            setDiagnosis(answers);
-            if (region === "전체" && answers.region) setRegion(answers.region);
+            // 목록 지역 필터: 비어 있었거나 예전 진단이 넣어 둔 지역이면 새 진단 지역으로 바꿔요 (직접 고른 내 지역은 그대로)
+            const applyRegion = !!answers.region && (region === "전체" || diagRegionApplied(diagnosis, region));
+            if (applyRegion) setRegion(answers.region);
+            setDiagnosis({ ...answers, regionApplied: applyRegion || (diagRegionApplied(diagnosis, region) && region === answers.region) });
             setStatusFilter("available");
             await showInterIfReady("diag"); // 결과를 보여주기 직전 (조건이 맞을 때만)
             setScreen({ view: "diagnosisResult" });
@@ -5583,6 +5594,8 @@ export default function App() {
           onBack={() => setScreen({ view: "home" })}
           onRedo={() => setScreen({ view: "diagnosis" })}
           onClear={() => {
+            // 진단이 넣어 둔 지역 필터도 함께 지워요 (직접 고른 내 지역은 그대로)
+            if (diagRegionApplied(diagnosis, region)) setRegion("전체");
             setDiagnosis(null);
             setStatusFilter("available");
             setScreen({ view: "home" });
