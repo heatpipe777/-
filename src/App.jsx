@@ -1644,101 +1644,141 @@ function HeroHeader({ icon: Icon, color, subtitle, title, onBack, right, image, 
   );
 }
 
+// 지원금 상세 상단 카드 (분야 그림·분야·지역·이름·D-day) — 간단 상세·상세 가이드 공통
+function ProgramSummaryCard({ program }) {
+  const dday = getDday(program.deadline);
+  const color = urgencyColor(dday);
+  const catStyle = CATEGORY_COLORS[program.category] || { color: BLUE, bg: BLUE_SOFT, bg2: BLUE_SOFT };
+  const CatIcon = CATEGORY_ICON[program.category] || Wallet;
+  return (
+    <div
+      className="relative overflow-hidden rounded-[24px] p-4 mb-3 flex items-center gap-3.5"
+      style={{ background: `linear-gradient(135deg, ${groupOf(program).color}2E 0%, #FFFFFF 85%)`, border: "1px solid #EEF0F6" }}
+    >
+      {CATEGORY_IMAGES[program.category] ? (
+        <img src={CATEGORY_IMAGES[program.category]} alt="" className="w-16 h-16 shrink-0 object-contain -my-1" />
+      ) : (
+      <div
+        className="w-14 h-14 rounded-full flex items-center justify-center shrink-0 relative overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, ${catStyle.bg2}, ${catStyle.bg})`,
+          boxShadow: `0 6px 14px ${catStyle.bg}55, inset 0 -3px 6px rgba(0,0,0,0.12)`,
+        }}
+      >
+        <div className="absolute -top-2 -left-2 w-7 h-7 rounded-full" style={{ background: "rgba(255,255,255,0.25)" }} />
+        <CatIcon size={24} color={catStyle.color} strokeWidth={2.3} className="relative" />
+      </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.8)", color: groupOf(program).color }}>{groupOf(program).key}</span>
+          <span className="text-[11px]" style={{ color: MUTED }}><MapPin size={10} className="inline -mt-0.5" /> {regionLabel(program)}</span>
+        </div>
+        <p className="text-[16.5px] font-bold leading-snug break-keep" style={{ color: TEXT }}>{program.name}</p>
+      </div>
+      <span
+        className="text-[11.5px] font-bold px-2 py-1 rounded-lg shrink-0 self-start tabular-nums"
+        style={program.recurring ? { background: GREEN_SOFT, color: GREEN } : dday < 0 ? { background: "#F1F2F5", color: MUTED } : { background: `${color}1A`, color }}
+      >
+        {program.recurring ? "상시" : dday >= 0 ? `D-${dday}` : "마감"}
+      </span>
+    </div>
+  );
+}
+
+// 상세 가이드 안의 칸 (흰 카드 + 색 제목)
+function GuideBox({ label, color, children, className = "" }) {
+  return (
+    <div className={`rounded-[20px] p-4 ${className}`} style={CARD}>
+      <span className="inline-block text-[11.5px] font-bold px-2.5 py-1 rounded-full mb-2" style={{ background: `${color}14`, color }}>{label}</span>
+      {children}
+    </div>
+  );
+}
+
 // 상세 가이드 (실제 데이터가 있는 프로그램용)
 function DetailedGuide({ program, onBack, favorites, onToggleFavorite }) {
   const [tab, setTab] = useState(null);
   const cards = [
-    { key: "target", icon: Users, color: GREEN, bg: GREEN_SOFT, title: "지원대상", subtitle: "저도 받을 수 있나요?", desc: "매출액, 개업일 등 조건에 해당하는 경우 지원이 가능해요." },
-    { key: "amount", icon: PiggyBank, color: GOLD, bg: GOLD_SOFT, title: "지원금액", subtitle: "얼마 받을 수 있나요?", desc: "지원 형태와 금액, 사용기한을 확인할 수 있어요." },
-    { key: "usage", icon: Settings, color: "#7B5CE0", bg: "#F0ECFB", title: "사용용도", subtitle: "어디에 쓸 수 있나요?", desc: "바우처를 어디에, 어떻게 사용할 수 있는지 알려드려요." },
-    { key: "schedule", icon: CalendarCheck, color: BLUE, bg: BLUE_SOFT, title: "신청 및 지급일정", subtitle: "기간은 언제까지인가요?", desc: "신청 기간과 지급 절차를 순서대로 안내해드려요." },
-    { key: "faq", icon: HelpCircle, color: "#E5674D", bg: "#FDEEE9", title: "자주 묻는 질문", subtitle: "헷갈리는 부분 정리", desc: "신청 전에 헷갈리기 쉬운 질문들을 모아봤어요." },
+    { key: "target", image: heroNameImg, color: GREEN, title: "지원대상", subtitle: "저도 받을 수 있나요?", head: "받을 수 있는지 확인하세요!", sub: "매출액·개업일 조건을 정리했어요" },
+    { key: "amount", image: ctaCoinImg, color: GOLD, title: "지원금액", subtitle: "얼마 받을 수 있나요?", head: "받을 금액을 확인하세요!", sub: "지원 형태와 금액·사용기한" },
+    { key: "usage", image: calc_cardfeeImg, color: "#7B5CE0", title: "사용용도", subtitle: "어디에 쓸 수 있나요?", head: "쓸 수 있는 곳을 확인하세요!", sub: "바우처를 어디에 쓸 수 있는지" },
+    { key: "schedule", image: heroScheduleImg, color: BLUE, title: "신청 및 지급일정", subtitle: "기간은 언제까지인가요?", head: "일정을 미리 챙기세요!", sub: "신청 기간과 지급 절차를 순서대로" },
+    { key: "faq", image: heroFaqImg, color: FAQ_PURPLE, title: "자주 묻는 질문", subtitle: "헷갈리는 부분 정리", head: "궁금한 점을 확인하세요!", sub: "신청 전에 헷갈리기 쉬운 질문" },
   ];
   const [infoOpen, setInfoOpen] = useState(true);
+  const closeTab = useCallback(() => setTab(null), []);
+  // 칸을 열면 휴대폰 뒤로 버튼은 그 칸만 닫아요
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    if (!tab) return;
+    window.__subBack = closeTab;
+    return () => {
+      if (window.__subBack === closeTab) window.__subBack = null;
+    };
+  }, [tab, closeTab]);
 
   if (tab) {
-    const activeCard = cards.find((c) => c.key === tab);
+    const c = cards.find((x) => x.key === tab);
     return (
       <div>
-        <SectionHeader title={activeCard.title} onBack={() => setTab(null)} />
-        <div className="relative overflow-hidden rounded-2xl p-5 mb-5" style={{ background: `linear-gradient(135deg, ${activeCard.bg}, white)` }}>
-          <div className="absolute -right-6 -top-8 w-28 h-28 rounded-full" style={{ background: `${activeCard.color}14` }} />
-          <div className="absolute -left-8 -bottom-10 w-24 h-24 rounded-full" style={{ background: `${activeCard.color}0D` }} />
-          <div className="relative flex items-start gap-3.5">
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
-              style={{ background: activeCard.color, boxShadow: `0 6px 14px ${activeCard.color}55` }}
-            >
-              <activeCard.icon size={26} color="white" strokeWidth={2} />
-            </div>
-            <div>
-              <p className="text-[16px] font-extrabold mb-1" style={{ color: TEXT }}>{activeCard.title}</p>
-              <p className="text-[12.5px] leading-relaxed" style={{ color: MUTED }}>{activeCard.desc}</p>
-            </div>
-          </div>
-        </div>
+        <HeroHeader color={c.color} image={c.image} title={c.title} subtitle={c.sub} headline={c.head} onBack={closeTab} />
         {tab === "target" && (
           <>
-            <div className="rounded-xl border p-4 mb-3" style={{ borderColor: BORDER, background: GREEN_SOFT }}>
-              <p className="text-xs font-semibold mb-1.5" style={{ color: GREEN }}>충족해야 하는 조건</p>
+            <GuideBox label="충족해야 하는 조건" color={GREEN} className="mb-3">
               {program.target.ok.map((t, i) => <ConditionRow key={i} ok text={t} />)}
-            </div>
-            <div className="rounded-xl border p-4" style={{ borderColor: BORDER, background: RED_SOFT }}>
-              <p className="text-xs font-semibold mb-1.5" style={{ color: RED }}>지원 제외 대상</p>
+            </GuideBox>
+            <GuideBox label="지원 제외 대상" color={RED}>
               {program.target.no.map((t, i) => <ConditionRow key={i} ok={false} text={t} />)}
-            </div>
+            </GuideBox>
           </>
         )}
         {tab === "amount" && (
-          <>
-            <div className="rounded-xl border p-5 mb-3 text-center" style={{ borderColor: BORDER, background: GOLD_SOFT }}>
-              <p className="text-xs font-medium mb-1" style={{ color: GOLD }}>지원금액</p>
-              <p className="text-3xl font-extrabold" style={{ color: GOLD }}>{program.amount.value}</p>
-              <p className="text-xs mt-1" style={{ color: GOLD }}>{program.amount.note}</p>
-            </div>
-          </>
+          <div className="relative overflow-hidden rounded-[24px] p-6 text-center" style={{ background: "linear-gradient(135deg, #FFF3D6 0%, #FFFFFF 90%)", border: "1px solid #F5E6C4" }}>
+            <p className="text-[12px] font-semibold mb-1" style={{ color: GOLD }}>지원금액</p>
+            <p className="text-[30px] font-extrabold" style={{ color: TEXT }}>{program.amount.value}</p>
+            <p className="text-[12.5px] mt-1.5 break-keep" style={{ color: "#5E6577" }}>{program.amount.note}</p>
+          </div>
         )}
         {tab === "usage" && (
           <>
-            <div className="rounded-xl border p-4 mb-3" style={{ borderColor: BORDER, background: GREEN_SOFT }}>
-              <p className="text-xs font-semibold mb-1.5" style={{ color: GREEN }}>사용 가능</p>
+            <GuideBox label="사용 가능" color={GREEN} className="mb-3">
               {program.usage.ok.map((t, i) => <ConditionRow key={i} ok text={t} />)}
-            </div>
-            <div className="rounded-xl border p-4" style={{ borderColor: BORDER, background: RED_SOFT }}>
-              <p className="text-xs font-semibold mb-1.5" style={{ color: RED }}>사용 불가</p>
+            </GuideBox>
+            <GuideBox label="사용 불가" color={RED}>
               {program.usage.no.map((t, i) => <ConditionRow key={i} ok={false} text={t} />)}
-            </div>
+            </GuideBox>
           </>
         )}
         {tab === "schedule" && (
           <>
-            <div className="flex gap-3 mb-4">
-              <div className="flex-1 rounded-xl border p-3.5" style={{ borderColor: BORDER, background: BLUE_SOFT }}>
-                <p className="text-[11px] mb-1" style={{ color: BLUE }}>신청 기간</p>
-                <p className="text-sm font-bold" style={{ color: TEXT }}>{program.schedule.apply}</p>
-              </div>
-              <div className="flex-1 rounded-xl border p-3.5" style={{ borderColor: BORDER, background: BLUE_SOFT }}>
-                <p className="text-[11px] mb-1" style={{ color: BLUE }}>사용 기한</p>
-                <p className="text-sm font-bold" style={{ color: TEXT }}>{program.schedule.use}</p>
-              </div>
+            <div className="flex gap-2.5 mb-3">
+              {[["신청 기간", program.schedule.apply], ["사용 기한", program.schedule.use]].map(([k, v]) => (
+                <div key={k} className="flex-1 rounded-[20px] p-3.5" style={CARD}>
+                  <p className="text-[11.5px] font-semibold mb-1" style={{ color: BLUE }}>{k}</p>
+                  <p className="text-[13.5px] font-bold break-keep" style={{ color: TEXT }}>{v}</p>
+                </div>
+              ))}
             </div>
-            {program.steps.map((s, i) => (
-              <div key={i} className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 text-white" style={{ background: BLUE }}>{i + 1}</div>
-                  {i < program.steps.length - 1 && <div className="w-px flex-1 my-1" style={{ background: BORDER }} />}
-                </div>
-                <div className="pb-4">
-                  <p className="text-sm font-semibold" style={{ color: TEXT }}>{s.t}</p>
-                  <p className="text-[12.5px] mt-0.5" style={{ color: MUTED }}>{s.d}</p>
-                </div>
+            <GuideBox label="신청 순서" color={BLUE}>
+              <div className="mt-1">
+                {program.steps.map((s, i) => (
+                  <div key={i} className="flex gap-3">
+                    <div className="flex flex-col items-center">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 text-white" style={BTN_PRIMARY}>{i + 1}</div>
+                      {i < program.steps.length - 1 && <div className="w-px flex-1 my-1" style={{ background: BORDER }} />}
+                    </div>
+                    <div className={i < program.steps.length - 1 ? "pb-4" : ""}>
+                      <p className="text-[13.5px] font-semibold" style={{ color: TEXT }}>{s.t}</p>
+                      <p className="text-[12.5px] mt-0.5 break-keep" style={{ color: MUTED }}>{s.d}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </GuideBox>
           </>
         )}
-        {tab === "faq" && (
-          <FaqList items={program.faq} />
-        )}
+        {tab === "faq" && <FaqList items={program.faq} />}
       </div>
     );
   }
@@ -1746,7 +1786,7 @@ function DetailedGuide({ program, onBack, favorites, onToggleFavorite }) {
   return (
     <div>
       <SectionHeader
-        title={program.name}
+        title="지원금 상세"
         onBack={onBack}
         right={
           <div className="flex items-center gap-1.5">
@@ -1755,36 +1795,49 @@ function DetailedGuide({ program, onBack, favorites, onToggleFavorite }) {
           </div>
         }
       />
-      <div className="rounded-xl border overflow-hidden mb-6" style={{ borderColor: BORDER, background: BLUE_SOFT }}>
-        <button onClick={() => setInfoOpen(!infoOpen)} className="w-full flex items-center justify-between px-4 py-3.5">
-          <span className="flex items-center gap-2 text-sm font-semibold" style={{ color: BLUE }}>
-            <Info size={16} /> {program.name}란?
+      <ProgramSummaryCard program={program} />
+
+      <div className="rounded-[20px] overflow-hidden mb-6" style={CARD}>
+        <button onClick={() => setInfoOpen(!infoOpen)} className="w-full flex items-center gap-2.5 px-4 py-3.5 text-left">
+          <span className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: BLUE_SOFT }}>
+            <Info size={15} color={BLUE} />
           </span>
-          <ChevronDown size={16} color={BLUE} style={{ transform: infoOpen ? "rotate(180deg)" : "rotate(0)", transition: "0.15s" }} />
+          <span className="flex-1 text-[14px] font-bold break-keep" style={{ color: TEXT }}>{program.name}란?</span>
+          <ChevronDown size={16} color={MUTED} style={{ transform: infoOpen ? "rotate(180deg)" : "rotate(0)", transition: "0.15s" }} />
         </button>
         {infoOpen && (
-          <p className="px-4 pb-4 text-[13px] leading-relaxed" style={{ color: "#4A5268" }}>
-            정부(소상공인시장진흥공단)가 경영이 어려운 소상공인의 고정비 부담을
-            덜어주기 위해 지급하는 목적성 지원금이에요. 카드형 디지털 바우처로
-            지급해 사업 운영에 꼭 필요한 비용에만 쓰도록 한 제도예요.
+          <p className="px-4 pb-4 text-[13px] leading-relaxed break-keep" style={{ color: "#5E6577" }}>
+            정부(소상공인시장진흥공단)가 경영이 어려운 소상공인의 고정비 부담을 덜어주기 위해 지급하는 목적성 지원금이에요. 카드형 디지털 바우처로 지급해 사업 운영에 꼭 필요한 비용에만 쓰도록 한 제도예요.
           </p>
         )}
       </div>
 
-      <p className="text-xs font-semibold mb-3" style={{ color: MUTED }}>간단 서비스</p>
-      <div className="grid grid-cols-2 gap-3">
-        {cards.map((c) => (
-          <div key={c.key} className="rounded-xl border p-4" style={{ borderColor: BORDER }}>
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: c.bg }}>
-              <c.icon size={19} color={c.color} strokeWidth={2} />
-            </div>
-            <p className="text-sm font-bold" style={{ color: TEXT }}>{c.title}</p>
-            <p className="text-[11.5px] mb-3" style={{ color: MUTED }}>{c.subtitle}</p>
-            <button onClick={() => setTab(c.key)} className="w-full py-2 rounded-lg text-white text-xs font-semibold" style={{ background: BLUE }}>
-              확인하기
+      <p className="text-[16px] font-bold mb-2.5" style={{ color: TEXT }}>한눈에 보기</p>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+        {cards.map((c, i) => {
+          const wide = i === cards.length - 1; // 마지막 칸은 폰에서 한 줄 전체
+          return (
+            <button
+              key={c.key}
+              onClick={() => setTab(c.key)}
+              aria-label={`${c.title} 보기`}
+              className={`relative overflow-hidden rounded-[22px] p-3.5 text-left active:scale-[0.98] transition-transform ${wide ? "col-span-2 md:col-span-1 flex items-center gap-3 md:block" : ""}`}
+              style={{ ...CARD, background: `linear-gradient(145deg, ${c.color}14 0%, #FFFFFF 75%)` }}
+            >
+              <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-[22px]">
+                <div className="absolute -right-5 -top-5 w-16 h-16 rounded-full" style={{ background: `${c.color}10` }} />
+              </div>
+              <img src={c.image} alt="" className={`relative w-12 h-12 object-contain shrink-0 ${wide ? "md:mb-2" : "mb-2"}`} />
+              <div className="relative min-w-0 flex-1">
+                <p className="text-[14px] font-bold break-keep" style={{ color: TEXT }}>{c.title}</p>
+                <p className="text-[11.5px] mt-0.5 break-keep" style={{ color: MUTED }}>{c.subtitle}</p>
+                <p className={`text-[12px] font-bold flex items-center gap-0.5 ${wide ? "mt-1.5 md:mt-2" : "mt-2"}`} style={{ color: c.color }}>
+                  확인하기 <ChevronRight size={13} />
+                </p>
+              </div>
             </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <a
@@ -1796,6 +1849,13 @@ function DetailedGuide({ program, onBack, favorites, onToggleFavorite }) {
       >
         신청하러 가기 <ExternalLink size={15} />
       </a>
+      <button
+        onClick={() => shareProgram(program)}
+        className="w-full mt-2.5 py-3.5 rounded-2xl text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] transition-transform"
+        style={{ background: BLUE_SOFT, color: BLUE }}
+      >
+        <Share2 size={15} /> 다른 사장님께 공유하기
+      </button>
       <p className="text-[11px] text-center mt-2" style={{ color: MUTED }}>
         소상공인24(sbiz24.kr) 공식 사이트로 이동해요
       </p>
@@ -1806,19 +1866,29 @@ function DetailedGuide({ program, onBack, favorites, onToggleFavorite }) {
   );
 }
 
+// 지원금 상세의 자주 묻는 질문 — 도움말 화면과 같은 Q/A 카드
 function FaqList({ items }) {
   const [open, setOpen] = useState(null);
   return (
     <div>
-      {items.map((f, i) => (
-        <div key={i} className="border-b py-3.5" style={{ borderColor: BORDER }}>
-          <button onClick={() => setOpen(open === i ? null : i)} className="w-full flex items-center justify-between text-left">
-            <span className="text-sm font-medium pr-3" style={{ color: TEXT }}>{f.q}</span>
-            <ChevronDown size={16} color={MUTED} style={{ transform: open === i ? "rotate(180deg)" : "rotate(0)", transition: "0.15s" }} />
-          </button>
-          {open === i && <p className="text-[12.5px] mt-2 leading-relaxed" style={{ color: MUTED }}>{f.a}</p>}
-        </div>
-      ))}
+      {items.map((f, i) => {
+        const isOpen = open === i;
+        return (
+          <div key={i} className="rounded-[18px] mb-2 overflow-hidden" style={isOpen ? { ...CARD, border: `1px solid ${FAQ_PURPLE}33` } : CARD}>
+            <button onClick={() => setOpen(isOpen ? null : i)} className="w-full flex items-start gap-2.5 px-4 py-3.5 text-left">
+              <span className="text-[13px] font-black shrink-0 leading-[1.45]" style={{ color: FAQ_PURPLE }}>Q</span>
+              <span className="flex-1 text-[13.5px] font-semibold leading-[1.45] break-keep" style={{ color: TEXT }}>{f.q}</span>
+              <ChevronDown size={16} color={MUTED} className="shrink-0 mt-0.5" style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0)", transition: "0.15s" }} />
+            </button>
+            {isOpen && (
+              <div className="flex items-start gap-2.5 px-4 pb-4">
+                <span className="text-[13px] font-black shrink-0 leading-[1.6]" style={{ color: "#B9A2E8" }}>A</span>
+                <p className="flex-1 text-[12.5px] leading-[1.7] break-keep" style={{ color: "#5E6577" }}>{f.a}</p>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1827,8 +1897,6 @@ function FaqList({ items }) {
 function SimpleDetail({ program, onBack, favorites, onToggleFavorite }) {
   const dday = getDday(program.deadline);
   const color = urgencyColor(dday);
-  const catStyle = CATEGORY_COLORS[program.category] || { color: BLUE, bg: BLUE_SOFT, bg2: BLUE_SOFT };
-  const CatIcon = CATEGORY_ICON[program.category] || Wallet;
   const closed = dday < 0 && !program.recurring;
   return (
     <div>
@@ -1850,38 +1918,7 @@ function SimpleDetail({ program, onBack, favorites, onToggleFavorite }) {
           </p>
         </div>
       )}
-      <div
-        className="relative overflow-hidden rounded-[24px] p-4 mb-3 flex items-center gap-3.5"
-        style={{ background: `linear-gradient(135deg, ${groupOf(program).color}2E 0%, #FFFFFF 85%)`, border: "1px solid #EEF0F6" }}
-      >
-        {CATEGORY_IMAGES[program.category] ? (
-          <img src={CATEGORY_IMAGES[program.category]} alt="" className="w-16 h-16 shrink-0 object-contain -my-1" />
-        ) : (
-        <div
-          className="w-14 h-14 rounded-full flex items-center justify-center shrink-0 relative overflow-hidden"
-          style={{
-            background: `linear-gradient(135deg, ${catStyle.bg2}, ${catStyle.bg})`,
-            boxShadow: `0 6px 14px ${catStyle.bg}55, inset 0 -3px 6px rgba(0,0,0,0.12)`,
-          }}
-        >
-          <div className="absolute -top-2 -left-2 w-7 h-7 rounded-full" style={{ background: "rgba(255,255,255,0.25)" }} />
-          <CatIcon size={24} color={catStyle.color} strokeWidth={2.3} className="relative" />
-        </div>
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 mb-1">
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.8)", color: groupOf(program).color }}>{groupOf(program).key}</span>
-            <span className="text-[11px]" style={{ color: MUTED }}><MapPin size={10} className="inline -mt-0.5" /> {regionLabel(program)}</span>
-          </div>
-          <p className="text-[16.5px] font-bold leading-snug break-keep" style={{ color: TEXT }}>{program.name}</p>
-        </div>
-        <span
-          className="text-[11.5px] font-bold px-2 py-1 rounded-lg shrink-0 self-start tabular-nums"
-          style={program.recurring ? { background: GREEN_SOFT, color: GREEN } : dday < 0 ? { background: "#F1F2F5", color: MUTED } : { background: `${color}1A`, color }}
-        >
-          {program.recurring ? "상시" : dday >= 0 ? `D-${dday}` : "마감"}
-        </span>
-      </div>
+      <ProgramSummaryCard program={program} />
       <div className="rounded-[20px] p-4 mb-3" style={CARD}>
         <ConditionRow ok text={`지원대상: ${program.target}`} />
         <ConditionRow ok text={`지원금액: ${program.amountLabel}`} />
