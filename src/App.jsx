@@ -961,9 +961,10 @@ function deadlineAlertText(name, days, what) {
   if (days === 0) return { title: `오늘 마감 · ${name}`, body: `오늘이 ${what} 마지막 날이에요. 놓치지 마세요!` };
   return { title: `마감 D-${days} · ${name}`, body: `${what}까지 ${days}일 남았어요. 눌러서 확인하세요.` };
 }
-// 알림 방식 — 소리·진동·화면 위 팝업·방해금지 시간·주말엔 금요일에 미리
+// 알림 방식 — 소리·진동·화면 위 팝업·방해금지 시간·알림 안 받는 요일(가게 쉬는 날 등, 하루 앞당겨 보냄)
 // (잠금화면 내용 숨기기는 안드로이드가 앱에서 못 바꾸게 해서, 휴대폰 설정 안내만 해요)
-const ALERT_STYLE_DEFAULT = { sound: true, vibe: true, popup: true, quiet: false, quietStart: 22, quietEnd: 8, weekend: false };
+const ALERT_STYLE_DEFAULT = { sound: true, vibe: true, popup: true, quiet: false, quietStart: 22, quietEnd: 8, restDays: [] };
+const REST_DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]; // 월~일 순서로 보여줘요
 const QUIET_STARTS = [
   { h: 21, label: "밤 9시" },
   { h: 22, label: "밤 10시" },
@@ -977,9 +978,11 @@ const QUIET_ENDS = [
 function normalizeAlertStyle(v) {
   const st = { ...ALERT_STYLE_DEFAULT };
   if (v && typeof v === "object") {
-    ["sound", "vibe", "popup", "quiet", "weekend"].forEach((k) => {
+    ["sound", "vibe", "popup", "quiet"].forEach((k) => {
       if (typeof v[k] === "boolean") st[k] = v[k];
     });
+    if (Array.isArray(v.restDays)) st.restDays = [...new Set(v.restDays.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].slice(0, 6);
+    else if (v.weekend === true) st.restDays = [6, 0]; // 예전 "주말엔 금요일에 미리" 설정을 이어받아요
     if (QUIET_STARTS.some((x) => x.h === v.quietStart)) st.quietStart = v.quietStart;
     if (QUIET_ENDS.some((x) => x.h === v.quietEnd)) st.quietEnd = v.quietEnd;
   }
@@ -1008,11 +1011,12 @@ async function ensureAlertChannel(st) {
   }
   return id;
 }
-// 방해금지 시간·주말이면 알림 시각을 옮겨요 (마감을 넘기지 않게 앞당기거나, 아침 방해금지가 끝나는 시각으로)
+// 알림 안 받는 요일·방해금지 시간이면 알림 시각을 옮겨요 (마감을 넘기지 않게 앞당기거나, 아침 방해금지가 끝나는 시각으로)
 function adjustAlertTime(at, st, now = new Date()) {
   if (!st) return at;
   const d = new Date(at);
-  if (st.weekend && (d.getDay() === 6 || d.getDay() === 0)) d.setDate(d.getDate() - (d.getDay() === 6 ? 1 : 2)); // 금요일 같은 시각
+  const rest = st.restDays || [];
+  for (let i = 0; i < 6 && rest.includes(d.getDay()); i++) d.setDate(d.getDate() - 1); // 쉬는 날이면 하루씩 앞당겨요
   if (st.quiet) {
     const h = d.getHours() + d.getMinutes() / 60;
     if (h >= st.quietStart) d.setHours(st.quietStart - 1, 0, 0, 0); // 밤: 방해금지 시작 1시간 전으로 당겨요
@@ -1231,14 +1235,56 @@ function NicknameScreen({ initial = "", firstRun, onSave, onSkip, onBack }) {
 }
 
 // ---- 사장님 일정 (내 일정 + 세금 + 즐겨찾기 지원금 마감) ----
+// 가게 일정 + 개인 일정(생일·기념일·제사 등). ask가 있으면 이름을 비워 두고 예시만 보여줘요 (누구 생일인지 적게)
 const EVENT_PRESETS = [
-  { title: "월급날", emoji: "💰", repeat: "monthly", day: 10 },
-  { title: "임대료", emoji: "🏠", repeat: "monthly", day: 25 },
-  { title: "대출 상환", emoji: "🏦", repeat: "monthly", day: 15 },
-  { title: "카드대금", emoji: "💳", repeat: "monthly", day: 14 },
-  { title: "공과금", emoji: "💡", repeat: "monthly", day: 25 },
-  { title: "직접 입력", emoji: "📌", repeat: "once" },
+  { key: "pay", group: "biz", title: "월급날", emoji: "💰", repeat: "monthly", day: 10 },
+  { key: "rent", group: "biz", title: "임대료", emoji: "🏠", repeat: "monthly", day: 25 },
+  { key: "loan", group: "biz", title: "대출 상환", emoji: "🏦", repeat: "monthly", day: 15 },
+  { key: "card", group: "biz", title: "카드대금", emoji: "💳", repeat: "monthly", day: 14 },
+  { key: "bill", group: "biz", title: "공과금", emoji: "💡", repeat: "monthly", day: 25 },
+  { key: "birthday", group: "life", title: "생일", emoji: "🎂", repeat: "yearly", ask: "예: 엄마 생일" },
+  { key: "anniv", group: "life", title: "기념일", emoji: "💍", repeat: "yearly", ask: "예: 결혼기념일" },
+  { key: "memorial", group: "life", title: "제사·기일", emoji: "🕯️", repeat: "yearly", lunar: true, ask: "예: 할아버지 제사" },
+  { key: "health", group: "life", title: "병원·검진", emoji: "🏥", repeat: "once", ask: "예: 건강검진" },
+  { key: "meet", group: "life", title: "모임·약속", emoji: "🤝", repeat: "once", ask: "예: 동창 모임" },
+  { key: "custom", group: "life", title: "직접 입력", emoji: "📌", repeat: "once", ask: "예: 직원 월급날" },
 ];
+// 음력 → 양력 (휴대폰에 들어 있는 한국 음력(단기력) 달력으로 계산, 윤달은 평달 기준)
+let lunarFmt = null;
+function lunarSupported() {
+  try {
+    lunarFmt ||= new Intl.DateTimeFormat("en-u-ca-dangi", { month: "numeric", day: "numeric" });
+    return lunarFmt.resolvedOptions().calendar === "dangi";
+  } catch (e) {
+    return false;
+  }
+}
+function lunarOf(date) {
+  const parts = lunarFmt.formatToParts(date);
+  const m = parts.find((p) => p.type === "month").value;
+  return { month: parseInt(m, 10), leap: !/^\d+$/.test(m), day: parseInt(parts.find((p) => p.type === "day").value, 10) };
+}
+// from 날짜부터 days일 안에서 음력 month월 day일인 양력 날짜들 (작은 달이라 30일이 없으면 29일)
+function lunarDatesBetween(month, day, from, days) {
+  if (!lunarSupported()) return [];
+  const out = [];
+  const d = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  let lastOfMonth = null; // 그 달의 마지막 날 (30일이 없는 달 대비)
+  for (let i = 0; i <= days; i++, d.setDate(d.getDate() + 1)) {
+    const l = lunarOf(d);
+    if (l.leap || l.month !== month) {
+      if (lastOfMonth && day === 30 && !out.includes(lastOfMonth)) out.push(lastOfMonth);
+      lastOfMonth = null;
+      continue;
+    }
+    lastOfMonth = l.day === 29 ? formatLocalDate(d) : lastOfMonth;
+    if (l.day === day) {
+      out.push(formatLocalDate(d));
+      lastOfMonth = null;
+    }
+  }
+  return [...new Set(out)];
+}
 const MY_ACCENT = "#E8890C";
 // 매달 반복 일정의 다음 날짜 (31일처럼 없는 날은 그 달 마지막 날로)
 function eventDateIn(year, month, day) {
@@ -1251,6 +1297,22 @@ function eventOccurrences(ev, withinDays = 60) {
     const d = parseLocalDate(ev.date);
     return d >= today ? [formatLocalDate(d)] : [];
   }
+  if (ev.repeat === "yearly") {
+    // 매년: 양력은 그 날짜(2/29는 평년엔 2/28), 음력은 해마다 양력 날짜가 바뀌어요
+    const span = Math.max(withinDays, 400); // 1년 넘게 찾아서 다음 번은 꼭 찾게
+    let all;
+    if (ev.lunar) all = lunarDatesBetween(ev.month, ev.day, today, span);
+    else {
+      all = [];
+      for (let y = today.getFullYear(); y <= today.getFullYear() + 2; y++) {
+        const d = eventDateIn(y, ev.month - 1, ev.day);
+        if (d >= today) all.push(formatLocalDate(d));
+      }
+    }
+    const limit = new Date(today.getTime() + withinDays * 864e5);
+    const inRange = all.filter((x) => parseLocalDate(x) <= limit);
+    return inRange.length ? inRange : all.slice(0, 1);
+  }
   const out = [];
   const limit = new Date(today.getTime() + withinDays * 864e5);
   for (let m = 0; m <= Math.ceil(withinDays / 28); m++) {
@@ -1262,6 +1324,7 @@ function eventOccurrences(ev, withinDays = 60) {
 }
 function eventRepeatLabel(ev) {
   if (ev.repeat === "once") return "한 번";
+  if (ev.repeat === "yearly") return `매년 ${ev.lunar ? "음력 " : ""}${ev.month}월 ${ev.day}일`;
   return ev.day >= 31 ? "매달 말일" : `매달 ${ev.day}일`;
 }
 // 화면에 보여줄 일정 목록 (가까운 순)
@@ -1270,7 +1333,7 @@ function buildScheduleItems({ favorites, myEvents }) {
   const items = [];
   const today = startOfToday();
   myEvents.forEach((ev) => {
-    const dates = ev.repeat === "once" ? eventOccurrences(ev) : eventOccurrences(ev, SCHEDULE_MONTHS * 30);
+    const dates = ev.repeat === "once" ? eventOccurrences(ev) : eventOccurrences(ev, ev.repeat === "yearly" ? 365 : SCHEDULE_MONTHS * 30);
     dates.forEach((d) =>
       items.push({ key: `my:${ev.id}:${d}`, type: "my", name: ev.title, deadline: d, who: eventRepeatLabel(ev), note: ev.alert ? "알림 켜짐" : "알림 꺼짐", ev, emoji: ev.emoji || "📌" })
     );
@@ -2788,12 +2851,13 @@ const FAQ_DATA = [
   { category: "세금", q: "간이과세자와 일반과세자는 뭐가 달라요?", a: "연 매출 1억 400만원 미만이면 간이과세자가 될 수 있고, 부가세를 1년에 한 번(1월) 신고해요. 일반과세자는 1월·7월 두 번 확정신고해요. 홈의 '사장님 일정'에서 날짜를 확인할 수 있어요." },
   { category: "세금", q: "세금 신고 날짜를 놓치면 어떻게 돼요?", a: "가산세가 붙어요. 늦었더라도 빨리 신고할수록 가산세가 줄어드니 바로 홈택스에서 '기한 후 신고'를 하세요. 국세청 상담센터(국번 없이 126)에서 도움을 받을 수 있어요." },
   { category: "앱 이용", q: "지원금 정보는 얼마나 자주 바뀌어요?", a: "공식 공고를 확인해서 주기적으로 업데이트해요. 지원사업은 예산 상황에 따라 자주 바뀌니, 신청 전에는 반드시 공식 사이트에서 최종 확인하세요. 접수가 끝난 지원금은 '접수마감' 탭에 따로 모아둬요." },
-  { category: "앱 이용", q: "내 지역은 어떻게 바꾸나요?", a: "MY 탭 > '내 지역'을 누르면 시·도와 시·군·구를 고를 수 있어요. 한 번 정하면 지원금 목록이 내 지역 기준으로 열리고, 전국 지원금도 함께 보여요." },
-  { category: "앱 이용", q: "어떤 알림을 받을 수 있나요?", a: "MY 탭 > 알림 설정에서 ① 지원금 마감 알림(즐겨찾기에서 🔔 켠 지원금) ② 세금 신고·납부일 알림 ③ 금리 발표일 알림을 켤 수 있어요. 마감 며칠 전부터 알릴지(가볍게·적당히·7일 전부터 매일)와 알림 시각도 고를 수 있어요. 상시접수 지원금은 마감일이 없어서 알림 대상이 아니에요." },
+  { category: "앱 이용", q: "내 지역은 어떻게 바꾸나요?", a: "홈 오른쪽 위 MY(사람 모양) > '내 지역'을 누르면 시·도와 시·군·구를 고를 수 있어요. 한 번 정하면 지원금 목록이 내 지역 기준으로 열리고, 전국 지원금도 함께 보여요." },
+  { category: "앱 이용", q: "어떤 알림을 받을 수 있나요?", a: "홈 오른쪽 위 MY(사람 모양) > 알림 설정에서 ① 지원금 마감 알림(즐겨찾기에서 🔔 켠 지원금) ② 세금 신고·납부일 알림 ③ 금리 발표일 알림을 켤 수 있어요. 사장님 일정에 넣은 월급날·생일·기념일·제사 같은 내 일정도 알려드려요. 마감 며칠 전부터 알릴지, 알림 시각, 소리·진동, 방해금지 시간, 알림 안 받는 요일(가게 쉬는 날)도 고를 수 있어요. 상시접수 지원금은 마감일이 없어서 알림 대상이 아니에요." },
+  { category: "앱 이용", q: "생일·기념일·제사도 등록할 수 있나요?", a: "네. 사장님 일정 > 내 일정 추가에서 생일·기념일·제사·기일을 고르면 매년 반복으로 등록돼요. 음력도 고를 수 있어서 음력 생일이나 제사도 해마다 양력 날짜를 자동으로 계산해 미리 알려드려요. 병원 예약·모임 같은 한 번뿐인 일정도 넣을 수 있어요." },
   { category: "앱 이용", q: "즐겨찾기는 어디에 저장되나요?", a: "이 휴대폰에만 저장돼요. 앱을 지우거나 휴대폰을 바꾸면 사라지니, 중요한 지원금은 '공유하기'로 나에게 보내두시면 안전해요." },
   { category: "앱 이용", q: "다른 사장님께 지원금을 알려주고 싶어요", a: "지원금 상세 화면에서 '다른 사장님께 공유하기'를 누르면 카카오톡·문자 등으로 지원금 정보를 보낼 수 있어요." },
-  { category: "앱 이용", q: "회원가입이나 개인정보가 필요한가요?", a: "아니요. 로그인 없이 바로 쓸 수 있고, 개인을 알아볼 수 있는 정보는 수집하지 않아요. 자세한 내용은 MY 탭의 개인정보처리방침에서 확인할 수 있어요." },
-  { category: "앱 이용", q: "맞춤 진단은 얼마나 정확한가요?", a: "지역·업종·직원 수·필요한 지원을 바탕으로 받을 수 있는 지원금을 골라드리지만, 신용점수·고용 기간 같은 세부 조건까지는 알 수 없어요. 참고용으로 보시고 최종 확인은 상세 화면과 공식 공고에서 하세요. MY 탭에서 언제든 다시 진단할 수 있어요." },
+  { category: "앱 이용", q: "회원가입이나 개인정보가 필요한가요?", a: "아니요. 로그인 없이 바로 쓸 수 있고, 개인을 알아볼 수 있는 정보는 수집하지 않아요. 자세한 내용은 MY의 개인정보처리방침에서 확인할 수 있어요." },
+  { category: "앱 이용", q: "맞춤 진단은 얼마나 정확한가요?", a: "지역·업종·직원 수·필요한 지원을 바탕으로 받을 수 있는 지원금을 골라드리지만, 신용점수·고용 기간 같은 세부 조건까지는 알 수 없어요. 참고용으로 보시고 최종 확인은 상세 화면과 공식 공고에서 하세요. MY > 맞춤 진단에서 언제든 다시 진단할 수 있어요." },
 ];
 
 // 궁금할 때 전화할 곳
@@ -3205,15 +3269,27 @@ function EventEditor({ initial, onSave, onDelete, onClose }) {
   const [emoji, setEmoji] = useState(initial?.emoji || "📌");
   const [repeat, setRepeat] = useState(initial?.repeat || "monthly");
   const [day, setDay] = useState(initial?.day || 10);
+  const [month, setMonth] = useState(initial?.month || TODAY.getMonth() + 1); // 매년 반복: 몇 월
+  const [lunar, setLunar] = useState(!!initial?.lunar); // 매년 반복: 음력인지
+  const [presetKey, setPresetKey] = useState(initial ? null : "pay");
+  const [hint, setHint] = useState("예: 직원 월급날");
   const [date, setDate] = useState(initial?.date && parseLocalDate(initial.date) >= startOfToday() ? initial.date : formatLocalDate(new Date(TODAY.getTime() + 7 * 864e5)));
   const [alertOn, setAlertOn] = useState(initial ? initial.alert !== false : true);
   const pickPreset = (p) => {
+    setPresetKey(p.key);
     setEmoji(p.emoji);
-    setTitle(p.title === "직접 입력" ? "" : p.title);
+    setTitle(p.ask ? "" : p.title);
+    setHint(p.ask || "예: 직원 월급날");
     setRepeat(p.repeat);
     if (p.day) setDay(p.day);
+    if (p.repeat === "yearly") setLunar(!!p.lunar && lunarSupported());
   };
-  const ok = title.trim().length > 0 && (repeat === "monthly" || date);
+  const maxDay = repeat === "yearly" ? (lunar ? 30 : new Date(2024, month, 0).getDate()) : 31;
+  const ok = title.trim().length > 0 && (repeat !== "once" || date);
+  // 달을 바꿔서 그 달에 없는 날이 되면 마지막 날로
+  useEffect(() => {
+    if (repeat === "yearly" && day > maxDay) setDay(maxDay);
+  }, [repeat, month, lunar]);
   useEffect(() => {
     window.__subBack = onClose;
     window.scrollTo(0, 0);
@@ -3229,34 +3305,81 @@ function EventEditor({ initial, onSave, onDelete, onClose }) {
           color={MY_ACCENT}
           image={heroEventImg}
           title={editing ? "일정 수정" : "내 일정 추가"}
-          subtitle={editing ? "일정 내용을 바꾸거나" : "월급날·임대료처럼 챙길 날을 등록하면"}
-          headline={editing ? "삭제할 수 있어요" : "미리 알려드려요!"}
+          subtitle={editing ? "일정 내용을 바꾸거나" : "월급날·임대료부터 생일·기념일까지"}
+          headline={editing ? "삭제할 수 있어요" : "챙길 날을 미리 알려드려요!"}
           onBack={onClose}
         />
 
-        {!editing && (
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {EVENT_PRESETS.map((p) => {
-              const on = (p.title === "직접 입력" && emoji === p.emoji) || title === p.title;
-              return (
-                <button key={p.title} onClick={() => pickPreset(p)} className="px-3 py-1.5 rounded-full text-[12.5px] font-semibold" style={on ? CHIP_ON : CHIP_OFF}>
-                  {p.emoji} {p.title}
-                </button>
-              );
-            })}
-          </div>
-        )}
+        {!editing &&
+          [
+            { g: "biz", label: "가게 일정" },
+            { g: "life", label: "개인 일정" },
+          ].map(({ g, label }) => (
+            <div key={g} className="mb-3">
+              <p className="text-[12px] font-bold mb-1.5 px-0.5" style={{ color: TEXT }}>{label}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {EVENT_PRESETS.filter((p) => p.group === g).map((p) => (
+                  <button key={p.key} onClick={() => pickPreset(p)} className="px-3 py-1.5 rounded-full text-[12.5px] font-semibold" style={presetKey === p.key ? CHIP_ON : CHIP_OFF}>
+                    {p.emoji} {p.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        {!editing && <div className="mb-1" />}
 
         <p className="text-[13px] font-semibold mb-1.5" style={{ color: TEXT }}>일정 이름</p>
         <div className="flex items-center rounded-xl px-3.5 py-3 mb-4" style={{ background: INPUT_BG }}>
           <span className="mr-2 text-[16px]">{emoji}</span>
-          <input value={title} onChange={(e) => setTitle(e.target.value.slice(0, 20))} placeholder="예: 직원 월급날" className="flex-1 min-w-0 bg-transparent outline-none text-[15px] font-semibold" style={{ color: TEXT }} />
+          <input value={title} onChange={(e) => setTitle(e.target.value.slice(0, 20))} placeholder={hint} className="flex-1 min-w-0 bg-transparent outline-none text-[15px] font-semibold" style={{ color: TEXT }} />
         </div>
 
         <p className="text-[13px] font-semibold mb-1.5" style={{ color: TEXT }}>반복</p>
-        <CalcModeSwitch value={repeat} onChange={setRepeat} options={[{ key: "monthly", label: "매달 반복" }, { key: "once", label: "한 번만" }]} />
+        <CalcModeSwitch value={repeat} onChange={setRepeat} options={[{ key: "monthly", label: "매달" }, { key: "yearly", label: "매년" }, { key: "once", label: "한 번만" }]} />
 
-        {repeat === "monthly" ? (
+        {repeat === "yearly" ? (
+          <>
+            {lunarSupported() && (
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[13px] font-semibold" style={{ color: TEXT }}>몇 월?</p>
+                <div className="flex rounded-full p-0.5" style={{ background: "#F1F2F6" }}>
+                  {[
+                    { k: false, l: "양력" },
+                    { k: true, l: "음력" },
+                  ].map((o) => (
+                    <button key={o.l} onClick={() => setLunar(o.k)} className="px-3.5 py-1 rounded-full text-[12.5px] font-bold" style={lunar === o.k ? { background: "white", color: BLUE, boxShadow: "0 1px 4px rgba(0,0,0,0.08)" } : { color: MUTED }}>
+                      {o.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {!lunarSupported() && <p className="text-[13px] font-semibold mb-1.5" style={{ color: TEXT }}>몇 월?</p>}
+            <div className="grid grid-cols-6 gap-1.5 mb-4">
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <button key={m} onClick={() => setMonth(m)} className="py-2 rounded-lg text-[12.5px] font-semibold tabular-nums" style={month === m ? CHIP_ON : { background: "#F5F6FA", color: TEXT }}>
+                  {m}월
+                </button>
+              ))}
+            </div>
+            <p className="text-[13px] font-semibold mb-1.5" style={{ color: TEXT }}>며칠?</p>
+            <div className="grid grid-cols-7 gap-1.5 mb-2">
+              {Array.from({ length: maxDay }, (_, i) => i + 1).map((d) => (
+                <button key={d} onClick={() => setDay(d)} className="aspect-square rounded-lg text-[12.5px] font-semibold tabular-nums" style={day === d ? CHIP_ON : { background: "#F5F6FA", color: TEXT }}>
+                  {d}
+                </button>
+              ))}
+            </div>
+            <p className="text-[12px] font-semibold mb-4 px-0.5" style={{ color: BLUE }}>
+              {(() => {
+                const next = eventOccurrences({ repeat: "yearly", month, day, lunar }, 400)[0];
+                if (!next) return `매년 ${lunar ? "음력 " : ""}${month}월 ${day}일`;
+                const nd = parseLocalDate(next);
+                return `매년 ${lunar ? "음력 " : ""}${month}월 ${day}일 · 다음은 ${nd.getFullYear()}년 ${nd.getMonth() + 1}월 ${nd.getDate()}일 (${WEEK[nd.getDay()]})`;
+              })()}
+            </p>
+          </>
+        ) : repeat === "monthly" ? (
           <>
             <p className="text-[13px] font-semibold mb-1.5" style={{ color: TEXT }}>매달 며칠?</p>
             <div className="grid grid-cols-7 gap-1.5 mb-4">
@@ -3277,14 +3400,14 @@ function EventEditor({ initial, onSave, onDelete, onClose }) {
         <div className="flex items-center justify-between rounded-xl px-3.5 py-3 mb-5" style={{ background: "#F7F8FB" }}>
           <div>
             <p className="text-[13px] font-semibold" style={{ color: TEXT }}>미리 알림 받기</p>
-            <p className="text-[11px]" style={{ color: MUTED }}>알림 시점·시각은 MY 탭 알림 설정을 따라요</p>
+            <p className="text-[11px]" style={{ color: MUTED }}>알림 시점·시각은 MY → 알림 설정을 따라요</p>
           </div>
           <Switch checked={alertOn} onChange={() => setAlertOn(!alertOn)} />
         </div>
 
         <button
           disabled={!ok}
-          onClick={() => onSave({ id: initial?.id || `e${Date.now()}`, title: title.trim(), emoji, repeat, day, date: repeat === "once" ? date : undefined, alert: alertOn })}
+          onClick={() => onSave({ id: initial?.id || `e${Date.now()}`, title: title.trim(), emoji, repeat, day: Math.min(day, maxDay), month: repeat === "yearly" ? month : undefined, lunar: repeat === "yearly" ? lunar : undefined, date: repeat === "once" ? date : undefined, alert: alertOn })}
           className="w-full py-4 rounded-2xl text-[14.5px] font-bold"
           style={ok ? BTN_PRIMARY : { background: "#E7E9F0", color: MUTED }}
         >
@@ -3363,7 +3486,7 @@ function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, pl
 
       {onSaveEvent && (
         <button onClick={() => setEditing({})} className="w-full flex items-center justify-center gap-1.5 py-3.5 rounded-2xl mb-3 text-[13.5px] font-bold active:scale-[0.99] transition-transform" style={{ background: "#FFF3E0", color: MY_ACCENT, border: "1.5px dashed #F5C27A" }}>
-          + 내 일정 추가 <span className="font-medium opacity-80">(월급날·임대료·대출 상환 등)</span>
+          + 내 일정 추가 <span className="font-medium opacity-80">(월급날·생일·기념일 등)</span>
         </button>
       )}
 
@@ -5743,17 +5866,40 @@ export default function App() {
               <p className="text-[11.5px] -mt-1.5 leading-relaxed break-keep" style={{ color: MUTED }}>이 시간에 걸린 알림은 끝나는 시각에 보내드려요.</p>
             </div>
           )}
-          <div className="px-4 py-3.5 flex items-center justify-between gap-3" style={{ borderTop: "1px solid #F1F2F6" }}>
-            <div className="flex items-center gap-3 min-w-0">
+          <div className="px-4 py-3.5" style={{ borderTop: "1px solid #F1F2F6" }}>
+            <div className="flex items-center gap-3 min-w-0 mb-3">
               <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "#E7F7EF" }}>
                 <CalendarX size={17} color="#2C9F6B" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold" style={{ color: TEXT }}>주말엔 금요일에 미리</p>
-                <p className="text-[12px] break-keep" style={{ color: MUTED }}>토·일요일 알림을 금요일 같은 시각에 보내요</p>
+                <p className="text-sm font-semibold" style={{ color: TEXT }}>알림 안 받는 요일</p>
+                <p className="text-[12px] break-keep" style={{ color: MUTED }}>
+                  {alertStyle.restDays.length
+                    ? `${REST_DAY_ORDER.filter((d) => alertStyle.restDays.includes(d)).map((d) => WEEK[d]).join("·")}요일 알림은 하루 앞당겨 보내드려요`
+                    : "가게 쉬는 날처럼 알림 받기 싫은 요일을 골라요"}
+                </p>
               </div>
             </div>
-            <Switch checked={alertStyle.weekend} onChange={() => setStyle({ weekend: !alertStyle.weekend })} />
+            <div className="grid grid-cols-7 gap-1.5">
+              {REST_DAY_ORDER.map((d) => {
+                const on = alertStyle.restDays.includes(d);
+                return (
+                  <button
+                    key={d}
+                    aria-label={`${WEEK[d]}요일 알림 ${on ? "받기" : "안 받기"}`}
+                    onClick={() => {
+                      if (!on && alertStyle.restDays.length >= 6) return alert("모든 요일을 끌 수는 없어요. 하루는 알림을 받을 수 있게 남겨 주세요.");
+                      setStyle({ restDays: on ? alertStyle.restDays.filter((x) => x !== d) : [...alertStyle.restDays, d] });
+                    }}
+                    className="py-2 rounded-xl text-[13px] font-bold"
+                    style={on ? CHIP_ON : { background: "#F5F6FA", color: d === 0 ? RED : d === 6 ? BLUE : TEXT }}
+                  >
+                    {WEEK[d]}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11.5px] mt-2 leading-relaxed break-keep" style={{ color: MUTED }}>마감을 놓치지 않게, 고른 요일의 알림은 버리지 않고 그 전날로 옮겨요.</p>
           </div>
         </div>
 
