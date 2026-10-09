@@ -165,6 +165,7 @@ const SCREENS = [
   { name: "세부 지역 선택", steps: [["click", "경북"]] },
   { name: "지역 선택 완료", steps: [["click", "완료"]] },
   { name: "맞춤 진단 1단계", steps: [["home"], ["click", "맞춤"]] },
+  { name: "맞춤 진단 결과", steps: [["click", "서울"], ["click", "음식점·카페"], ["click", "3천만원 이하"], ["click", "예비 창업"], ["click", "혼자 운영"], ["click", "건너뛰기"], ["click", "건너뛰기"]] },
 ];
 
 await evaluate(HELPERS);
@@ -174,6 +175,12 @@ if (await evaluate(`document.body.innerText.includes("어떻게 불러드릴까�
   results.push(await evaluate(`__audit.check("첫 실행 이름 입력")`));
   await evaluate(`__audit.click("건너뛰기")`);
   await sleep(900);
+  // 처음엔 맞춤 진단 안내 화면으로 가요 → 점검 후 "나중에 할게요"로 홈
+  if (await evaluate(`document.body.innerText.includes("나중에 할게요")`)) {
+    results.push(await evaluate(`__audit.check("첫 실행 진단 안내")`));
+    await evaluate(`__audit.click("나중에 할게요")`);
+    await sleep(900);
+  }
 }
 // 바뀐 화면만 점검: AUDIT_ONLY="계산기,MY" (이름 일부만 써도 돼요)
 // 앞 화면에 이어서 들어가는 화면은, 홈에서 시작하는 화면까지 거슬러 올라가 함께 지나가요(점검 결과는 고른 것만)

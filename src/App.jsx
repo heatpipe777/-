@@ -3569,7 +3569,7 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
 }
 
 // ---- 맞춤 진단(온보딩) ----
-function DiagnosisWizard({ onBack, onComplete }) {
+function DiagnosisWizard({ onBack, onComplete, intro = false }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({ region: null, industry: null, revenueBand: null, yearsBand: null, employees: null, needs: [], situation: [] });
 
@@ -3619,6 +3619,17 @@ function DiagnosisWizard({ onBack, onComplete }) {
         </div>
       </div>
 
+      {/* 처음 설치하고 들어왔을 때만: 왜 하는지 안내 + 나중에 하기 */}
+      {intro && step === 0 && (
+        <div className="rounded-[18px] px-4 py-3.5 mb-5 flex items-start gap-3" style={{ background: "#FFF7E8", border: "1px solid #FBE3B5" }}>
+          <span className="text-[22px] leading-none mt-0.5">🎯</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13.5px] font-bold" style={{ color: TEXT }}>1분이면 내게 맞는 지원금을 찾아드려요</p>
+            <p className="text-[12px] mt-0.5 break-keep" style={{ color: MUTED }}>7가지만 답하면 돼요. 나중에 언제든 다시 하거나 초기화할 수 있어요.</p>
+            <button onClick={onBack} className="mt-2 text-[12.5px] font-semibold underline" style={{ color: MUTED }}>나중에 할게요 · 홈으로</button>
+          </div>
+        </div>
+      )}
       <p className="text-[11.5px] font-bold mb-1.5" style={{ color: BLUE }}>{step + 1} / {STEPS.length}</p>
       <h2 className="text-[19px] font-bold leading-snug" style={{ color: TEXT }}>{current.question}</h2>
       <p className="text-[12px] mt-1 mb-5" style={{ color: MUTED }}>{current.hint || " "}</p>
@@ -3691,6 +3702,7 @@ function DiagnosisWizard({ onBack, onComplete }) {
 }
 
 function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, onSelectProgram, statusFilter, setStatusFilter, callName = "사장님" }) {
+  const allOpenCount = ALL_PROGRAMS.filter((p) => !isExpired(p)).length;
   const results = ALL_PROGRAMS.map((p) => ({ p, r: diagnoseProgram(p, diagnosis) })).filter((x) => x.r.eligible);
   const open = results.filter((x) => !isExpired(x.p));
   const urgentCount = open.filter((x) => getDday(x.p.deadline) <= 7).length;
@@ -3770,6 +3782,14 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
         </div>
       </div>
 
+      {/* 안내: 진단은 언제든 다시·초기화 가능, 진단 결과가 전부가 아님 */}
+      <div className="rounded-[18px] px-4 py-3 mb-3 flex items-start gap-2.5" style={{ background: "#F3F6FF", border: "1px solid #E1E8FB" }}>
+        <Lightbulb size={15} color={BLUE} className="shrink-0 mt-0.5" />
+        <p className="text-[12px] leading-relaxed break-keep" style={{ color: "#4A5672" }}>
+          상황이 바뀌면 오른쪽 위 <b style={{ color: BLUE }}>다시 진단</b>·<b style={{ color: TEXT }}>초기화</b>로 언제든 새로 할 수 있어요. 진단은 맞춤 추천일 뿐, 받아가게엔 <b style={{ color: TEXT }}>더 많은 지원금과 기능</b>이 있어요 (아래에서 확인)
+        </p>
+      </div>
+
       {notices.length > 0 && (
         <div className="rounded-[20px] p-4 mb-3 space-y-2" style={{ background: GOLD_SOFT }}>
           {notices.map((n) => (
@@ -3830,13 +3850,33 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
         </div>
       )}
 
-      <button
-        onClick={onViewAll}
-        className="w-full flex items-center justify-center gap-1 py-3 mt-4 rounded-2xl text-[12.5px] font-semibold"
-        style={CHIP_OFF}
-      >
-        조건과 상관없이 전체 지원금 보기 <ChevronRight size={13} />
-      </button>
+      {/* 진단 결과가 전부가 아니에요 — 앱 전체 기능 안내 */}
+      <div className="rounded-[22px] p-4 mt-5" style={{ ...CARD, background: "linear-gradient(135deg, #FFF7E8 0%, #FFFFFF 70%)", border: "1px solid #FBE3B5" }}>
+        <p className="text-[15px] font-extrabold" style={{ color: TEXT }}>진단 결과가 전부가 아니에요 💡</p>
+        <p className="text-[12.5px] mt-1 break-keep" style={{ color: MUTED }}>
+          진단은 답변에 맞춰 골라낸 추천이에요. 받아가게에는 이런 것도 있어요.
+        </p>
+        <div className="grid grid-cols-2 gap-1.5 mt-3">
+          {[
+            ["📋", `전체 지원금 ${allOpenCount}건`],
+            ["📅", "세금 신고일·내 일정 알림"],
+            ["🧮", "사장님 계산기 9가지"],
+            ["📰", "정책 뉴스·지역센터"],
+          ].map(([e, t]) => (
+            <span key={t} className="text-[12px] font-semibold px-2.5 py-2 rounded-xl break-keep" style={{ background: "#FFFFFF", color: TEXT, border: "1px solid #F1E3C8" }}>
+              {e} {t}
+            </span>
+          ))}
+        </div>
+        <div className="flex gap-2 mt-3.5">
+          <button onClick={onViewAll} className="flex-1 py-3 rounded-2xl text-[13px] font-bold" style={BTN_PRIMARY}>
+            전체 지원금 보기
+          </button>
+          <button onClick={onBack} className="flex-1 py-3 rounded-2xl text-[13px] font-bold" style={{ background: "#FFFFFF", color: TEXT, border: "1px solid #E6E9F2" }}>
+            홈 둘러보기
+          </button>
+        </div>
+      </div>
 
       <p className="text-[11px] mt-4 leading-relaxed" style={{ color: MUTED }}>
         * 답변을 바탕으로 한 참고용 추천이에요. 신용점수·고용 기간 같은 세부 조건은 지원금마다 달라서, 신청 전 상세 화면과 공식 공고를 꼭 확인하세요.
@@ -5286,8 +5326,12 @@ export default function App() {
           onSave={(n) => {
             setNickname(n);
             setOnboardDone(true);
+            setScreen({ view: "diagnosis", from: "onboard" }); // 처음엔 맞춤 진단으로 안내 (나중에 하기 가능)
           }}
-          onSkip={() => setOnboardDone(true)}
+          onSkip={() => {
+            setOnboardDone(true);
+            setScreen({ view: "diagnosis", from: "onboard" });
+          }}
         />
       </Shell>
     );
@@ -5516,6 +5560,7 @@ export default function App() {
     return (
       <Shell>
         <DiagnosisWizard
+          intro={screen.from === "onboard"}
           onBack={() => setScreen({ view: "home" })}
           onComplete={async (answers) => {
             setDiagnosis(answers);
