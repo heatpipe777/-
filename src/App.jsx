@@ -1007,6 +1007,23 @@ function callNameOf(nick) {
 function NicknameScreen({ initial = "", firstRun, onSave, onSkip, onBack }) {
   const [value, setValue] = useState(initial);
   const preview = callNameOf(value);
+  const inputRef = useRef(null);
+  // 첫 실행 화면: 시작 인트로가 완전히 사라진 뒤에 포커스해요 (안 그러면 키보드가 인트로와 겹쳐 보여요)
+  useEffect(() => {
+    if (!firstRun) return;
+    if (window.__introDone) {
+      inputRef.current?.focus();
+      return;
+    }
+    const onDone = () => inputRef.current?.focus();
+    window.addEventListener("introDone", onDone, { once: true });
+    // 혹시 신호를 놓쳐도 2.5초 뒤엔 포커스해요
+    const fallback = setTimeout(onDone, 2500);
+    return () => {
+      window.removeEventListener("introDone", onDone);
+      clearTimeout(fallback);
+    };
+  }, [firstRun]);
   return (
     <div className={firstRun ? "pt-8" : ""}>
       {firstRun ? (
@@ -1023,7 +1040,7 @@ function NicknameScreen({ initial = "", firstRun, onSave, onSkip, onBack }) {
 
       <div className="flex items-center rounded-2xl px-4 py-3.5" style={{ background: INPUT_BG }}>
         <input
-          autoFocus={firstRun}
+          ref={inputRef}
           value={value}
           onChange={(e) => setValue(e.target.value.replace(/\s+/g, "").slice(0, NICK_MAX))}
           placeholder="예: 김사장, 민지"

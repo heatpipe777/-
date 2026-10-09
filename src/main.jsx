@@ -31,28 +31,43 @@ if (Capacitor.isNativePlatform()) {
   });
 }
 
+// 시간이 걸리는 작업에 최대 기다리는 시간을 둬요 (기기에 따라 멈추는 걸 막기 위해)
+const withTimeout = (promise, ms) => Promise.race([promise, new Promise((r) => setTimeout(r, ms))]);
+
 // 휴대폰 시작 화면(아이콘)은 인트로 그림까지 다 그려진 뒤에 닫아요 → 그 사이 빈 화면이 안 생겨요
-const introShown = (async () => {
-  const img = document.querySelector("#intro img");
-  try {
-    if (img) await img.decode();
-  } catch (e) {
-    // 그림을 못 불러와도 계속
-  }
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  if (Capacitor.isNativePlatform()) await SplashScreen.hide({ fadeOutDuration: 150 }).catch(() => {});
-})();
+// 어떤 기기에서 멈추더라도 최대 1.5초 안에는 꼭 넘어가게 안전장치를 둬요
+const introShown = withTimeout(
+  (async () => {
+    const img = document.querySelector("#intro img");
+    try {
+      if (img) await img.decode();
+    } catch (e) {
+      // 그림을 못 불러와도 계속
+    }
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    if (Capacitor.isNativePlatform()) await SplashScreen.hide({ fadeOutDuration: 150 }).catch(() => {});
+  })(),
+  1500
+);
 
 // 시작 인트로: 이름·소개를 2초 보여주고 서서히 사라져요 (한 번만, 반복 효과 없음)
+// 인트로가 떠 있는 동안에는 다른 입력창이 몰래 포커스를 가져가 키보드가 겹쳐 보이지 않게 window.__introDone으로 알려줘요
+window.__introDone = false;
 const hideIntro = async () => {
   const el = document.getElementById("intro");
-  if (!el) return;
+  if (!el) {
+    window.__introDone = true;
+    window.dispatchEvent(new Event("introDone"));
+    return;
+  }
   await introShown;
   setTimeout(() => {
     el.classList.add("hide");
     setTimeout(() => {
       el.remove();
       document.documentElement.style.background = "#FFFFFF"; // 시작 때만 크림색, 이후엔 흰 배경
+      window.__introDone = true;
+      window.dispatchEvent(new Event("introDone"));
     }, 400);
   }, 2000);
 };
