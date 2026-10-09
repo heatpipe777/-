@@ -51,6 +51,10 @@ import {
   Hourglass,
   CalendarX,
   Star,
+  Volume2,
+  Vibrate,
+  Moon,
+  BellRing,
 } from "lucide-react";
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import { Device } from "@capacitor/device";
@@ -957,8 +961,67 @@ function deadlineAlertText(name, days, what) {
   if (days === 0) return { title: `오늘 마감 · ${name}`, body: `오늘이 ${what} 마지막 날이에요. 놓치지 마세요!` };
   return { title: `마감 D-${days} · ${name}`, body: `${what}까지 ${days}일 남았어요. 눌러서 확인하세요.` };
 }
+// 알림 방식 — 소리·진동·화면 위 팝업·방해금지 시간·주말엔 금요일에 미리
+// (잠금화면 내용 숨기기는 안드로이드가 앱에서 못 바꾸게 해서, 휴대폰 설정 안내만 해요)
+const ALERT_STYLE_DEFAULT = { sound: true, vibe: true, popup: true, quiet: false, quietStart: 22, quietEnd: 8, weekend: false };
+const QUIET_STARTS = [
+  { h: 21, label: "밤 9시" },
+  { h: 22, label: "밤 10시" },
+  { h: 23, label: "밤 11시" },
+];
+const QUIET_ENDS = [
+  { h: 7, label: "아침 7시" },
+  { h: 8, label: "아침 8시" },
+  { h: 9, label: "아침 9시" },
+];
+function normalizeAlertStyle(v) {
+  const st = { ...ALERT_STYLE_DEFAULT };
+  if (v && typeof v === "object") {
+    ["sound", "vibe", "popup", "quiet", "weekend"].forEach((k) => {
+      if (typeof v[k] === "boolean") st[k] = v[k];
+    });
+    if (QUIET_STARTS.some((x) => x.h === v.quietStart)) st.quietStart = v.quietStart;
+    if (QUIET_ENDS.some((x) => x.h === v.quietEnd)) st.quietEnd = v.quietEnd;
+  }
+  return st;
+}
+// 안드로이드는 소리·진동·팝업을 "알림 채널"로 정하고, 한 번 만든 채널은 앱이 바꿀 수 없어요
+// → 설정 조합마다 다른 채널을 만들어 쓰고, 안 쓰는 받아가게 채널은 지워요 (휴대폰 설정 목록이 깔끔하게)
+const alertChannelId = (st) => `ba_${st.sound ? 1 : 0}${st.vibe ? 1 : 0}${st.popup ? 1 : 0}`;
+async function ensureAlertChannel(st) {
+  const id = alertChannelId(st);
+  const parts = [st.sound ? "소리" : "무음", st.vibe ? "진동" : "진동 없음", st.popup ? "팝업" : "알림창만"];
+  await LocalNotifications.createChannel({
+    id,
+    name: "마감·일정 알림",
+    description: `지원금 마감·세금 신고일·금리 발표일 알림 (${parts.join(" · ")})`,
+    importance: st.popup ? 4 : 3,
+    // 소리 끔 = 무음 파일(res/raw/silence.wav)을 소리로 지정 (지정하지 않으면 기본 알림음이 나요)
+    ...(st.sound ? {} : { sound: "silence.wav" }),
+    vibration: st.vibe,
+  });
+  try {
+    const { channels } = await LocalNotifications.listChannels();
+    for (const c of channels) if (c.id.startsWith("ba_") && c.id !== id) await LocalNotifications.deleteChannel({ id: c.id });
+  } catch (e) {
+    // 예전 채널 정리는 실패해도 괜찮아요
+  }
+  return id;
+}
+// 방해금지 시간·주말이면 알림 시각을 옮겨요 (마감을 넘기지 않게 앞당기거나, 아침 방해금지가 끝나는 시각으로)
+function adjustAlertTime(at, st, now = new Date()) {
+  if (!st) return at;
+  const d = new Date(at);
+  if (st.weekend && (d.getDay() === 6 || d.getDay() === 0)) d.setDate(d.getDate() - (d.getDay() === 6 ? 1 : 2)); // 금요일 같은 시각
+  if (st.quiet) {
+    const h = d.getHours() + d.getMinutes() / 60;
+    if (h >= st.quietStart) d.setHours(st.quietStart - 1, 0, 0, 0); // 밤: 방해금지 시작 1시간 전으로 당겨요
+    else if (h < st.quietEnd) d.setHours(st.quietEnd, 0, 0, 0); // 새벽·아침: 방해금지가 끝나는 시각으로
+  }
+  return d > now ? d : at; // 옮긴 시각이 이미 지났으면 원래 시각 그대로
+}
 // 설정에 맞는 알림 목록을 만들어요 (시간순)
-function buildAlertList({ programs, taxOn, taxStaff, rateOn, plan, hour, events = [], name = "사장님" }) {
+function buildAlertList({ programs, taxOn, taxStaff, rateOn, plan, hour, events = [], name = "사장님", style }) {
   const now = new Date();
   const days = (ALERT_PLANS[plan] || ALERT_PLANS.normal).days;
   const list = [];
@@ -969,7 +1032,7 @@ function buildAlertList({ programs, taxOn, taxStaff, rateOn, plan, hour, events 
       at.setDate(at.getDate() - d);
       at.setHours(hour, 0, 0, 0);
       if (at <= now) return;
-      list.push({ id: base + k, at, ...deadlineAlertText(name, d, what), extra });
+      list.push({ id: base + k, at, ...deadlineAlertText(name, d, what), extra, dl: { base, name, deadline, what } });
     });
   };
   programs.forEach((p) => addDeadline(`p:${p.id}`, p.name, p.deadline, "신청 마감", { programId: p.id }));
@@ -990,7 +1053,23 @@ function buildAlertList({ programs, taxOn, taxStaff, rateOn, plan, hour, events 
     });
   }
   // 알림 내용 앞에 이름을 붙여 불러요 (예: 민지님, 월급날까지 3일 남았어요)
-  return list.sort((a, b) => a.at - b.at).slice(0, MAX_ALERTS).map((n) => ({ ...n, body: `${name}, ${n.body}` }));
+  // 방해금지·주말로 날짜가 옮겨지면 "D-며칠" 문구도 새 날짜 기준으로, 같은 날로 겹치면 하나만
+  const seen = new Set();
+  const adjusted = list
+    .map((n) => {
+      const at = adjustAlertTime(n.at, style, now);
+      if (!n.dl || at.toDateString() === n.at.toDateString()) return { ...n, at };
+      const left = Math.round((parseLocalDate(n.dl.deadline) - new Date(at.getFullYear(), at.getMonth(), at.getDate())) / 864e5);
+      return { ...n, at, ...deadlineAlertText(n.dl.name, left, n.dl.what) };
+    })
+    .filter((n) => {
+      if (!n.dl) return true;
+      const k = n.dl.base + ":" + n.at.toDateString();
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  return adjusted.sort((a, b) => a.at - b.at).slice(0, MAX_ALERTS).map((n) => ({ ...n, body: `${name}, ${n.body}` }));
 }
 
 // 마감임박순 정렬 — 이미 마감된 항목은 맨 뒤로 보내요
@@ -5054,6 +5133,8 @@ export default function App() {
   const [taxStaff, setTaxStaff] = useState(false); // 직원 관련 세금(원천세·4대보험)도 알릴지
   const [alertPlan, setAlertPlan] = useState("normal"); // 마감 며칠 전부터 알릴지
   const [alertHour, setAlertHour] = useState(9); // 몇 시에 알릴지
+  const [alertStyle, setAlertStyle] = useState(ALERT_STYLE_DEFAULT); // 소리·진동·팝업·방해금지 등
+  const setStyle = (patch) => setAlertStyle((st) => ({ ...st, ...patch }));
   const [scheduledAlerts, setScheduledAlerts] = useState([]); // MY 화면 미리보기용
   const [homeUpcoming, setHomeUpcoming] = useState(() => {
     try {
@@ -5139,6 +5220,7 @@ export default function App() {
           if (typeof data.taxStaff === "boolean") setTaxStaff(data.taxStaff);
           if (ALERT_PLANS[data.alertPlan]) setAlertPlan(data.alertPlan);
           if (ALERT_HOURS.some((x) => x.h === data.alertHour)) setAlertHour(data.alertHour);
+          if (data.alertStyle) setAlertStyle(normalizeAlertStyle(data.alertStyle));
           if (Array.isArray(data.myEvents)) setMyEvents(data.myEvents);
           if (typeof data.nickname === "string") setNickname(data.nickname);
           if (data.onboardDone) setOnboardDone(true);
@@ -5169,6 +5251,7 @@ export default function App() {
             taxStaff,
             alertPlan,
             alertHour,
+            alertStyle,
             myEvents,
             nickname,
             onboardDone,
@@ -5181,7 +5264,7 @@ export default function App() {
         // 저장 실패해도 앱 사용에는 지장 없도록 조용히 넘어가요
       }
     })();
-  }, [favorites, notifyIds, notifyEnabled, rateAlertOn, taxAlertOn, taxStaff, alertPlan, alertHour, myEvents, nickname, onboardDone, region, diagnosis, prefsLoaded]);
+  }, [favorites, notifyIds, notifyEnabled, rateAlertOn, taxAlertOn, taxStaff, alertPlan, alertHour, alertStyle, myEvents, nickname, onboardDone, region, diagnosis, prefsLoaded]);
 
   // 실제 휴대폰 알림 예약: 설정이 바뀔 때마다 기존 예약을 모두 지우고 다시 예약해요
   useEffect(() => {
@@ -5195,6 +5278,7 @@ export default function App() {
       hour: alertHour,
       events: myEvents,
       name: callName,
+      style: alertStyle,
     });
     setScheduledAlerts(list);
     if (!Capacitor.isNativePlatform()) return;
@@ -5205,9 +5289,11 @@ export default function App() {
           await LocalNotifications.cancel({ notifications: pending.notifications.map((n) => ({ id: n.id })) });
         }
         if (!list.length) return;
+        const channelId = await ensureAlertChannel(alertStyle);
         await LocalNotifications.schedule({
           notifications: list.map((n) => ({
             id: n.id,
+            channelId,
             title: n.title,
             body: n.body,
             schedule: { at: n.at, allowWhileIdle: true },
@@ -5222,14 +5308,14 @@ export default function App() {
         // 알림 예약에 실패해도 앱 사용에는 지장 없도록 조용히 넘어가요
       }
     })();
-  }, [notifyEnabled, rateAlertOn, taxAlertOn, taxStaff, alertPlan, alertHour, myEvents, callName, notifyIds, favorites, prefsLoaded, dayKey]);
+  }, [notifyEnabled, rateAlertOn, taxAlertOn, taxStaff, alertPlan, alertHour, alertStyle, myEvents, callName, notifyIds, favorites, prefsLoaded, dayKey]);
 
   // 알림을 누르면 해당 지원금 상세 화면으로 바로 이동해요
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const handle = LocalNotifications.addListener("localNotificationActionPerformed", (action) => {
       const extra = action.notification?.extra || {};
-      if (extra.screen === "exchange" || extra.screen === "taxSchedule") return setScreen({ view: extra.screen });
+      if (extra.screen === "exchange" || extra.screen === "taxSchedule" || extra.screen === "alertSettings") return setScreen({ view: extra.screen });
       const id = extra.programId;
       if (id != null && ALL_PROGRAMS.some((p) => p.id === id)) setScreen({ view: "detail", id });
     });
@@ -5257,6 +5343,34 @@ export default function App() {
     if (await ensureNotifyPermission()) setter(true);
   };
   const toggleNotifyEnabled = makeToggle(notifyEnabled, setNotifyEnabled);
+  // 지금 설정(소리·진동·팝업)으로 알림 하나를 3초 뒤에 보내 봐요
+  const [testSent, setTestSent] = useState(false);
+  const sendTestAlert = async () => {
+    if (!Capacitor.isNativePlatform()) return alert("알림은 받아가게 앱(안드로이드)에서만 받을 수 있어요.");
+    if (!(await ensureNotifyPermission())) return;
+    try {
+      const channelId = await ensureAlertChannel(alertStyle);
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            id: 999990,
+            channelId,
+            title: "받아가게 알림 미리보기",
+            body: `${callName}, 마감·일정 알림은 이렇게 와요 🔔`,
+            schedule: { at: new Date(Date.now() + 3000), allowWhileIdle: true },
+            isExactNotification: false,
+            smallIcon: "ic_stat_notify",
+            iconColor: BLUE,
+            extra: { screen: "alertSettings" },
+          },
+        ],
+      });
+      setTestSent(true);
+      setTimeout(() => setTestSent(false), 4000);
+    } catch (e) {
+      alert("알림을 보내지 못했어요. 휴대폰 알림 권한을 확인해 주세요.");
+    }
+  };
   const toggleRateAlert = makeToggle(rateAlertOn, setRateAlertOn);
   const toggleTaxAlert = makeToggle(taxAlertOn, setTaxAlertOn);
   const saveEvent = async (ev) => {
@@ -5579,6 +5693,80 @@ export default function App() {
             <CalcModeSwitch value={String(alertHour)} onChange={(v) => setAlertHour(Number(v))} options={ALERT_HOURS.map((x) => ({ key: String(x.h), label: x.label }))} />
           </div>
         )}
+
+
+        <p className="text-[13px] font-bold mt-5 mb-2.5 px-1" style={{ color: TEXT }}>알림 방식</p>
+        <div className="rounded-[20px] overflow-hidden" style={CARD}>
+          {[
+            { key: "sound", icon: Volume2, color: BLUE, bg: BLUE_SOFT, title: "소리", sub: "알림음이 울려요" },
+            { key: "vibe", icon: Vibrate, color: "#7B5CE0", bg: "#F0ECFB", title: "진동", sub: "휴대폰이 진동해요" },
+            { key: "popup", icon: BellRing, color: "#E5674D", bg: "#FDEEE9", title: "화면 위에 띄우기", sub: "사용 중에도 화면 위쪽에 잠깐 크게 보여요" },
+          ].map((r, i) => (
+            <div key={r.key} className="px-4 py-3.5 flex items-center justify-between gap-3" style={{ borderTop: i > 0 ? "1px solid #F1F2F6" : "none" }}>
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: r.bg }}>
+                  <r.icon size={17} color={r.color} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold" style={{ color: TEXT }}>{r.title}</p>
+                  <p className="text-[12px] break-keep" style={{ color: MUTED }}>{r.sub}</p>
+                </div>
+              </div>
+              <Switch checked={alertStyle[r.key]} onChange={() => setStyle({ [r.key]: !alertStyle[r.key] })} />
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-[20px] mt-2.5 overflow-hidden" style={CARD}>
+          <div className="px-4 py-3.5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "#EEF0FB" }}>
+                <Moon size={17} color="#4B55A8" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold" style={{ color: TEXT }}>방해금지 시간</p>
+                <p className="text-[12px] break-keep" style={{ color: MUTED }}>
+                  {alertStyle.quiet
+                    ? `${QUIET_STARTS.find((x) => x.h === alertStyle.quietStart).label} ~ ${QUIET_ENDS.find((x) => x.h === alertStyle.quietEnd).label}엔 알림을 보내지 않아요`
+                    : "밤·이른 아침엔 알림을 보내지 않아요"}
+                </p>
+              </div>
+            </div>
+            <Switch checked={alertStyle.quiet} onChange={() => setStyle({ quiet: !alertStyle.quiet })} />
+          </div>
+          {alertStyle.quiet && (
+            <div className="px-4 pb-4 pt-0.5">
+              <p className="text-[12px] font-bold mb-2" style={{ color: TEXT }}>시작</p>
+              <CalcModeSwitch value={String(alertStyle.quietStart)} onChange={(v) => setStyle({ quietStart: Number(v) })} options={QUIET_STARTS.map((x) => ({ key: String(x.h), label: x.label }))} />
+              <p className="text-[12px] font-bold mb-2" style={{ color: TEXT }}>끝</p>
+              <CalcModeSwitch value={String(alertStyle.quietEnd)} onChange={(v) => setStyle({ quietEnd: Number(v) })} options={QUIET_ENDS.map((x) => ({ key: String(x.h), label: x.label }))} />
+              <p className="text-[11.5px] -mt-1.5 leading-relaxed break-keep" style={{ color: MUTED }}>이 시간에 걸린 알림은 끝나는 시각에 보내드려요.</p>
+            </div>
+          )}
+          <div className="px-4 py-3.5 flex items-center justify-between gap-3" style={{ borderTop: "1px solid #F1F2F6" }}>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "#E7F7EF" }}>
+                <CalendarX size={17} color="#2C9F6B" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold" style={{ color: TEXT }}>주말엔 금요일에 미리</p>
+                <p className="text-[12px] break-keep" style={{ color: MUTED }}>토·일요일 알림을 금요일 같은 시각에 보내요</p>
+              </div>
+            </div>
+            <Switch checked={alertStyle.weekend} onChange={() => setStyle({ weekend: !alertStyle.weekend })} />
+          </div>
+        </div>
+
+        <button
+          onClick={sendTestAlert}
+          className="w-full mt-2.5 py-3.5 rounded-2xl text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] transition-transform"
+          style={{ background: BLUE_SOFT, color: BLUE }}
+        >
+          <BellRing size={15} /> {testSent ? "3초 뒤에 알림이 와요" : "알림 미리 받아보기"}
+        </button>
+        <p className="text-[11px] mt-2 px-1 leading-relaxed break-keep" style={{ color: MUTED }}>
+          휴대폰의 '방해 금지 모드'나 무음 모드가 켜져 있으면 소리·진동 없이 조용히 와요. 알림음 종류나 잠금화면에서 내용 숨기기는 휴대폰 설정 → 애플리케이션 → 받아가게 → 알림에서 바꿀 수 있어요.
+        </p>
 
         {Capacitor.isNativePlatform() && (notifyEnabled || taxAlertOn || rateAlertOn) && (
           <div className="rounded-[20px] p-4 mt-2.5" style={{ background: "#F6F7FA" }}>
