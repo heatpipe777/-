@@ -946,7 +946,8 @@ const ALERT_HOURS = [
   { h: 18, label: "오후 6시" },
 ];
 const STAFF_TAX = ["원천세 신고·납부", "4대보험료 납부", "근로소득 지급명세서 제출"];
-const MAX_ALERTS = 120; // 너무 많이 예약하지 않도록 상한을 둬요
+const MAX_ALERTS = 120; // 너무 많이 예약하지 않도록 상한을 둬요 (안드로이드 앱당 알람 한도 500개보다 넉넉히 적게)
+const ALERT_AHEAD_DAYS = 180; // 내 일정·세금 알림을 몇 일 앞까지 미리 예약할지
 // 알림 id는 숫자여야 해요 — 지원금 id("voucher" 같은 글자)를 숫자로 바꿔요
 function alertBaseId(key) {
   let h = 0;
@@ -1040,10 +1041,11 @@ function buildAlertList({ programs, taxOn, taxStaff, rateOn, plan, hour, events 
     });
   };
   programs.forEach((p) => addDeadline(`p:${p.id}`, p.name, p.deadline, "신청 마감", { programId: p.id }));
-  events.filter((ev) => ev.alert).forEach((ev) => eventOccurrences(ev).forEach((d) => addDeadline(`e:${ev.id}:${d}`, ev.title, d, "일정", { screen: "taxSchedule" })));
+  // 앱을 한동안 안 열어도 알림이 끊기지 않게 반년 치 예약 (가까운 순 MAX_ALERTS개까지)
+  events.filter((ev) => ev.alert).forEach((ev) => eventOccurrences(ev, ALERT_AHEAD_DAYS).forEach((d) => addDeadline(`e:${ev.id}:${d}`, ev.title, d, "일정", { screen: "taxSchedule" })));
   if (taxOn) {
-    // 세금은 60일 안의 일정만 (매달 돌아오는 원천세 등이 너무 많이 쌓이지 않게)
-    const limit = new Date(now.getTime() + 60 * 864e5);
+    // 세금도 반년 안의 일정까지
+    const limit = new Date(now.getTime() + ALERT_AHEAD_DAYS * 864e5);
     TAX_SCHEDULE.filter((t) => taxStaff || !STAFF_TAX.includes(t.name))
       .filter((t) => parseLocalDate(t.deadline) <= limit)
       .forEach((t) => addDeadline(`t:${t.name}:${t.deadline}`, t.name, t.deadline, "신고·납부", { screen: "taxSchedule" }));
@@ -1073,7 +1075,17 @@ function buildAlertList({ programs, taxOn, taxStaff, rateOn, plan, hour, events 
       seen.add(k);
       return true;
     });
-  return adjusted.sort((a, b) => a.at - b.at).slice(0, MAX_ALERTS).map((n) => ({ ...n, body: `${name}, ${n.body}` }));
+  // 알림 번호가 겹치면 나중 것이 앞의 것을 덮어써 사라져요 → 겹치면 빈 번호로 옮겨요
+  const usedIds = new Set();
+  return adjusted
+    .sort((a, b) => a.at - b.at)
+    .slice(0, MAX_ALERTS)
+    .map((n) => {
+      let id = n.id;
+      while (usedIds.has(id)) id += 1;
+      usedIds.add(id);
+      return { ...n, id, body: `${name}, ${n.body}` };
+    });
 }
 
 // 마감임박순 정렬 — 이미 마감된 항목은 맨 뒤로 보내요
@@ -1265,8 +1277,11 @@ function lunarOf(date) {
   return { month: parseInt(m, 10), leap: !/^\d+$/.test(m), day: parseInt(parts.find((p) => p.type === "day").value, 10) };
 }
 // from 날짜부터 days일 안에서 음력 month월 day일인 양력 날짜들 (작은 달이라 30일이 없으면 29일)
+const lunarCache = new Map(); // 같은 계산 반복 방지 (화면을 그릴 때마다 400일씩 다시 세지 않게)
 function lunarDatesBetween(month, day, from, days) {
   if (!lunarSupported()) return [];
+  const key = `${month}-${day}-${formatLocalDate(from)}-${days}`;
+  if (lunarCache.has(key)) return lunarCache.get(key);
   const out = [];
   const d = new Date(from.getFullYear(), from.getMonth(), from.getDate());
   let lastOfMonth = null; // 그 달의 마지막 날 (30일이 없는 달 대비)
@@ -1283,7 +1298,10 @@ function lunarDatesBetween(month, day, from, days) {
       lastOfMonth = null;
     }
   }
-  return [...new Set(out)];
+  const result = [...new Set(out)];
+  if (lunarCache.size > 200) lunarCache.clear();
+  lunarCache.set(key, result);
+  return result;
 }
 const MY_ACCENT = "#E8890C";
 // 매달 반복 일정의 다음 날짜 (31일처럼 없는 날은 그 달 마지막 날로)
@@ -2505,6 +2523,10 @@ function InterestRateContent({ onOpenCalculator, rateAlertOn, onToggleRateAlert 
   const next = BOK_MEETINGS.find((d) => getDday(d) >= 0);
   const nextD = next ? getDday(next) : null;
   const nextDate = next ? parseLocalDate(next) : null;
+  // 앱에 넣어 둔 기준금리보다 새 발표가 이미 있었으면(앱 업데이트 전) 한국은행에서 확인하도록 안내
+  const lastMeeting = BOK_MEETINGS.filter((d) => getDday(d) <= 0).pop();
+  const rateStale = lastMeeting && lastMeeting > BOK_RATE.date.replace(/./g, "-");
+  const lastMeetingDate = lastMeeting ? parseLocalDate(lastMeeting) : null;
   const maxRate = 3.5;
   const policyRates = [
     { label: "대표 정책자금", sub: "일반경영안정자금 등", value: "연 2.96%~", tone: BLUE },
@@ -2539,6 +2561,24 @@ function InterestRateContent({ onOpenCalculator, rateAlertOn, onToggleRateAlert 
           기준금리가 오르면 변동금리 대출 이자도 따라 오를 수 있어요. 정책자금은 상승 폭이 작은 편이에요.
         </p>
       </div>
+
+      {rateStale && (
+        <a
+          href="https://www.bok.or.kr/portal/singl/baseRate/list.do?dataSeCd=01&menuNo=200643"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="-mt-2.5 mb-5 rounded-[20px] p-4 flex items-start gap-2.5"
+          style={{ background: "#FFF6E5", border: "1px solid #F5E1B8" }}
+        >
+          <Info size={16} color="#B26A00" className="shrink-0 mt-0.5" />
+          <span className="flex-1 min-w-0 text-[12.5px] leading-relaxed break-keep" style={{ color: "#7A5200" }}>
+            <b>{getDday(lastMeeting) === 0 ? "오늘" : `${lastMeetingDate.getMonth() + 1}월 ${lastMeetingDate.getDate()}일`} 발표 결과</b>가 아직 앱에 반영되지 않았을 수 있어요. 최신 기준금리는 한국은행에서 확인하세요.
+            <span className="flex items-center gap-1 mt-1.5 font-bold" style={{ color: "#B26A00" }}>
+              한국은행 기준금리 보기 <ExternalLink size={13} />
+            </span>
+          </span>
+        </a>
+      )}
 
       {/* 금리 발표일 알림 */}
       {onToggleRateAlert && (
@@ -4625,17 +4665,18 @@ function VatSplitCalc() {
 }
 
 function WeeklyAllowanceCalc() {
-  const [wage, wageRaw, onWageChange] = useNumberInput("10320");
+  const { year: MWY, wage: MIN_WAGE } = minWageNow();
+  const [wage, wageRaw, onWageChange] = useNumberInput(String(MIN_WAGE));
   const [hours, hoursRaw, onHoursChange] = useNumberInput("20");
   const eligible = hours >= 15;
   const allowance = eligible ? (Math.min(hours, 40) / 40) * 8 * wage : 0;
   const monthly = allowance * (365 / 7 / 12);
   return (
     <div>
-      <CalcNumberField label="시급" value={wageRaw} onChange={onWageChange} placeholder="10,320" suffix="원" hint={`2026년 최저시급 ${MIN_WAGE_2026.toLocaleString("ko-KR")}원`} />
+      <CalcNumberField label="시급" value={wageRaw} onChange={onWageChange} placeholder={MIN_WAGE.toLocaleString("ko-KR")} suffix="원" hint={`${MWY}년 최저시급 ${MIN_WAGE.toLocaleString("ko-KR")}원`} />
       <CalcNumberField label="1주 근무시간" value={hoursRaw} onChange={onHoursChange} placeholder="20" suffix="시간" />
       {!eligible && <CalcNotice>1주 15시간 미만 근무는 주휴수당 지급 대상이 아니에요.</CalcNotice>}
-      {wage > 0 && wage < MIN_WAGE_2026 && <CalcNotice>입력한 시급이 2026년 최저시급보다 낮아요.</CalcNotice>}
+      {wage > 0 && wage < MIN_WAGE && <CalcNotice>입력한 시급이 {MWY}년 최저시급보다 낮아요.</CalcNotice>}
       <CalcResultCard
         title="주휴수당"
         rows={[
@@ -4827,37 +4868,46 @@ function CardFeeCalc() {
   );
 }
 
-const MIN_WAGE_2026 = 10320;
+// 연도별 최저시급 — 새해 1월 1일이 되면 자동으로 바뀌어요 (새 연도 고시되면 한 줄 추가)
+const MIN_WAGES = [
+  { year: 2026, wage: 10320 },
+  { year: 2027, wage: 10700 }, // 2026.8 고용노동부 고시
+];
+function minWageNow() {
+  const y = TODAY.getFullYear();
+  return [...MIN_WAGES].reverse().find((m) => m.year <= y) || MIN_WAGES[0];
+}
 function MinWageCheckCalc() {
+  const { year: MWY, wage: MIN_WAGE } = minWageNow();
   const [mode, setMode] = useState("hourly");
-  const [wage, wageRaw, onWageChange] = useNumberInput("10320");
+  const [wage, wageRaw, onWageChange] = useNumberInput(String(MIN_WAGE));
   const [weekHours, weekRaw, onWeekChange] = useNumberInput("40");
-  const [pay, payRaw, onPayChange] = useNumberInput("2156880");
+  const [pay, payRaw, onPayChange] = useNumberInput(String(MIN_WAGE * 209));
   const [hours, hoursRaw, onHoursChange] = useNumberInput("209");
-  const MW = MIN_WAGE_2026.toLocaleString("ko-KR");
+  const MW = MIN_WAGE.toLocaleString("ko-KR");
 
   if (mode === "hourly") {
     // 주 15시간 이상이면 주휴시간(주 근무시간 ÷ 5, 최대 8시간)을 더해 월 소정근로시간을 구해요
     const juhu = weekHours >= 15 ? Math.min(weekHours, 40) / 5 : 0;
     const monthHours = Math.round((weekHours + juhu) * (365 / 7 / 12)); // 주 40시간 → 209시간 (고용노동부 기준과 같게 반올림)
-    const ok = wage >= MIN_WAGE_2026;
+    const ok = wage >= MIN_WAGE;
     return (
       <div>
         <CalcModeSwitch value={mode} onChange={setMode} options={[{ key: "hourly", label: "시급으로 확인" }, { key: "monthly", label: "월급으로 확인" }]} />
-        <CalcNumberField label="시급" value={wageRaw} onChange={onWageChange} placeholder="10,320" suffix="원" />
+        <CalcNumberField label="시급" value={wageRaw} onChange={onWageChange} placeholder={MW} suffix="원" />
         <CalcNumberField label="1주 근무시간" value={weekRaw} onChange={onWeekChange} placeholder="40" suffix="시간" hint="주 15시간 이상이면 주휴수당이 붙어요" />
         <CalcNotice tone={ok ? "green" : "red"}>
           {ok
             ? `2026년 최저시급(${MW}원) 이상이에요.`
-            : `2026년 최저시급(${MW}원)보다 시간당 ${won(MIN_WAGE_2026 - wage)} 적어요. 최저임금 위반 소지가 있어요.`}
+            : `${MWY}년 최저시급(${MW}원)보다 시간당 ${won(MIN_WAGE - wage)} 적어요. 최저임금 위반 소지가 있어요.`}
         </CalcNotice>
         <CalcResultCard
           title="최저임금 체크 (시급)"
           rows={[
             { label: "한 달 줘야 할 월급 (주휴 포함)", value: won(wage * monthHours), primary: true },
             { label: "월 소정근로시간 (주휴 포함)", value: `${monthHours}시간` },
-            { label: "최저임금 기준 월급", value: won(MIN_WAGE_2026 * monthHours) },
-            ...(!ok ? [{ label: "한 달 부족한 금액", value: won((MIN_WAGE_2026 - wage) * monthHours), tone: "red" }] : []),
+            { label: "최저임금 기준 월급", value: won(MIN_WAGE * monthHours) },
+            ...(!ok ? [{ label: "한 달 부족한 금액", value: won((MIN_WAGE - wage) * monthHours), tone: "red" }] : []),
           ]}
         />
       </div>
@@ -4865,11 +4915,11 @@ function MinWageCheckCalc() {
   }
 
   const effectiveWage = hours > 0 ? pay / hours : 0;
-  const isViolation = effectiveWage < MIN_WAGE_2026;
+  const isViolation = effectiveWage < MIN_WAGE;
   return (
     <div>
       <CalcModeSwitch value={mode} onChange={setMode} options={[{ key: "hourly", label: "시급으로 확인" }, { key: "monthly", label: "월급으로 확인" }]} />
-      <CalcNumberField label="월 급여 (세전)" value={payRaw} onChange={onPayChange} placeholder="2,156,880" suffix="원" />
+      <CalcNumberField label="월 급여 (세전)" value={payRaw} onChange={onPayChange} placeholder={(MIN_WAGE * 209).toLocaleString("ko-KR")} suffix="원" />
       <CalcNumberField label="월 소정근로시간" value={hoursRaw} onChange={onHoursChange} placeholder="209" suffix="시간" hint="주 40시간이면 주휴 포함 209시간" />
       <CalcNotice tone={isViolation ? "red" : "green"}>
         {isViolation ? `2026년 최저시급(${MW}원)보다 낮아요. 최저임금 위반 소지가 있어요.` : `2026년 최저시급(${MW}원) 이상으로 지급하고 있어요.`}
@@ -4878,8 +4928,8 @@ function MinWageCheckCalc() {
         title="최저임금 체크 (월급)"
         rows={[
           { label: "환산 시급", value: won(effectiveWage), primary: true },
-          { label: "최저임금 기준 월급", value: won(MIN_WAGE_2026 * hours) },
-          ...(isViolation ? [{ label: "한 달 부족한 금액", value: won((MIN_WAGE_2026 - effectiveWage) * hours), tone: "red" }] : []),
+          { label: "최저임금 기준 월급", value: won(MIN_WAGE * hours) },
+          ...(isViolation ? [{ label: "한 달 부족한 금액", value: won((MIN_WAGE - effectiveWage) * hours), tone: "red" }] : []),
         ]}
       />
     </div>
@@ -4943,7 +4993,7 @@ const CALC_TIPS = {
     "카드수수료 지원사업을 하는 지자체도 있어요. 지원금 목록에서 '고정비'를 찾아보세요.",
   ],
   minwage: [
-    "2026년 최저시급은 10,320원, 주 40시간 기준 월 2,156,880원이에요.",
+    `${minWageNow().year}년 최저시급은 ${minWageNow().wage.toLocaleString("ko-KR")}원, 주 40시간 기준 월 ${(minWageNow().wage * 209).toLocaleString("ko-KR")}원이에요.`,
     "위반하면 3년 이하 징역 또는 2천만원 이하 벌금 대상이라 꼭 미리 확인하세요.",
   ],
 };
