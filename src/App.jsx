@@ -507,6 +507,17 @@ const showInterIfReady = async (kind) => {
   });
 };
 
+// 큰 광고(rect)는 아래 빈 공간에 들어가는 광고라, 내용이 광고에 실제로 가려지는 만큼만 여백을 줘요
+// (광고 높이만큼 무조건 늘리면 내용이 짧아도 아래로 한참 스크롤돼요). 얇은 배너는 화면마다 내용이 바뀌어서 그대로 광고 높이만큼
+const adPadding = (space) => {
+  if (adState.size !== "rect") return space;
+  const col = document.querySelector("#root .min-h-screen > div");
+  if (!col) return space;
+  document.body.style.paddingBottom = "";
+  let bottom = 0;
+  for (const c of col.children) bottom = Math.max(bottom, c.getBoundingClientRect().bottom + window.scrollY);
+  return Math.max(0, Math.ceil(bottom + space - document.documentElement.scrollHeight));
+};
 // 종료 창 등이 하단 배너를 치웠다가 닫히면 다시 띄우라고 알려요
 const restoreBottomAd = () => window.dispatchEvent(new Event("bottomAdRestore"));
 // size: "banner"(얇은 하단 배너) | "rect"(아래 빈 공간이 넉넉한 화면용 300x250) | null(숨김)
@@ -523,7 +534,7 @@ function useBottomBanner(size) {
     const sub = AdMob.addListener(BannerAdPluginEvents.SizeChanged, (size) => {
       const h = adState.kind === "bottom" && !adState.hidden ? Math.round(size?.height || 0) + (adState.size === "rect" ? 16 : 0) : 0;
       // 배너와 화면 내용 사이 24px 띄워서 실수로 누르지 않게 해요 (AdMob 실수 클릭 정책)
-      document.body.style.paddingBottom = h ? `${h + 24}px` : "";
+      document.body.style.paddingBottom = h ? `${adPadding(h + 24)}px` : "";
     });
     return () => {
       sub.then((x) => x.remove());
