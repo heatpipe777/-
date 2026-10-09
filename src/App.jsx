@@ -53,6 +53,7 @@ import {
   Star,
 } from "lucide-react";
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
+import { Device } from "@capacitor/device";
 import { AdMob, BannerAdPosition, BannerAdSize, BannerAdPluginEvents, InterstitialAdPluginEvents } from "@capacitor-community/admob";
 import { App as CapApp } from "@capacitor/app";
 import { LocalNotifications } from "@capacitor/local-notifications";
@@ -397,19 +398,26 @@ const NEWS = [
 ];
 // ---- 광고 (AdMob) ----
 // AdMob 광고 단위 (앱 ID는 android/app/src/main/res/values/strings.xml 의 admob_app_id)
-// 에뮬레이터는 구글이 자동으로 테스트 광고를 보여줘요. 실제 폰으로 볼 때는 광고를 절대 누르지 마세요(부정 클릭).
+// 에뮬레이터에서는 자동으로 구글 테스트 광고(항상 나옴)로 바꿔 광고 위치를 바로 확인할 수 있어요.
+// 실제 폰은 진짜 광고 — 내 광고를 절대 누르지 마세요(부정 클릭).
 const BANNER_AD_ID = "ca-app-pub-9653756747871964/9870276186"; // 하단 배너
 const EXIT_AD_ID = "ca-app-pub-9653756747871964/7335612181"; // 종료 창
-const AD_TESTING = false;
+let AD_TESTING = false; // initAds()에서 에뮬레이터면 true
+// 구글 공식 테스트 광고 번호 (에뮬레이터는 구글이 "테스트 기기"로 보고 진짜 번호를 쓰기 때문에 직접 바꿔요)
+const TEST_AD_IDS = { banner: "ca-app-pub-3940256099942544/6300978111", inter: "ca-app-pub-3940256099942544/1033173712" };
+const adId = (real, kind) => (AD_TESTING ? TEST_AD_IDS[kind] : real);
 // 전면 광고 단위 — AdMob에서 '전면 광고' 단위를 만들면 번호를 넣어요 (null이면 전면 광고를 쓰지 않아요)
 const INTER_AD_ID = "ca-app-pub-9653756747871964/8973922092";
 // 배너를 넣지 않는 화면: 약관·개인정보처리방침 (하단 탭은 없앴어요)
 const NO_AD_VIEWS = ["privacy", "terms"];
 let adReady = null; // 광고 초기화는 앱이 켜질 때 한 번만
 const initAds = () =>
-  (adReady ||= AdMob.initialize({ initializeForTesting: AD_TESTING }).catch(() => {
-    adReady = null;
-  }));
+  (adReady ||= Device.getInfo()
+    .then((info) => { AD_TESTING = !!info.isVirtual; }, () => {})
+    .then(() => AdMob.initialize({ initializeForTesting: AD_TESTING }))
+    .catch(() => {
+      adReady = null;
+    }));
 // 광고는 화면에 한 개만 — 지금 떠 있는 광고 종류: null | "bottom"(하단 배너) | "exit"(종료 창)
 const adState = { kind: null, size: null, hidden: false };
 const removeAd = async () => {
@@ -472,7 +480,7 @@ const prepareInter = async (kind) => {
   if (!Capacitor.isNativePlatform() || !INTER_AD_ID || interReady || !interAllowed(kind)) return;
   try {
     await initAds();
-    await AdMob.prepareInterstitial({ adId: INTER_AD_ID, isTesting: AD_TESTING });
+    await AdMob.prepareInterstitial({ adId: adId(INTER_AD_ID, "inter"), isTesting: AD_TESTING });
     interReady = true;
   } catch (e) {
     interReady = false;
@@ -531,7 +539,7 @@ function useBottomBanner(size) {
             adState.size = size;
             adState.hidden = false;
             await AdMob.showBanner({
-              adId: BANNER_AD_ID,
+              adId: adId(BANNER_AD_ID, "banner"),
               adSize: size === "rect" ? BannerAdSize.MEDIUM_RECTANGLE : BannerAdSize.ADAPTIVE_BANNER,
               position: BannerAdPosition.BOTTOM_CENTER,
               margin: size === "rect" ? 16 : 0,
@@ -655,7 +663,7 @@ function ExitDialog({ onCancel, onExit }) {
         await removeAd(); // 숨겨 둔 하단 배너가 있으면 치워요
         if (cancelled) return;
         adState.kind = "exit";
-        await AdMob.showBanner({ adId: EXIT_AD_ID, adSize: BannerAdSize.MEDIUM_RECTANGLE, position: BannerAdPosition.CENTER, margin: 0, isTesting: AD_TESTING });
+        await AdMob.showBanner({ adId: adId(EXIT_AD_ID, "banner"), adSize: BannerAdSize.MEDIUM_RECTANGLE, position: BannerAdPosition.CENTER, margin: 0, isTesting: AD_TESTING });
         if (cancelled) await removeAd();
       } catch (e) {
         adState.kind = null;
