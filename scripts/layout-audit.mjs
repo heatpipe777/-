@@ -164,7 +164,7 @@ const SCREENS = [
   { name: "내 지역 선택 창", steps: [["home"], ["click", "MY"], ["click", "내 지역"]] },
   { name: "세부 지역 선택", steps: [["click", "경북"]] },
   { name: "지역 선택 완료", steps: [["click", "완료"]] },
-  { name: "맞춤 진단 1단계", steps: [["home"], ["click", "맞춤"]] },
+  { name: "맞춤 진단 1단계", steps: [["home"], ["click", "맞춤"], ["try", "다시 진단"]] },
   { name: "맞춤 진단 결과", steps: [["click", "서울"], ["click", "음식점·카페"], ["click", "3천만원 이하"], ["click", "예비 창업"], ["click", "혼자 운영"], ["click", "건너뛰기"], ["click", "건너뛰기"]] },
 ];
 
@@ -205,6 +205,9 @@ for (const [idx, sc] of SCREENS.entries()) {
         if (!ok) break;
         await sleep(400);
       }
+    } else if (kind === "try") {
+      // 있으면 누르고, 없으면 그냥 넘어가요 (예: 이미 진단했으면 결과 화면에서 "다시 진단")
+      await evaluate(`__audit.click(${JSON.stringify(arg)})`);
     } else {
       const ok = await evaluate(`__audit.click(${JSON.stringify(arg)})`);
       if (!ok) results.push({ screen: sc.name, issues: [{ type: "이동 실패", el: arg }] });
