@@ -6295,6 +6295,7 @@ export default function App() {
           className="w-full py-2.5 text-[12.5px] font-bold flex items-center justify-center gap-0.5"
           style={{ color: homeUpcoming === "subsidy" ? BLUE : MY_ACCENT, borderTop: "1px solid #F1F2F6" }}
         >
+          <img src={mini(homeUpcoming === "subsidy" ? "coin" : "taxcal")} alt="" className="w-6 h-6 object-contain mr-1" />
           {homeUpcoming === "subsidy" ? "지원금 마감 가까운 순으로 모두 보기" : `${shortCall === "내" ? "내" : shortCall} 일정 전체 보기 · 일정 추가`} <ChevronRight size={14} />
         </button>
       </div>
@@ -6322,8 +6323,8 @@ export default function App() {
               <img key={c.key} src={c.img} alt="" draggable={false} className="w-8 h-8 object-contain shrink-0" style={{ marginLeft: i ? -6 : 0, filter: "drop-shadow(0 2px 3px rgba(20,50,140,0.18))" }} />
             ))}
           </div>
-          <span className="shrink-0 inline-flex items-center gap-0.5 px-3.5 py-2 rounded-full text-[12.5px] font-bold text-white" style={{ background: BLUE, boxShadow: "0 4px 10px rgba(62,110,240,0.3)" }}>
-            열기 <ChevronRight size={14} strokeWidth={2.6} />
+          <span className="shrink-0 inline-flex items-center gap-0.5 text-[12.5px] font-bold" style={{ color: BLUE }}>
+            자세히 보기 <ChevronRight size={14} strokeWidth={2.6} />
           </span>
         </div>
       </button>
