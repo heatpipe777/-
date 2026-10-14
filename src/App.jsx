@@ -101,6 +101,7 @@ import calc_minwageImg from "./assets/calc/minwage.webp";
 import calcArtImg from "./assets/home-tiles/calc-art.webp";
 import noticeImg from "./assets/home-tiles/notice.webp";
 import mascotCoinImg from "./assets/mascot/coin.webp";
+import mascotLogoImg from "./assets/mascot/logo.webp";
 import mascotHelloImg from "./assets/mascot/hello.webp";
 import mascotCheerImg from "./assets/mascot/cheer.webp";
 import mascotEmptyImg from "./assets/mascot/empty.webp";
@@ -4973,8 +4974,6 @@ const CALC_TABS = [
   { key: "cardfee", label: "카드수수료", short: "카드수수료", Icon: CreditCard, color: "#3F6BEA", img: calc_cardfeeImg, sub: "카드 매출과 수수료율로", head: "실제 입금액을 계산해요", Comp: CardFeeCalc },
   { key: "minwage", label: "최저임금 체크", short: "최저임금", Icon: BadgeCheck, color: "#EE6A3C", img: calc_minwageImg, sub: "월급·시급이", head: "최저임금 이상인지 확인해요", Comp: MinWageCheckCalc },
 ];
-// 홈 계산기 칸(5칸)에 맞춘 짧은 이름
-const HOME_CALC_LABEL = { margin: "마진·판매가", breakeven: "손익분기점", cardfee: "카드수수료" };
 const CALC_TIPS = {
   margin: [
     "마진율은 '판매가 대비' 비율이에요. 원가 8,000원에 마진 30%면 판매가는 10,400원이 아니라 11,429원이에요.",
@@ -6147,7 +6146,7 @@ export default function App() {
         <>
       {/* 맨 위: 앱 이름 + 즐겨찾기·MY (하단 탭 대신) */}
       <div className="flex items-center gap-2 -mt-2 mb-3">
-        <img src="/icons/icon-192.png" alt="" className="w-8 h-8 rounded-[10px]" />
+        <img src={mascotLogoImg} alt="" className="w-9 h-9 object-contain -my-1" />
         <p className="flex-1 text-[19px] font-black" style={{ color: TEXT, letterSpacing: "-0.04em" }}>
           받아<span style={{ color: "#F07A12" }}>가게</span>
         </p>
@@ -6290,29 +6289,44 @@ export default function App() {
         ) : (
           <HomeScheduleList key={dayKey} favorites={favorites} myEvents={myEvents} taxStaff={taxStaff} onOpen={() => setScreen({ view: "taxSchedule" })} />
         )}
+        {/* 전체 화면으로 들어가는 길 (지원금 → 마감 임박 목록, 일정 → 사장님 일정 화면) */}
+        <button
+          onClick={() => (homeUpcoming === "subsidy" ? (setStatusFilter("available"), setHomeScreen("list")) : setScreen({ view: "taxSchedule" }))}
+          className="w-full py-2.5 text-[12.5px] font-bold flex items-center justify-center gap-0.5"
+          style={{ color: homeUpcoming === "subsidy" ? BLUE : MY_ACCENT, borderTop: "1px solid #F1F2F6" }}
+        >
+          {homeUpcoming === "subsidy" ? "지원금 마감 가까운 순으로 모두 보기" : `${shortCall === "내" ? "내" : shortCall} 일정 전체 보기 · 일정 추가`} <ChevronRight size={14} />
+        </button>
       </div>
 
-      {/* 사장님 필수 계산기 — 다른 지원금 앱엔 없는 우리 앱만의 강점이라 크게 보여줘요. 자주 쓰는 4개는 바로 열려요 */}
-      <div className="rounded-[26px] mb-6 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #EEF4FF 0%, #E1ECFE 55%, #C9DCFE 100%)", border: "1.5px solid #C9DAFD", boxShadow: "0 12px 26px rgba(62,110,240,0.16)" }}>
+      {/* 사장님 필수 계산기 — 다른 지원금 앱엔 없는 우리 앱만의 강점이라 크게 보여줘요.
+          아이콘은 "무엇이 있는지" 보여주는 진열용이고, 카드 어디를 눌러도 계산기 목록으로 들어가요(목록과 중복 없이 한 길로) */}
+      <button
+        onClick={() => setScreen({ view: "calculator" })}
+        aria-label="사장님 필수 계산기 열기"
+        className="w-full text-left rounded-[26px] mb-6 relative overflow-hidden active:scale-[0.99] transition-transform"
+        style={{ background: "linear-gradient(135deg, #EEF4FF 0%, #E1ECFE 55%, #C9DCFE 100%)", border: "1.5px solid #C9DAFD", boxShadow: "0 12px 26px rgba(62,110,240,0.16)" }}
+      >
         <img src={calcArtImg} alt="" draggable={false} className="absolute right-0 top-0 pointer-events-none" style={{ height: 112, WebkitMaskImage: "radial-gradient(ellipse 70% 70% at 55% 50%, #000 60%, transparent 100%)", maskImage: "radial-gradient(ellipse 70% 70% at 55% 50%, #000 60%, transparent 100%)" }} />
-        <button onClick={() => setScreen({ view: "calculator" })} className="relative w-full text-left pl-4 pr-[34%] pt-3.5 pb-2.5 flex items-start" style={{ minHeight: 100 }} aria-label="사장님 필수 계산기 열기">
-          <div className="flex-1 min-w-0 relative z-10">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold text-white" style={{ background: "linear-gradient(90deg, #4E86FA, #3E6EF0)", boxShadow: "0 3px 8px rgba(62,110,240,0.3)" }}>
-              ⚡ 9가지 · 무료 · 30초
-            </span>
-            <p className="text-[18px] font-black mt-1.5 flex items-center gap-0.5" style={{ color: "#1F3A8A", letterSpacing: "-0.03em", lineHeight: 1.35 }}>사장님 필수 계산기 <ChevronRight size={18} strokeWidth={2.6} /></p>
-            <p className="text-[12px] mt-0.5 break-keep" style={{ color: "#4A5578" }}>결과는 카톡으로 바로 보내요</p>
-          </div>
-        </button>
-        <div className="relative grid grid-cols-5 gap-y-2 px-1.5 pb-3">
-          {CALC_TABS.map((c) => (
-            <button key={c.key} onClick={() => setScreen({ view: "calculator", tab: c.key })} aria-label={`${c.label} 계산기`} className="flex flex-col items-center gap-0.5 py-0.5 active:scale-[0.94] transition-transform">
-              <img src={c.img} alt="" draggable={false} className="w-10 h-10 object-contain" style={{ filter: "drop-shadow(0 3px 5px rgba(20,50,140,0.15))" }} />
-              <span className="text-[11px] font-bold whitespace-nowrap" style={{ color: TEXT, letterSpacing: "-0.03em" }}>{HOME_CALC_LABEL[c.key] || c.short}</span>
-            </button>
-          ))}
+        <div className="relative pl-4 pr-[34%] pt-3.5 pb-2" style={{ minHeight: 96 }}>
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold text-white" style={{ background: "linear-gradient(90deg, #4E86FA, #3E6EF0)", boxShadow: "0 3px 8px rgba(62,110,240,0.3)" }}>
+            ⚡ 9가지 · 무료 · 30초
+          </span>
+          <p className="text-[18px] font-black mt-1.5" style={{ color: "#1F3A8A", letterSpacing: "-0.03em", lineHeight: 1.35 }}>사장님 필수 계산기</p>
+          <p className="text-[12px] mt-0.5 break-keep" style={{ color: "#4A5578" }}>결과는 카톡으로 바로 보내요</p>
         </div>
-      </div>
+        {/* 진열용 아이콘 한 줄 + 열기 버튼 */}
+        <div className="relative flex items-center gap-2 pl-3.5 pr-3 pb-3.5">
+          <div className="flex-1 min-w-0 flex items-center">
+            {CALC_TABS.map((c, i) => (
+              <img key={c.key} src={c.img} alt="" draggable={false} className="w-8 h-8 object-contain shrink-0" style={{ marginLeft: i ? -6 : 0, filter: "drop-shadow(0 2px 3px rgba(20,50,140,0.18))" }} />
+            ))}
+          </div>
+          <span className="shrink-0 inline-flex items-center gap-0.5 px-3.5 py-2 rounded-full text-[12.5px] font-bold text-white" style={{ background: BLUE, boxShadow: "0 4px 10px rgba(62,110,240,0.3)" }}>
+            열기 <ChevronRight size={14} strokeWidth={2.6} />
+          </span>
+        </div>
+      </button>
 
       {/* 오늘의 정책 소식 — 매일 바뀌는 볼거리 (뉴스 화면 바로가기 역할도 해요) */}
       {(() => {
