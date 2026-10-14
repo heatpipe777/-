@@ -6316,21 +6316,97 @@ export default function App() {
       </button>
 
 
-      {/* 바로가기 한 줄 — 뉴스·일정·계산기는 아래에 각자 칸이 있어서 여기엔 없어요 */}
-      <div className="grid grid-cols-5 gap-1 mb-6 -mt-1">
-        {[
-          { key: "all", label: "지원금", img: listHeroImg, onClick: () => { setStatusFilter("available"); setHomeScreen("list"); } },
+      {/* 바로가기 — 뉴스·일정·계산기는 아래에 각자 칸이 있어서 여기엔 없어요
+          ★ 시안 비교용 임시 분기(localStorage quickDemo = X|Y) — 사용자 선택 후 하나만 남기기 */}
+      {(() => {
+        let demo = "Z";
+        try { demo = localStorage.getItem("quickDemo") || "Z"; } catch { /* 기본 */ }
+        const openCount = ALL_PROGRAMS.filter((p) => !isExpired(p)).length;
+        const goList = () => { setStatusFilter("available"); setHomeScreen("list"); };
+        const others = [
           { key: "center", label: "지역센터", img: centerHeroImg, onClick: () => setScreen({ view: "centers" }) },
           { key: "exchange", label: "금리·환율", img: heroRateImg, onClick: () => setScreen({ view: "exchange" }) },
           { key: "docs", label: "서류 준비", img: heroDocsImg, onClick: () => setScreen({ view: "documents" }) },
           { key: "faq", label: "도움말", img: heroFaqImg, onClick: () => setScreen({ view: "faq" }) },
-        ].map((t) => (
-          <button key={t.key} onClick={t.onClick} aria-label={`${t.label} 열기`} className="flex flex-col items-center gap-1 py-1 active:scale-[0.95] transition-transform">
-            <img src={t.img} alt="" draggable={false} className="w-[50px] h-[50px] object-contain" />
-            <span className="text-[12px] font-bold whitespace-nowrap" style={{ color: TEXT }}>{t.label}</span>
-          </button>
-        ))}
-      </div>
+        ];
+        if (demo === "Z") {
+          // 퍼즐(벤토)형: 3칸 기준 — 지원금 큰 칸(2x2) / 오른쪽에 지역센터·금리 / 아래 서류(1칸)·도움말(2칸)
+          const tile = (t, extra = {}) => (
+            <button
+              key={t.key}
+              onClick={t.onClick}
+              aria-label={`${t.label.replace("\n", " ")} 열기`}
+              className="relative overflow-hidden rounded-[22px] p-3 text-left active:scale-[0.98] transition-transform"
+              style={{ background: t.bg, ...extra }}
+            >
+              <span className="relative z-10 block font-extrabold whitespace-pre-line" style={{ color: "#1A1F2C", fontSize: 14.5, lineHeight: 1.35, letterSpacing: "-0.02em" }}>{t.label}</span>
+              <img src={t.img} alt="" draggable={false} className="absolute right-1 bottom-1 object-contain pointer-events-none" style={{ width: t.size || "58%", maxWidth: 84 }} />
+            </button>
+          );
+          return (
+            <div className="grid grid-cols-3 gap-2.5 mb-6" style={{ gridAutoRows: "86px" }}>
+              <button
+                onClick={goList}
+                aria-label="지원금 찾기 열기"
+                className="relative overflow-hidden rounded-[24px] p-4 text-left active:scale-[0.98] transition-transform"
+                style={{ gridColumn: "1 / span 2", gridRow: "1 / span 2", background: "linear-gradient(140deg, #5B8DF7 0%, #3E6EF0 55%, #3159DC 100%)", boxShadow: "0 10px 22px rgba(62,110,240,0.28), inset 0 1px 0 rgba(255,255,255,0.3)" }}
+              >
+                <div className="absolute -right-10 -top-12 w-40 h-40 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
+                <p className="relative z-10 text-[20px] font-black text-white" style={{ letterSpacing: "-0.03em", lineHeight: 1.3 }}>소상공인<br />지원금 찾기</p>
+                <p className="relative z-10 mt-1.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold text-white whitespace-nowrap" style={{ background: "rgba(80,120,240,0.55)" }}>
+                  신청 가능 <b className="text-[14px] font-extrabold tabular-nums" style={{ color: "#FFE680" }}>{openCount}</b>건
+                </p>
+                <img src={listHeroImg} alt="" draggable={false} className="absolute right-1 bottom-1 w-[40%] max-w-[112px] object-contain pointer-events-none" style={{ filter: "drop-shadow(0 8px 12px rgba(10,30,110,0.3))" }} />
+              </button>
+              {tile({ ...others[0], label: "지역센터\n찾기", bg: "linear-gradient(140deg,#FFEFF6,#FBD9E9)" })}
+              {tile({ ...others[1], label: "금리·\n환율", bg: "linear-gradient(140deg,#ECFAF3,#CFF0DF)" })}
+              {tile({ ...others[2], label: "서류\n준비", bg: "linear-gradient(140deg,#FFF3E8,#FDDFC6)" })}
+              {tile({ ...others[3], label: "도움말 Q&A\n궁금한 점 찾기", bg: "linear-gradient(140deg,#F4EFFF,#E2D6FB)", size: "30%" }, { gridColumn: "2 / span 2" })}
+            </div>
+          );
+        }
+        if (demo === "Y") {
+          return (
+            <div className="grid grid-cols-5 gap-1 mb-6 -mt-1">
+              <button onClick={goList} aria-label="지원금 열기" className="relative flex flex-col items-center gap-1 pt-1.5 pb-2 rounded-[20px] active:scale-[0.95] transition-transform" style={{ background: "linear-gradient(160deg, #EAF1FF, #D6E4FF)", border: "1.5px solid #B9CEFD" }}>
+                <span className="absolute -top-1.5 -right-1 min-w-[22px] h-[20px] px-1.5 rounded-full text-[11px] font-extrabold text-white flex items-center justify-center tabular-nums" style={{ background: RED, boxShadow: "0 0 0 2px white" }}>{openCount}</span>
+                <img src={listHeroImg} alt="" draggable={false} className="w-[58px] h-[58px] object-contain" />
+                <span className="text-[13px] font-extrabold whitespace-nowrap" style={{ color: BLUE }}>지원금</span>
+              </button>
+              {others.map((t) => (
+                <button key={t.key} onClick={t.onClick} aria-label={`${t.label} 열기`} className="flex flex-col items-center gap-1 pt-1.5 pb-2 active:scale-[0.95] transition-transform">
+                  <img src={t.img} alt="" draggable={false} className="w-[58px] h-[58px] object-contain" />
+                  <span className="text-[13px] font-bold whitespace-nowrap" style={{ color: TEXT }}>{t.label}</span>
+                </button>
+              ))}
+            </div>
+          );
+        }
+        return (
+          <>
+            {/* 메인 기능은 넓은 칸으로 크게 */}
+            <button onClick={goList} aria-label="지원금 찾기 열기" className="w-full rounded-[24px] mb-3 pl-4 pr-2 py-3 flex items-center gap-3 text-left relative overflow-hidden active:scale-[0.99] transition-transform" style={{ background: "linear-gradient(120deg, #4E86FA 0%, #3E6EF0 60%, #3159DC 100%)", boxShadow: "0 10px 22px rgba(62,110,240,0.28), inset 0 1px 0 rgba(255,255,255,0.3)" }}>
+              <div className="absolute -right-8 -top-12 w-36 h-36 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
+              <div className="flex-1 min-w-0 relative">
+                <p className="text-[18px] font-black text-white" style={{ letterSpacing: "-0.03em" }}>지원금 찾기</p>
+                <p className="text-[12.5px] mt-0.5" style={{ color: "rgba(255,255,255,0.9)" }}>
+                  지금 신청 가능 <b className="text-[14px] font-extrabold tabular-nums" style={{ color: "#FFE680" }}>{openCount}</b>건 · 분야·지역별로
+                </p>
+              </div>
+              <img src={listHeroImg} alt="" draggable={false} className="relative w-[64px] h-[64px] object-contain shrink-0" />
+              <ChevronRight size={20} color="white" strokeWidth={2.6} className="relative shrink-0" />
+            </button>
+            <div className="grid grid-cols-4 gap-1 mb-6">
+              {others.map((t) => (
+                <button key={t.key} onClick={t.onClick} aria-label={`${t.label} 열기`} className="flex flex-col items-center gap-1 py-1 active:scale-[0.95] transition-transform">
+                  <img src={t.img} alt="" draggable={false} className="w-[58px] h-[58px] object-contain" />
+                  <span className="text-[13px] font-bold whitespace-nowrap" style={{ color: TEXT }}>{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        );
+      })()}
 
       {/* 다가오는 일정: 지원금 마감 / 사장님 일정 */}
       <div className="flex items-center justify-between gap-2 mt-4 mb-2">
