@@ -107,7 +107,12 @@ import toolFaqImg from "./assets/home-tiles/tool-faq-icon.webp";
 import toolDocsImg from "./assets/home-tiles/tool-docs-icon.webp";
 import calcArtImg from "./assets/home-tiles/calc-art.webp";
 import noticeImg from "./assets/home-tiles/notice.webp";
-import heroMegaImg from "./assets/home-tiles/hero-mega.webp";
+import mascotCoinImg from "./assets/mascot/coin.webp";
+import mascotHelloImg from "./assets/mascot/hello.webp";
+import mascotCheerImg from "./assets/mascot/cheer.webp";
+import mascotEmptyImg from "./assets/mascot/empty.webp";
+import mascotSearchImg from "./assets/mascot/search.webp";
+import mascotBellImg from "./assets/mascot/bell.webp";
 import ctaCoinImg from "./assets/home-tiles/cta-coin.webp";
 import newsFundImg from "./assets/news/fund.webp";
 import newsFixedImg from "./assets/news/fixed.webp";
@@ -675,7 +680,7 @@ function ReviewAskDialog({ callName, stats, onExit, onReview, onClose }) {
   return (
     <div className="fixed inset-0 flex items-center justify-center px-4" style={{ zIndex: 70, background: "rgba(20,24,36,0.55)" }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="w-full rounded-[26px] bg-white px-5 pt-7 pb-4 text-center" style={{ maxWidth: 340, boxShadow: "0 20px 50px rgba(0,0,0,0.25)" }}>
-        <img src="/icons/icon-192.png" alt="" className="w-[68px] h-[68px] mx-auto rounded-[20px]" style={{ boxShadow: "0 8px 18px rgba(214,140,20,0.25)" }} />
+        <img src={mascotCoinImg} alt="" draggable={false} className="w-[104px] h-[104px] mx-auto object-contain -mt-2" />
         <div className="flex justify-center gap-1 mt-3.5">
           {[0, 1, 2, 3, 4].map((i) => (
             <Star key={i} size={22} fill="#FFC23D" strokeWidth={0} />
@@ -1192,9 +1197,7 @@ function NicknameScreen({ initial = "", firstRun, onSave, onSkip, onBack }) {
     <div className={firstRun ? "pt-8" : ""}>
       {firstRun ? (
         <div className="text-center mb-7">
-          <div className="w-20 h-20 mx-auto rounded-[26px] flex items-center justify-center mb-4" style={{ background: "linear-gradient(135deg, #6AAEFE, #3E72F6)", boxShadow: "0 10px 24px rgba(62,114,246,0.3)" }}>
-            <span className="text-[38px]">👋</span>
-          </div>
+          <img src={mascotHelloImg} alt="" draggable={false} className="w-[132px] h-[132px] mx-auto mb-3 object-contain" />
           <p className="text-[22px] font-extrabold" style={{ color: TEXT }}>반가워요!</p>
           <p className="text-[15px] mt-1.5" style={{ color: "#5E6577" }}>어떻게 불러드릴까요?</p>
         </div>
@@ -1682,6 +1685,17 @@ const CATEGORY_IMAGES = {
   신용: catCredit,
   재기: catRestart,
 };
+// 지원금마다 다른 그림: 전국 사업은 하는 일, 지역 사업은 그 지역 풍경 (없으면 분야 그림)
+const PROGRAM_IMG_FILES = import.meta.glob("./assets/prog/*.webp", { eager: true, import: "default" });
+const PROGRAM_IMG_KEY = {
+  voucher: "voucher", 1: "p1", 4: "p4", 23: "p23", 24: "p24", 25: "p25", 103: "p103", 102: "p102", 5: "p5",
+  2: "seoul", 3: "gyeonggi", 7: "daegu", 8: "incheon", 11: "gangwon", 12: "jeju", 13: "gwangju", 14: "daejeon", 15: "daejeon",
+  16: "gyeongnam", 17: "ulsan", 18: "chungbuk", 19: "sejong", 21: "chungnam", 22: "jeonbuk", 26: "hampyeong",
+};
+// 작은 입체 아이콘 (설정 줄·메뉴 등) — 이름으로 불러요
+const MINI_IMG_FILES = import.meta.glob("./assets/mini/*.webp", { eager: true, import: "default" });
+const mini = (name) => MINI_IMG_FILES[`./assets/mini/${name}.webp`];
+const programImage = (p) => PROGRAM_IMG_FILES[`./assets/prog/${PROGRAM_IMG_KEY[p.id]}.webp`] || CATEGORY_IMAGES[p.category];
 const CATEGORY_COLORS = {
   고정비: { color: "white", bg: "#22B573", bg2: "#3DDB94" },
   에너지: { color: "white", bg: "#EA9A1E", bg2: "#FBC15B" },
@@ -1853,8 +1867,8 @@ function ProgramSummaryCard({ program }) {
       className="relative overflow-hidden rounded-[24px] p-4 mb-3 flex items-center gap-3.5"
       style={{ background: `linear-gradient(135deg, ${groupOf(program).color}2E 0%, #FFFFFF 85%)`, border: "1px solid #EEF0F6" }}
     >
-      {CATEGORY_IMAGES[program.category] ? (
-        <img src={CATEGORY_IMAGES[program.category]} alt="" className="w-16 h-16 shrink-0 object-contain -my-1" />
+      {programImage(program) ? (
+        <img src={programImage(program)} alt="" className="w-16 h-16 shrink-0 object-contain -my-1" />
       ) : (
       <div
         className="w-14 h-14 rounded-full flex items-center justify-center shrink-0 relative overflow-hidden"
@@ -2876,6 +2890,8 @@ function CenterMapPreview({ center }) {
   );
 }
 // 자주 묻는 질문 (지원금 기본 상식 + 세금 + 앱 사용법)
+// 도움말 분류별 작은 입체 아이콘
+const FAQ_CAT_IMG = { "지원금 기본": "coin", "신청 방법": "pen", 세금: "receipt", "앱 이용": "phone" };
 // top: true 는 "많이 묻는 질문"으로 맨 위에 보여줘요
 const FAQ_DATA = [
   { category: "지원금 기본", top: true, q: "저도 '소상공인'에 해당하나요?", a: "상시근로자(사장님 제외) 수로 판단해요. 음식점·도소매·서비스업 등은 5명 미만, 제조·건설·운수·광업은 10명 미만이면 소상공인이에요. 여기에 업종별 매출 기준(소기업 기준) 이하여야 해요. 정확한 확인은 '중소기업현황정보시스템(sminfo.mss.go.kr)'에서 소상공인 확인서를 발급받아 보시면 돼요." },
@@ -2969,7 +2985,8 @@ function FaqSearchScreen({ onBack }) {
           const active = category === c;
           const n = c === "전체" ? FAQ_DATA.length : FAQ_DATA.filter((f) => f.category === c).length;
           return (
-            <button key={c} onClick={() => setCategory(c)} className="px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0" style={active ? CHIP_ON : CHIP_OFF}>
+            <button key={c} onClick={() => setCategory(c)} className="px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 inline-flex items-center gap-1" style={active ? CHIP_ON : CHIP_OFF}>
+              {FAQ_CAT_IMG[c] && <img src={mini(FAQ_CAT_IMG[c])} alt="" className="w-[18px] h-[18px] -my-1 object-contain" />}
               {c} <span className="opacity-70">{n}</span>
             </button>
           );
@@ -2978,7 +2995,8 @@ function FaqSearchScreen({ onBack }) {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="text-center py-14 text-sm" style={{ color: MUTED }}>
+        <div className="text-center py-10 text-sm" style={{ color: MUTED }}>
+          <img src={mascotSearchImg} alt="" draggable={false} className="w-[110px] h-[110px] mx-auto mb-2 object-contain" />
           검색 결과가 없어요.
           <br />
           아래 상담 전화로 편하게 물어보세요.
@@ -3145,7 +3163,7 @@ function DocumentsScreen({ onBack }) {
           <div key={g.key} className="mb-5">
             <div className="flex items-center justify-between gap-2 mb-2 px-1">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="w-1 h-4 rounded-full shrink-0" style={{ background: g.color }} />
+                <img src={mini({ hometax: "hometax", gov24: "gov", etc: "folder", self: "handpen" }[g.key])} alt="" className="w-9 h-9 shrink-0 object-contain" />
                 <div className="min-w-0">
                   <p className="text-[14px] font-bold" style={{ color: TEXT }}>
                     {g.title} <span className="text-[12px] font-semibold tabular-nums" style={{ color: MUTED }}>{done}/{g.docs.length}</span>
@@ -4117,6 +4135,7 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
       {/* 결과 요약 */}
       <div className="relative overflow-hidden rounded-[24px] p-5 mb-3" style={{ background: "linear-gradient(135deg, #5B8DF7 0%, #3D63DD 100%)" }}>
         <div className="absolute -right-10 -top-12 w-40 h-40 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }} />
+        {open.length > 0 && <img src={mascotCheerImg} alt="" draggable={false} className="absolute pointer-events-none" style={{ right: 4, top: 4, width: "22%", maxWidth: 104 }} />}
         <div className="relative flex items-center gap-1.5 mb-1.5">
           <CheckCircle2 size={15} color="white" />
           <p className="text-[12.5px] text-white/80">{callName}이 지금 신청할 수 있는</p>
@@ -4285,7 +4304,7 @@ function ProgramRow({ p, onClick, actions, reason, highlight }) {
   const dday = getDday(p.deadline);
   const grp = groupOf(p);
   const cat = { bg: grp.color };
-  const img = CATEGORY_IMAGES[p.category];
+  const img = programImage(p);
   const CatIcon = CATEGORY_ICON[p.category] || FileText;
   const urgent = !p.recurring && dday >= 0 && dday <= 7;
   const closed = dday < 0 && !p.recurring;
@@ -4363,8 +4382,8 @@ function HomeScheduleList({ favorites, myEvents, taxStaff, onOpen }) {
         const dt = parseLocalDate(x.deadline);
         return (
           <button key={x.key} onClick={onOpen} className="w-full flex items-center gap-3 py-3" style={{ borderTop: i > 0 ? "1px solid #F1F2F6" : "none" }}>
-            <span className="w-8 h-8 rounded-full flex items-center justify-center text-[14px] shrink-0" style={{ background: t.bg }}>
-              {x.type === "my" ? x.emoji : x.type === "tax" ? "🧾" : "💙"}
+            <span className="w-8 h-8 rounded-full flex items-center justify-center text-[14px] shrink-0" style={{ background: x.type === "my" ? t.bg : "transparent" }}>
+              {x.type === "my" ? x.emoji : <img src={mini(x.type === "tax" ? "receipt" : "coin")} alt="" className="w-8 h-8 object-contain" />}
             </span>
             <span className="flex-1 min-w-0 text-left">
               <span className="block text-[13.5px] font-semibold truncate" style={{ color: TEXT }}>{x.name}</span>
@@ -5828,16 +5847,14 @@ export default function App() {
         <HeroHeader icon={Bell} color="#E5674D" image={heroAlertImg} title="알림 설정" subtitle="마감일·세금 신고일·금리 발표일" headline="미리 알려드려요!" onBack={() => setScreen({ view: "home" })} />
         <div className="rounded-[20px] overflow-hidden" style={CARD}>
           {[
-            { key: "deadline", icon: Bell, color: "#E5674D", bg: "#FDEEE9", title: "지원금 마감 알림", sub: "즐겨찾기에서 🔔 켠 지원금", on: notifyEnabled, toggle: toggleNotifyEnabled },
-            { key: "tax", icon: CalendarCheck, color: "#2C9F6B", bg: "#E7F7EF", title: "세금 신고·납부일 알림", sub: "부가세·종합소득세 등", on: taxAlertOn, toggle: toggleTaxAlert },
-            { key: "rate", icon: Landmark, color: BLUE, bg: BLUE_SOFT, title: "금리 발표일 알림", sub: "한국은행 기준금리 발표 당일", on: rateAlertOn, toggle: toggleRateAlert },
+            { key: "deadline", img: "bell", icon: Bell, color: "#E5674D", bg: "#FDEEE9", title: "지원금 마감 알림", sub: "즐겨찾기에서 🔔 켠 지원금", on: notifyEnabled, toggle: toggleNotifyEnabled },
+            { key: "tax", img: "taxcal", icon: CalendarCheck, color: "#2C9F6B", bg: "#E7F7EF", title: "세금 신고·납부일 알림", sub: "부가세·종합소득세 등", on: taxAlertOn, toggle: toggleTaxAlert },
+            { key: "rate", img: "bank", icon: Landmark, color: BLUE, bg: BLUE_SOFT, title: "금리 발표일 알림", sub: "한국은행 기준금리 발표 당일", on: rateAlertOn, toggle: toggleRateAlert },
           ].map((r, i) => (
             <div key={r.key} style={{ borderTop: i > 0 ? "1px solid #F1F2F6" : "none" }}>
               <div className="px-4 py-3.5 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: r.bg }}>
-                    <r.icon size={17} color={r.color} />
-                  </div>
+                  <img src={mini(r.img)} alt="" draggable={false} className="w-10 h-10 shrink-0 object-contain" />
                   <div className="min-w-0">
                     <p className="text-sm font-semibold" style={{ color: TEXT }}>{r.title}</p>
                     <p className="text-[12px]" style={{ color: MUTED }}>{r.sub}</p>
@@ -5871,15 +5888,13 @@ export default function App() {
         <p className="text-[13px] font-bold mt-5 mb-2.5 px-1" style={{ color: TEXT }}>알림 방식</p>
         <div className="rounded-[20px] overflow-hidden" style={CARD}>
           {[
-            { key: "sound", icon: Volume2, color: BLUE, bg: BLUE_SOFT, title: "소리", sub: "알림음이 울려요" },
-            { key: "vibe", icon: Vibrate, color: "#7B5CE0", bg: "#F0ECFB", title: "진동", sub: "휴대폰이 진동해요" },
-            { key: "popup", icon: BellRing, color: "#E5674D", bg: "#FDEEE9", title: "화면 위에 띄우기", sub: "사용 중에도 화면 위쪽에 잠깐 크게 보여요" },
+            { key: "sound", img: "speaker", icon: Volume2, color: BLUE, bg: BLUE_SOFT, title: "소리", sub: "알림음이 울려요" },
+            { key: "vibe", img: "vibe", icon: Vibrate, color: "#7B5CE0", bg: "#F0ECFB", title: "진동", sub: "휴대폰이 진동해요" },
+            { key: "popup", img: "popup", icon: BellRing, color: "#E5674D", bg: "#FDEEE9", title: "화면 위에 띄우기", sub: "사용 중에도 화면 위쪽에 잠깐 크게 보여요" },
           ].map((r, i) => (
             <div key={r.key} className="px-4 py-3.5 flex items-center justify-between gap-3" style={{ borderTop: i > 0 ? "1px solid #F1F2F6" : "none" }}>
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: r.bg }}>
-                  <r.icon size={17} color={r.color} />
-                </div>
+                <img src={mini(r.img)} alt="" draggable={false} className="w-10 h-10 shrink-0 object-contain" />
                 <div className="min-w-0">
                   <p className="text-sm font-semibold" style={{ color: TEXT }}>{r.title}</p>
                   <p className="text-[12px] break-keep" style={{ color: MUTED }}>{r.sub}</p>
@@ -5893,9 +5908,7 @@ export default function App() {
         <div className="rounded-[20px] mt-2.5 overflow-hidden" style={CARD}>
           <div className="px-4 py-3.5 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "#EEF0FB" }}>
-                <Moon size={17} color="#4B55A8" />
-              </div>
+              <img src={mini("moon")} alt="" draggable={false} className="w-10 h-10 shrink-0 object-contain" />
               <div className="min-w-0">
                 <p className="text-sm font-semibold" style={{ color: TEXT }}>방해금지 시간</p>
                 <p className="text-[12px] break-keep" style={{ color: MUTED }}>
@@ -5918,9 +5931,7 @@ export default function App() {
           )}
           <div className="px-4 py-3.5" style={{ borderTop: "1px solid #F1F2F6" }}>
             <div className="flex items-center gap-3 min-w-0 mb-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "#E7F7EF" }}>
-                <CalendarX size={17} color="#2C9F6B" />
-              </div>
+              <img src={mini("calx")} alt="" draggable={false} className="w-10 h-10 shrink-0 object-contain" />
               <div className="min-w-0">
                 <p className="text-sm font-semibold" style={{ color: TEXT }}>알림 안 받는 요일</p>
                 <p className="text-[12px] break-keep" style={{ color: MUTED }}>
@@ -5958,7 +5969,7 @@ export default function App() {
           className="w-full mt-2.5 py-3.5 rounded-2xl text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] transition-transform"
           style={{ background: BLUE_SOFT, color: BLUE }}
         >
-          <BellRing size={15} /> {testSent ? "3초 뒤에 알림이 와요" : "알림 미리 받아보기"}
+          <img src={mascotBellImg} alt="" draggable={false} className="w-9 h-9 -my-2 object-contain" /> {testSent ? "3초 뒤에 알림이 와요" : "알림 미리 받아보기"}
         </button>
         <p className="text-[11px] mt-2 px-1 leading-relaxed break-keep" style={{ color: MUTED }}>
           휴대폰의 '방해 금지 모드'나 무음 모드가 켜져 있으면 소리·진동 없이 조용히 와요. 알림음 종류나 잠금화면에서 내용 숨기기는 휴대폰 설정 → 애플리케이션 → 받아가게 → 알림에서 바꿀 수 있어요.
@@ -6143,52 +6154,32 @@ export default function App() {
           <User size={23} color={TEXT} strokeWidth={2} />
         </button>
       </div>
+      {/* 홈 인사 카드: 가게 캐릭터가 동전을 받아 드는 모습 + 인사 말풍선 */}
       <div
-        className="relative overflow-hidden mb-3 pl-5 pr-4 pt-5 pb-5"
-        style={{ background: "linear-gradient(135deg, #6AAEFE 0%, #4E86FA 45%, #3E72F6 100%)", borderRadius: 28, boxShadow: "0 10px 24px rgba(62,114,246,0.25), inset 0 1px 0 rgba(255,255,255,0.35)" }}
+        className="relative overflow-hidden mb-3 flex items-center gap-1 pl-1 pr-4 py-3"
+        style={{ background: "linear-gradient(135deg, #F4F8FF 0%, #E6EFFF 100%)", borderRadius: 28, border: "1px solid #DCE6FF", boxShadow: "0 8px 20px rgba(62,114,246,0.12)" }}
       >
-        {/* 위쪽 은은한 광택 */}
-        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(110% 85% at 15% -15%, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0) 55%)" }} />
-        {/* 배경 장식 원 */}
-        <div className="absolute -right-12 -top-16 w-48 h-48 rounded-full" style={{ background: "rgba(255,255,255,0.07)" }} />
-        <div className="absolute -left-10 -bottom-16 w-40 h-40 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }} />
-        {/* 확성기 + 알림 말풍선 그림 (오른쪽 아래) */}
-        <div className="absolute right-0 top-0 bottom-0" style={{ aspectRatio: "340 / 350", maxWidth: "34%" }}>
-          <img
-            src={heroMegaImg}
-            alt=""
-            draggable={false}
-            className="w-full h-full object-contain object-right-bottom pointer-events-none"
-            style={{
-              WebkitMaskImage: "radial-gradient(ellipse 72% 72% at 55% 50%, #000 60%, transparent 100%)",
-              maskImage: "radial-gradient(ellipse 72% 72% at 55% 50%, #000 60%, transparent 100%)",
-            }}
-          />
-          {/* 그림 속 종 말풍선을 누르면 알림 설정(MY)으로 */}
-          <button
-            onClick={() => setScreen({ view: "alertSettings" })}
-            aria-label="알림 설정"
-            className="absolute z-10 rounded-full"
-            style={{ right: "4%", top: "2%", width: "36%", aspectRatio: "1 / 1" }}
-          />
-        </div>
-
-        <div className="relative z-10">
-          <p className="text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.95)" }}>{callName}, 안녕하세요 👋</p>
-          <h1 className="font-black mt-1 whitespace-nowrap" style={{ color: "white", fontSize: 21, lineHeight: 1.4, letterSpacing: "-0.03em" }}>
-            받을 혜택, 받아가게!
+        <div className="absolute -right-10 -top-14 w-40 h-40 rounded-full" style={{ background: "rgba(62,114,246,0.06)" }} />
+        <div className="absolute rounded-full pointer-events-none" style={{ left: "2%", top: "10%", width: "36%", aspectRatio: "1 / 1", background: "radial-gradient(circle, rgba(255,214,90,0.35) 0%, rgba(255,214,90,0) 65%)" }} />
+        <img src={mascotCoinImg} alt="" draggable={false} className="relative shrink-0 pointer-events-none" style={{ width: "36%", maxWidth: 170 }} />
+        <div className="relative min-w-0">
+          <div className="inline-block px-3 py-1.5 rounded-2xl rounded-bl-md text-[13px] font-semibold" style={{ background: "white", color: TEXT, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+            {callName}, 안녕하세요!
+          </div>
+          <h1 className="font-black mt-2" style={{ color: "#1F3A8A", fontSize: 21, lineHeight: 1.35, letterSpacing: "-0.03em" }}>
+            받을 혜택,<br />받아<span style={{ color: "#F07A12" }}>가게!</span>
           </h1>
-        </div>
-        {/* 안내용 표시 — 목록은 아래 '소상공인 지원금' 카드로 들어가요 */}
-        <div
-          className="relative z-10 mt-3.5 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full"
-          style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.25)" }}
-        >
-          {/* 초록 점: 몇 번만 깜박이고 멈춰요 (계속 깜박이면 화면을 쉬지 않고 다시 그려요) */}
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#81F5BE", boxShadow: "0 0 6px #81F5BE", animation: "dotPulse 2s cubic-bezier(0.4, 0, 0.6, 1) 2s 4" }} />
-          <span className="text-[12px] font-semibold text-white" style={{ lineHeight: 1.5 }}>
-            지금 신청할 수 있는 지원금 <b className="text-[14px] font-extrabold tabular-nums" style={{ color: "#FFE680" }}>{ALL_PROGRAMS.filter((p) => !isExpired(p)).length}</b>건
-          </span>
+          {/* 안내용 표시 — 목록은 아래 '소상공인 지원금' 카드로 들어가요 */}
+          <div
+            className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full"
+            style={{ background: "white", border: "1px solid #DCE6FF", boxShadow: "0 2px 6px rgba(62,114,246,0.08)" }}
+          >
+            {/* 초록 점: 몇 번만 깜박이고 멈춰요 (계속 깜박이면 화면을 쉬지 않고 다시 그려요) */}
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#22C27A", animation: "dotPulse 2s cubic-bezier(0.4, 0, 0.6, 1) 2s 4" }} />
+            <span className="text-[12px] font-semibold" style={{ lineHeight: 1.5, color: TEXT }}>
+              지금 신청할 수 있는 지원금 <b className="text-[14px] font-extrabold tabular-nums" style={{ color: "#3E72F6" }}>{ALL_PROGRAMS.filter((p) => !isExpired(p)).length}</b>건
+            </span>
+          </div>
         </div>
       </div>
 
@@ -6496,7 +6487,8 @@ export default function App() {
 
       <div className="space-y-2.5">
         {filtered.length === 0 && (
-          <div className="text-center py-14 text-sm" style={{ color: MUTED }}>
+          <div className="text-center py-10 text-sm" style={{ color: MUTED }}>
+            <img src={mascotSearchImg} alt="" draggable={false} className="w-[110px] h-[110px] mx-auto mb-2 object-contain" />
             조건에 맞는 지원금이 없어요.
           </div>
         )}
@@ -6544,7 +6536,7 @@ export default function App() {
           )}
           {favCount === 0 ? (
             <div className="rounded-[22px] px-5 py-8 text-center" style={CARD}>
-              <img src={heroFavImg} alt="" className="w-[88px] h-[88px] mx-auto mb-2 object-contain" />
+              <img src={mascotEmptyImg} alt="" draggable={false} className="w-[124px] h-[124px] mx-auto mb-2 object-contain" />
               <p className="text-[15px] font-bold" style={{ color: TEXT }}>아직 저장한 지원금이 없어요</p>
               <p className="text-[12.5px] mt-1.5 break-keep" style={{ color: MUTED }}>지원금 목록에서 ♡를 누르면 여기에 모이고, 마감 전에 알림도 받을 수 있어요</p>
               <button
@@ -6720,7 +6712,7 @@ export default function App() {
           <p className="text-[13px] font-bold mb-2.5 px-1" style={{ color: TEXT }}>내 정보</p>
           <button onClick={() => setScreen({ view: "nickname" })} className="w-full text-left rounded-[22px] px-4 py-3.5 mb-2.5 flex items-center justify-between gap-3 active:scale-[0.99] transition-transform" style={CARD}>
             <div className="flex items-center gap-3 min-w-0">
-              <img src={heroNameImg} alt="" className="w-11 h-11 shrink-0 object-contain" />
+              <img src={mini("nametag")} alt="" className="w-11 h-11 shrink-0 object-contain" />
               <div className="min-w-0">
                 <p className="text-[14.5px] font-bold" style={{ color: TEXT }}>내 이름</p>
                 <p className="text-[12px] truncate" style={{ color: MUTED }}>{nickname ? `${callName}으로 불러드려요` : "아직 설정 전이에요 · 지금은 '사장님'으로 불러요"}</p>
@@ -6730,7 +6722,7 @@ export default function App() {
           </button>
           <button onClick={openPicker} className="w-full text-left rounded-[22px] px-4 py-3.5 mb-2.5 flex items-center justify-between gap-3 active:scale-[0.99] transition-transform" style={CARD}>
             <div className="flex items-center gap-3 min-w-0">
-              <img src={heroRegionImg} alt="" className="w-11 h-11 shrink-0 object-contain" />
+              <img src={mini("pin")} alt="" className="w-11 h-11 shrink-0 object-contain" />
               <div className="min-w-0">
                 <p className="text-[14.5px] font-bold" style={{ color: TEXT }}>내 지역</p>
                 <p className="text-[12px] truncate" style={{ color: MUTED }}>
@@ -6746,7 +6738,7 @@ export default function App() {
             style={CARD}
           >
             <div className="flex items-center gap-3 min-w-0">
-              <img src={ctaCoinImg} alt="" className="w-11 h-11 shrink-0 object-contain" />
+              <img src={mini("clip")} alt="" className="w-11 h-11 shrink-0 object-contain" />
               <div className="min-w-0">
                 <p className="text-[14.5px] font-bold" style={{ color: TEXT }}>맞춤 진단</p>
                 <p className="text-[12px] truncate" style={{ color: MUTED }}>
@@ -6759,7 +6751,7 @@ export default function App() {
           <p className="text-[13px] font-bold mb-2.5 px-1 mt-5" style={{ color: TEXT }}>알림</p>
           <button onClick={() => setScreen({ view: "alertSettings" })} className="w-full text-left rounded-[22px] px-4 py-3.5 mb-5 flex items-center justify-between gap-3 active:scale-[0.99] transition-transform" style={CARD}>
             <div className="flex items-center gap-3 min-w-0">
-              <img src={heroAlertImg} alt="" className="w-11 h-11 shrink-0 object-contain" />
+              <img src={mini("bell")} alt="" className="w-11 h-11 shrink-0 object-contain" />
               <div className="min-w-0">
                 <p className="text-[14.5px] font-bold" style={{ color: TEXT }}>알림 설정</p>
                 <p className="text-[12px] truncate" style={{ color: MUTED }}>
@@ -6779,7 +6771,7 @@ export default function App() {
             className="w-full text-left rounded-[22px] px-4 py-3.5 mt-1 mb-5 flex items-center gap-3 active:scale-[0.99] transition-transform"
             style={{ ...CARD, background: "linear-gradient(135deg, #FFF4DE 0%, #FFFFFF 75%)", border: "1px solid #FBE3B5" }}
           >
-            <span className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 text-[22px]" style={{ background: "#FFE7B3" }}>📣</span>
+            <img src={mini("share")} alt="" className="w-11 h-11 shrink-0 object-contain" />
             <span className="flex-1 min-w-0">
               <span className="block text-[14.5px] font-bold" style={{ color: TEXT }}>동료 사장님께 알려주기</span>
               <span className="block text-[12px] break-keep" style={{ color: MUTED }}>카카오톡·문자 등으로 받아가게를 추천해요</span>
@@ -6790,8 +6782,8 @@ export default function App() {
           <p className="text-[13px] font-bold mb-2.5 px-1 mt-4" style={{ color: TEXT }}>약관·정보</p>
           <div className="rounded-[22px] overflow-hidden mb-3" style={CARD}>
             {[
-              { key: "privacy", label: "개인정보처리방침" },
-              { key: "terms", label: "이용약관" },
+              { key: "privacy", label: "개인정보처리방침", img: "lockdoc" },
+              { key: "terms", label: "이용약관", img: "doc" },
             ].map((item, i) => (
               <button
                 key={item.key}
@@ -6799,7 +6791,7 @@ export default function App() {
                 className="w-full text-left px-4 py-3.5 flex items-center justify-between"
                 style={i > 0 ? { borderTop: `1px solid ${BORDER}` } : {}}
               >
-                <span className="text-sm font-semibold" style={{ color: TEXT }}>{item.label}</span>
+                <span className="flex items-center gap-2.5 text-sm font-semibold" style={{ color: TEXT }}><img src={mini(item.img)} alt="" className="w-7 h-7 object-contain" />{item.label}</span>
                 <ChevronRight size={16} color={MUTED} />
               </button>
             ))}
