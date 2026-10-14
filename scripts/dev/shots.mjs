@@ -4,7 +4,7 @@ import fs from "fs";
 const OUT = process.argv[2];
 fs.mkdirSync(OUT, { recursive: true });
 const ADB = "C:/Android/Sdk/platform-tools/adb.exe";
-const adb = (a) => execSync(`"${ADB}" ${a}`, { cwd: "C:/Users/미미", env: { ...process.env, MSYS_NO_PATHCONV: "1" } });
+const adb = (a) => execSync(`"${ADB}" -s ${process.env.ANDROID_SERIAL || "emulator-5554"} ${a}`, { cwd: "C:/Users/미미", env: { ...process.env, MSYS_NO_PATHCONV: "1" } });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function connect() {
@@ -78,7 +78,10 @@ const go = async (steps) => {
     await sleep(1300);
   }
 };
-const shot = (name) => {
+const shot = async (name) => {
+  // 스토어 캡처엔 광고 숨김 (하단 배너는 앱 위에 따로 그려지는 네이티브 화면)
+  await ev("(window.Capacitor?.Plugins?.AdMob?.removeBanner?.()||Promise.resolve()).then(()=>true,()=>true)");
+  await sleep(600);
   fs.writeFileSync(`${OUT}/${name}.png`, adb("exec-out screencap -p"));
   console.log("찍음", name);
 };
@@ -110,6 +113,6 @@ for (const [name, steps] of SHOTS) {
   await go(steps);
   await top();
   await sleep(1200);
-  shot(name);
+  await shot(name);
 }
 ws.close();
