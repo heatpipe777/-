@@ -4374,13 +4374,13 @@ function HomeScheduleList({ favorites, myEvents, taxStaff, onOpen }) {
         const t = tones[x.type];
         const dt = parseLocalDate(x.deadline);
         return (
-          <button key={x.key} onClick={onOpen} className="w-full flex items-center gap-3 py-3" style={{ borderTop: i > 0 ? "1px solid #F1F2F6" : "none" }}>
-            <span className="w-8 h-8 rounded-full flex items-center justify-center text-[14px] shrink-0" style={{ background: x.type === "my" ? t.bg : "transparent" }}>
-              {x.type === "my" ? x.emoji : <img src={mini(x.type === "tax" ? "receipt" : "coin")} alt="" className="w-8 h-8 object-contain" />}
+          <button key={x.key} onClick={onOpen} className="w-full flex items-center gap-2.5 py-2.5" style={{ borderTop: i > 0 ? "1px solid #F1F2F6" : "none" }}>
+            <span className="w-6 h-6 rounded-full flex items-center justify-center text-[12px] shrink-0" style={{ background: x.type === "my" ? t.bg : "transparent" }}>
+              {x.type === "my" ? x.emoji : <img src={mini(x.type === "tax" ? "receipt" : "coin")} alt="" className="w-6 h-6 object-contain" />}
             </span>
-            <span className="flex-1 min-w-0 text-left">
-              <span className="block text-[13.5px] font-semibold truncate" style={{ color: TEXT }}>{x.name}</span>
-              <span className="block text-[11px]" style={{ color: MUTED }}>{dt.getMonth() + 1}월 {dt.getDate()}일 · {x.who}</span>
+            <span className="flex-1 min-w-0 text-left flex items-baseline gap-1.5">
+              <span className="text-[13.5px] font-semibold truncate" style={{ color: TEXT }}>{x.name}</span>
+              <span className="text-[11px] shrink-0 tabular-nums" style={{ color: MUTED }}>{dt.getMonth() + 1}.{dt.getDate()}</span>
             </span>
             <span className="text-[11.5px] font-bold px-2 py-1 rounded-lg shrink-0 tabular-nums" style={d <= 3 ? { background: RED, color: "white" } : { background: t.bg, color: t.fg }}>
               {d === 0 ? "오늘" : `D-${d}`}
@@ -4389,8 +4389,8 @@ function HomeScheduleList({ favorites, myEvents, taxStaff, onOpen }) {
         );
       })}
       {myEvents.length === 0 && (
-        <button onClick={onOpen} className="w-full flex items-center gap-2 py-3 text-left" style={{ borderTop: items.length ? "1px solid #F1F2F6" : "none" }}>
-          <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[15px] font-bold" style={{ background: "#FFF3E0", color: MY_ACCENT }}>+</span>
+        <button onClick={onOpen} className="w-full flex items-center gap-2.5 py-2.5 text-left" style={{ borderTop: items.length ? "1px solid #F1F2F6" : "none" }}>
+          <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[14px] font-bold" style={{ background: "#FFF3E0", color: MY_ACCENT }}>+</span>
           <span className="text-[12.5px] font-semibold" style={{ color: MY_ACCENT }}>월급날·임대료를 등록하면 미리 알려드려요</span>
         </button>
       )}
@@ -4423,11 +4423,11 @@ function DeadlineSoonList({ onSelect }) {
           <button
             key={p.id}
             onClick={() => onSelect(p.id)}
-            className="w-full flex items-center gap-3 py-3"
+            className="w-full flex items-center gap-2.5 py-2.5"
             style={{ borderTop: index > 0 ? "1px solid #F1F2F6" : "none" }}
           >
             <span
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[14px] font-extrabold shrink-0 tabular-nums"
+              className="w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-extrabold shrink-0 tabular-nums"
               style={{ background: tone.bg, color: tone.fg }}
             >
               {index + 1}
@@ -4973,6 +4973,8 @@ const CALC_TABS = [
   { key: "cardfee", label: "카드수수료", short: "카드수수료", Icon: CreditCard, color: "#3F6BEA", img: calc_cardfeeImg, sub: "카드 매출과 수수료율로", head: "실제 입금액을 계산해요", Comp: CardFeeCalc },
   { key: "minwage", label: "최저임금 체크", short: "최저임금", Icon: BadgeCheck, color: "#EE6A3C", img: calc_minwageImg, sub: "월급·시급이", head: "최저임금 이상인지 확인해요", Comp: MinWageCheckCalc },
 ];
+// 홈 계산기 칸(5칸)에 맞춘 짧은 이름
+const HOME_CALC_LABEL = { margin: "마진·판매가", breakeven: "손익분기점", cardfee: "카드수수료" };
 const CALC_TIPS = {
   margin: [
     "마진율은 '판매가 대비' 비율이에요. 원가 8,000원에 마진 30%면 판매가는 10,400원이 아니라 11,429원이에요.",
@@ -6268,18 +6270,23 @@ export default function App() {
       </div>
 
       {/* 다가오는 일정: 지원금 마감 / 사장님 일정 */}
-      <div className="flex items-center justify-between mt-4 mb-2.5">
-        <div className="flex items-center gap-1.5">
-          <p className="text-[16px] font-bold" style={{ color: TEXT }}>다가오는 마감·일정</p>
-          <Clock size={15} color="#F0567A" strokeWidth={2.4} />
+      <div className="flex items-center justify-between gap-2 mt-4 mb-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <p className="text-[16px] font-bold whitespace-nowrap" style={{ color: TEXT }}>다가오는 마감·일정</p>
+          <Clock size={15} color="#F0567A" strokeWidth={2.4} className="shrink-0" />
+        </div>
+        {/* 작은 전환 버튼 (예전엔 카드 안에 큰 전환 줄이 따로 있었어요) */}
+        <div className="flex p-0.5 rounded-full shrink-0" style={{ background: "#F1F3F8" }}>
+          {[{ key: "subsidy", label: "지원금" }, { key: "mine", label: `${shortCall} 일정` }].map((o) => (
+            <button key={o.key} onClick={() => setHomeUpcomingSaved(o.key)} className="px-3 py-1 rounded-full text-[12px] font-bold whitespace-nowrap" style={homeUpcoming === o.key ? { background: "white", color: BLUE, boxShadow: "0 1px 4px rgba(0,0,0,0.08)" } : { color: MUTED }}>
+              {o.label}
+            </button>
+          ))}
         </div>
       </div>
-      <div className="rounded-[22px] mb-6 px-3.5 pt-3 pb-1 bg-white" style={{ border: "1px solid #F0F1F6", boxShadow: "0 6px 20px rgba(40,60,120,0.06)" }}>
-        <CalcModeSwitch value={homeUpcoming} onChange={setHomeUpcomingSaved} options={[{ key: "subsidy", label: "지원금 마감" }, { key: "mine", label: `${shortCall} 일정` }]} />
+      <div className="rounded-[22px] mb-6 px-3.5 py-0.5 bg-white" style={{ border: "1px solid #F0F1F6", boxShadow: "0 6px 20px rgba(40,60,120,0.06)" }}>
         {homeUpcoming === "subsidy" ? (
-          <div className="-mt-3">
-            <DeadlineSoonList key={dayKey} onSelect={(id) => setScreen({ view: "detail", id })} />
-          </div>
+          <DeadlineSoonList key={dayKey} onSelect={(id) => setScreen({ view: "detail", id })} />
         ) : (
           <HomeScheduleList key={dayKey} favorites={favorites} myEvents={myEvents} taxStaff={taxStaff} onOpen={() => setScreen({ view: "taxSchedule" })} />
         )}
@@ -6297,11 +6304,11 @@ export default function App() {
             <p className="text-[12px] mt-0.5 break-keep" style={{ color: "#4A5578" }}>결과는 카톡으로 바로 보내요</p>
           </div>
         </button>
-        <div className="relative grid grid-cols-4 gap-2 px-3 pb-3">
-          {["margin", "vat", "allowance", "insurance"].map((k) => CALC_TABS.find((c) => c.key === k)).map((c) => (
-            <button key={c.key} onClick={() => setScreen({ view: "calculator", tab: c.key })} aria-label={`${c.label} 계산기`} className="rounded-[16px] bg-white py-2 flex flex-col items-center gap-0.5 active:scale-[0.96] transition-transform" style={{ boxShadow: "0 4px 12px rgba(10,30,110,0.1)" }}>
-              <img src={c.img} alt="" draggable={false} className="w-9 h-9 object-contain" />
-              <span className="text-[11.5px] font-bold whitespace-nowrap" style={{ color: TEXT }}>{c.short}</span>
+        <div className="relative grid grid-cols-5 gap-y-2 px-1.5 pb-3">
+          {CALC_TABS.map((c) => (
+            <button key={c.key} onClick={() => setScreen({ view: "calculator", tab: c.key })} aria-label={`${c.label} 계산기`} className="flex flex-col items-center gap-0.5 py-0.5 active:scale-[0.94] transition-transform">
+              <img src={c.img} alt="" draggable={false} className="w-10 h-10 object-contain" style={{ filter: "drop-shadow(0 3px 5px rgba(20,50,140,0.15))" }} />
+              <span className="text-[11px] font-bold whitespace-nowrap" style={{ color: TEXT, letterSpacing: "-0.03em" }}>{HOME_CALC_LABEL[c.key] || c.short}</span>
             </button>
           ))}
         </div>
