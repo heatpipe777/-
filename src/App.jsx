@@ -6287,27 +6287,24 @@ export default function App() {
 
       {/* 사장님 필수 계산기 — 다른 지원금 앱엔 없는 우리 앱만의 강점이라 크게 보여줘요. 자주 쓰는 4개는 바로 열려요 */}
       <div className="rounded-[26px] mb-6 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #EEF4FF 0%, #E1ECFE 55%, #C9DCFE 100%)", border: "1.5px solid #C9DAFD", boxShadow: "0 12px 26px rgba(62,110,240,0.16)" }}>
-        <img src={calcArtImg} alt="" draggable={false} className="absolute right-0 top-0 pointer-events-none" style={{ height: 150, WebkitMaskImage: "radial-gradient(ellipse 70% 70% at 55% 50%, #000 60%, transparent 100%)", maskImage: "radial-gradient(ellipse 70% 70% at 55% 50%, #000 60%, transparent 100%)" }} />
-        <button onClick={() => setScreen({ view: "calculator" })} className="relative w-full text-left pl-4 pr-[36%] pt-4 pb-3 flex items-start" style={{ minHeight: 132 }} aria-label="사장님 필수 계산기 열기">
+        <img src={calcArtImg} alt="" draggable={false} className="absolute right-0 top-0 pointer-events-none" style={{ height: 112, WebkitMaskImage: "radial-gradient(ellipse 70% 70% at 55% 50%, #000 60%, transparent 100%)", maskImage: "radial-gradient(ellipse 70% 70% at 55% 50%, #000 60%, transparent 100%)" }} />
+        <button onClick={() => setScreen({ view: "calculator" })} className="relative w-full text-left pl-4 pr-[34%] pt-3.5 pb-2.5 flex items-start" style={{ minHeight: 100 }} aria-label="사장님 필수 계산기 열기">
           <div className="flex-1 min-w-0 relative z-10">
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold text-white" style={{ background: "linear-gradient(90deg, #4E86FA, #3E6EF0)", boxShadow: "0 3px 8px rgba(62,110,240,0.3)" }}>
               ⚡ 9가지 · 무료 · 30초
             </span>
-            <p className="text-[20px] font-black mt-2" style={{ color: "#1F3A8A", letterSpacing: "-0.03em", lineHeight: 1.35 }}>사장님 필수 계산기</p>
-            <p className="text-[12.5px] mt-1 break-keep" style={{ color: "#4A5578" }}>마진·부가세·주휴수당·4대보험까지<br />결과는 카톡으로 바로 보내요</p>
+            <p className="text-[18px] font-black mt-1.5 flex items-center gap-0.5" style={{ color: "#1F3A8A", letterSpacing: "-0.03em", lineHeight: 1.35 }}>사장님 필수 계산기 <ChevronRight size={18} strokeWidth={2.6} /></p>
+            <p className="text-[12px] mt-0.5 break-keep" style={{ color: "#4A5578" }}>결과는 카톡으로 바로 보내요</p>
           </div>
         </button>
         <div className="relative grid grid-cols-4 gap-2 px-3 pb-3">
           {["margin", "vat", "allowance", "insurance"].map((k) => CALC_TABS.find((c) => c.key === k)).map((c) => (
-            <button key={c.key} onClick={() => setScreen({ view: "calculator", tab: c.key })} aria-label={`${c.label} 계산기`} className="rounded-[18px] bg-white py-2.5 flex flex-col items-center gap-1 active:scale-[0.96] transition-transform" style={{ boxShadow: "0 4px 12px rgba(10,30,110,0.12)" }}>
-              <img src={c.img} alt="" draggable={false} className="w-11 h-11 object-contain" />
+            <button key={c.key} onClick={() => setScreen({ view: "calculator", tab: c.key })} aria-label={`${c.label} 계산기`} className="rounded-[16px] bg-white py-2 flex flex-col items-center gap-0.5 active:scale-[0.96] transition-transform" style={{ boxShadow: "0 4px 12px rgba(10,30,110,0.1)" }}>
+              <img src={c.img} alt="" draggable={false} className="w-9 h-9 object-contain" />
               <span className="text-[11.5px] font-bold whitespace-nowrap" style={{ color: TEXT }}>{c.short}</span>
             </button>
           ))}
         </div>
-        <button onClick={() => setScreen({ view: "calculator" })} className="relative w-full py-2.5 text-[12.5px] font-bold flex items-center justify-center gap-0.5" style={{ color: "#2F57D8", background: "rgba(255,255,255,0.55)", borderTop: "1px solid #D5E2FD" }}>
-          손익분기점·대출이자·퇴직금·카드수수료·최저임금도 있어요 <ChevronRight size={14} />
-        </button>
       </div>
 
       {/* 오늘의 정책 소식 — 매일 바뀌는 볼거리 (뉴스 화면 바로가기 역할도 해요) */}
