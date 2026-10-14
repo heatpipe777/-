@@ -6805,7 +6805,7 @@ export default function App() {
             ))}
           </div>
 
-          <p className="text-[11.5px] text-center mt-8" style={{ color: MUTED }}>받아가게 v1.0</p>
+          <p className="text-[11.5px] text-center mt-8" style={{ color: MUTED }}>받아가게 v1.1</p>
           <p className="text-[11px] text-center mt-1 leading-relaxed" style={{ color: MUTED }}>정부·공공기관의 공식 앱이 아닌 민간 정보 서비스예요</p>
         </>
       )}
