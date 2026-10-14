@@ -6241,17 +6241,6 @@ export default function App() {
           <h1 className="font-black mt-2" style={{ color: "#1F3A8A", fontSize: 21, lineHeight: 1.35, letterSpacing: "-0.03em" }}>
             받을 혜택,<br />받아<span style={{ color: "#F07A12" }}>가게!</span>
           </h1>
-          {/* 안내용 표시 — 목록은 아래 '소상공인 지원금' 카드로 들어가요 */}
-          <div
-            className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full"
-            style={{ background: "white", border: "1px solid #DCE6FF", boxShadow: "0 2px 6px rgba(62,114,246,0.08)" }}
-          >
-            {/* 초록 점: 몇 번만 깜박이고 멈춰요 (계속 깜박이면 화면을 쉬지 않고 다시 그려요) */}
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#22C27A", animation: "dotPulse 2s cubic-bezier(0.4, 0, 0.6, 1) 2s 4" }} />
-            <span className="text-[12px] font-semibold" style={{ lineHeight: 1.5, color: TEXT }}>
-              지금 신청할 수 있는 지원금 <b className="text-[14px] font-extrabold tabular-nums" style={{ color: "#3E72F6" }}>{ALL_PROGRAMS.filter((p) => !isExpired(p)).length}</b>건
-            </span>
-          </div>
         </div>
       </div>
 
