@@ -1344,6 +1344,62 @@ function eventRepeatLabel(ev) {
 }
 // 화면에 보여줄 일정 목록 (가까운 순)
 const SCHEDULE_MONTHS = 12; // 일정 화면에 보여줄 기간
+// ---- 홈 인사 말풍선 ----
+// 급한 것(오늘·내일 일정, 3일 안 마감)이 있으면 먼저 알려주고, 없으면 시간대·요일·계절 문구 중 하나를 골라요.
+// 앱을 열 때마다(홈에 들어올 때마다) 새로 골라서 매번 조금씩 달라져요.
+const hasBatchim = (word) => {
+  const c = (word || "").trim().slice(-1).charCodeAt(0);
+  return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 !== 0;
+};
+const GREET_GENERAL = [
+  "오늘도 대박 나세요!",
+  "받을 혜택, 놓치지 마세요!",
+  "오늘도 힘내세요 💪",
+  "좋은 소식 챙겨왔어요!",
+  "오늘 장사도 술술 풀리길!",
+  "새 지원금 소식 확인해 보세요",
+];
+function homeGreeting({ callName, favorites, myEvents, taxStaff, now = new Date() }) {
+  const items = buildScheduleItems({ favorites, myEvents }).filter(
+    (x) => getDday(x.deadline) >= 0 && (taxStaff || x.type !== "tax" || !STAFF_TAX.includes(x.name))
+  );
+  // 1) 오늘·내일 내 일정
+  const mine = items.find((x) => x.type === "my" && getDday(x.deadline) <= 1);
+  if (mine) {
+    const d = getDday(mine.deadline);
+    return `${callName}, ${d === 0 ? "오늘" : "내일"}은 ${mine.name}${hasBatchim(mine.name) ? "이에요" : "예요"} ${mine.emoji || ""}`.trim();
+  }
+  // 2) 3일 안 세금 신고일·찜한 지원금 마감
+  const soon = items.find((x) => x.type !== "my" && getDday(x.deadline) <= 3);
+  if (soon) {
+    const d = getDday(soon.deadline);
+    return soon.type === "tax"
+      ? `${callName}, ${soon.name} ${d === 0 ? "오늘까지예요!" : `D-${d}이에요!`}`
+      : `찜한 지원금 마감이 ${d === 0 ? "오늘" : `${d}일 남았어요`}!`;
+  }
+  // 3) 시간대·요일·계절 문구 + 일반 문구 중 하나
+  const h = now.getHours();
+  const day = now.getDay();
+  const month = now.getMonth() + 1;
+  const pool = [...GREET_GENERAL];
+  if (h < 5) pool.push("늦게까지 고생 많으세요");
+  else if (h < 11) pool.push("좋은 아침이에요!", "오늘 하루도 활짝 여세요!");
+  else if (h < 14) pool.push("점심 장사 화이팅!", "점심은 챙겨 드셨어요?");
+  else if (h < 17) pool.push("오후도 힘내세요!", "잠깐 쉬어 가세요 ☕");
+  else if (h < 21) pool.push("저녁 장사 대박 나세요!", "오늘도 수고 많으셨어요");
+  else pool.push("오늘 하루도 수고 많으셨어요", "푹 쉬고 내일 또 힘내요!");
+  if (day === 1) pool.push("이번 주도 힘차게 시작해요!");
+  if (day === 5) pool.push("한 주 마무리 잘 하세요!");
+  if (day === 0 || day === 6) pool.push("주말 장사 대박 나세요!");
+  if (month === 1) pool.push("새해 복 많이 받으세요!");
+  if (month === 12) pool.push("올 한 해도 수고 많으셨어요");
+  if (month >= 6 && month <= 8) pool.push("더위 조심하세요 🍉");
+  if (month === 12 || month <= 2) pool.push("추운 날, 따뜻하게 챙기세요");
+  const msg = pool[Math.floor(Math.random() * pool.length)];
+  // 이름을 앞에 붙이면 어색한 문구(감탄·질문)는 그대로, 나머지는 "OO님, " 붙여요
+  return `${callName}, ${msg}`;
+}
+
 function buildScheduleItems({ favorites, myEvents }) {
   const items = [];
   const today = startOfToday();
@@ -5397,6 +5453,14 @@ export default function App() {
 
   // 날짜가 바뀐 뒤 앱으로 돌아오면 D-day·마감 여부·알림 예약을 새 날짜로 다시 계산해요
   const [dayKey, setDayKey] = useState(() => TODAY.getTime());
+  // 홈 인사 문구 — 홈 화면에 들어올 때마다 새로 골라요 (아래 useEffect)
+  const [greetSeed, setGreetSeed] = useState(0);
+  const atHomeHub = mainTab === "home" && homeScreen === "hub" && screen.view === "home";
+  useEffect(() => {
+    if (atHomeHub) setGreetSeed((x) => x + 1);
+  }, [atHomeHub]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const greeting = useMemo(() => homeGreeting({ callName, favorites, myEvents, taxStaff }), [greetSeed, callName, favorites, myEvents, taxStaff, dayKey]);
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === "visible" && refreshToday()) setDayKey(TODAY.getTime());
@@ -6171,8 +6235,8 @@ export default function App() {
         <div className="absolute rounded-full pointer-events-none" style={{ left: "2%", top: "10%", width: "36%", aspectRatio: "1 / 1", background: "radial-gradient(circle, rgba(255,214,90,0.35) 0%, rgba(255,214,90,0) 65%)" }} />
         <img src={mascotCoinImg} alt="" draggable={false} className="relative shrink-0 pointer-events-none" style={{ width: "36%", maxWidth: 170 }} />
         <div className="relative min-w-0">
-          <div className="inline-block px-3 py-1.5 rounded-2xl rounded-bl-md text-[13px] font-semibold" style={{ background: "white", color: TEXT, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-            {callName}, 안녕하세요!
+          <div className="inline-block px-3 py-1.5 rounded-2xl rounded-bl-md text-[13px] font-semibold break-keep" style={{ background: "white", color: TEXT, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+            {greeting}
           </div>
           <h1 className="font-black mt-2" style={{ color: "#1F3A8A", fontSize: 21, lineHeight: 1.35, letterSpacing: "-0.03em" }}>
             받을 혜택,<br />받아<span style={{ color: "#F07A12" }}>가게!</span>
