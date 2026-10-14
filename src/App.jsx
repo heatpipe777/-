@@ -98,13 +98,6 @@ import calc_allowanceImg from "./assets/calc/allowance.webp";
 import calc_severanceImg from "./assets/calc/severance.webp";
 import calc_cardfeeImg from "./assets/calc/cardfee.webp";
 import calc_minwageImg from "./assets/calc/minwage.webp";
-import tileAllImg from "./assets/home-tiles/all.webp";
-import tileCenterImg from "./assets/home-tiles/center.webp";
-import tileNewsImg from "./assets/home-tiles/news.webp";
-import tileExchangeImg from "./assets/home-tiles/exchange.webp";
-import toolTaxImg from "./assets/home-tiles/tool-tax-icon.webp";
-import toolFaqImg from "./assets/home-tiles/tool-faq-icon.webp";
-import toolDocsImg from "./assets/home-tiles/tool-docs-icon.webp";
 import calcArtImg from "./assets/home-tiles/calc-art.webp";
 import noticeImg from "./assets/home-tiles/notice.webp";
 import mascotCoinImg from "./assets/mascot/coin.webp";
@@ -4522,8 +4515,17 @@ function CalcNotice({ tone = "red", children }) {
 // 계산 결과 카드 — 결과를 복사해서 메모·카톡에 붙여넣을 수 있어요
 function CalcResultCard({ rows, title = "계산 결과" }) {
   const [copied, setCopied] = useState(false);
+  const resultText = () => [`[받아가게 계산기] ${title}`, ...rows.map((r) => `· ${r.label}: ${r.value}`), "", `받아가게 앱에서 무료로 계산해 보세요 👉 ${STORE_WEB_URL}`].join("\n");
+  // 카톡 등으로 바로 보내기 — 받은 사람이 앱 링크로 들어와요 (입소문 통로)
+  const share = async () => {
+    try {
+      if (Capacitor.isNativePlatform()) await Share.share({ title: `받아가게 계산기 · ${title}`, text: resultText(), dialogTitle: "계산 결과 보내기" });
+      else if (navigator.share) await navigator.share({ title: "받아가게 계산기", text: resultText() });
+      else copy();
+    } catch { /* 공유 창을 닫은 경우 */ }
+  };
   const copy = async () => {
-    const text = [`[받아가게 계산기] ${title}`, ...rows.map((r) => `· ${r.label}: ${r.value}`), "", `받아가게 앱에서 무료로 계산해 보세요 👉 ${STORE_WEB_URL}`].join("\n");
+    const text = resultText();
     if (await copyText(text)) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
@@ -4536,9 +4538,14 @@ function CalcResultCard({ rows, title = "계산 결과" }) {
           <ClipboardIcon />
           <p className="text-[13px] font-bold" style={{ color: TEXT }}>{title}</p>
         </div>
-        <button onClick={copy} className="flex items-center gap-1 text-[11.5px] font-semibold px-2.5 py-1 rounded-full" style={{ background: "white", color: copied ? GREEN : BLUE }}>
-          {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "복사됨" : "결과 복사"}
-        </button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button onClick={copy} className="flex items-center gap-1 text-[11.5px] font-semibold px-2.5 py-1 rounded-full" style={{ background: "white", color: copied ? GREEN : BLUE }}>
+            {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "복사됨" : "결과 복사"}
+          </button>
+          <button onClick={share} className="flex items-center gap-1 text-[11.5px] font-semibold px-2.5 py-1 rounded-full" style={{ background: BLUE, color: "white" }}>
+            <Share2 size={12} /> 공유
+          </button>
+        </div>
       </div>
       <div className="space-y-2.5">
         {rows.map((row, i) => (
@@ -6244,6 +6251,22 @@ export default function App() {
       </button>
 
 
+      {/* 바로가기 한 줄 — 뉴스·일정·계산기는 아래에 각자 칸이 있어서 여기엔 없어요 */}
+      <div className="grid grid-cols-5 gap-1 mb-6 -mt-1">
+        {[
+          { key: "all", label: "지원금", img: listHeroImg, onClick: () => { setStatusFilter("available"); setHomeScreen("list"); } },
+          { key: "center", label: "지역센터", img: centerHeroImg, onClick: () => setScreen({ view: "centers" }) },
+          { key: "exchange", label: "금리·환율", img: heroRateImg, onClick: () => setScreen({ view: "exchange" }) },
+          { key: "docs", label: "서류 준비", img: heroDocsImg, onClick: () => setScreen({ view: "documents" }) },
+          { key: "faq", label: "도움말", img: heroFaqImg, onClick: () => setScreen({ view: "faq" }) },
+        ].map((t) => (
+          <button key={t.key} onClick={t.onClick} aria-label={`${t.label} 열기`} className="flex flex-col items-center gap-1 py-1 active:scale-[0.95] transition-transform">
+            <img src={t.img} alt="" draggable={false} className="w-[50px] h-[50px] object-contain" />
+            <span className="text-[12px] font-bold whitespace-nowrap" style={{ color: TEXT }}>{t.label}</span>
+          </button>
+        ))}
+      </div>
+
       {/* 다가오는 일정: 지원금 마감 / 사장님 일정 */}
       <div className="flex items-center justify-between mt-4 mb-2.5">
         <div className="flex items-center gap-1.5">
@@ -6262,96 +6285,54 @@ export default function App() {
         )}
       </div>
 
-      {/* 많이 찾는 서비스 */}
-      <p className="text-[16px] font-bold mb-2.5" style={{ color: TEXT }}>많이 찾는 서비스</p>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        {[
-          { key: "all", label: "소상공인\n지원금", bg: "#FDEEDC", img: tileAllImg, onClick: () => { setStatusFilter("available"); setHomeScreen("list"); } },
-          { key: "center", label: "지역센터\n찾기", bg: "#FCEAF3", img: tileCenterImg, onClick: () => setScreen({ view: "centers" }) },
-          { key: "exchange", label: "금리·환율\n정보", bg: "#E7F7EF", img: tileExchangeImg, onClick: () => setScreen({ view: "exchange" }) },
-          { key: "news", label: "정책뉴스\n확인", bg: "#F1ECFC", img: tileNewsImg, onClick: () => setMainTab("news") },
-        ].map((tile) => (
-          <button
-            key={tile.key}
-            onClick={tile.onClick}
-            aria-label={tile.label.replace("\n", " ")}
-            className="relative overflow-hidden active:scale-[0.98] transition-transform"
-            style={{ background: tile.bg, borderRadius: 30, aspectRatio: "525 / 672" }}
-          >
-            {/* 타일 이미지에 제목 글자까지 들어 있어요 */}
-            <img src={tile.img} alt="" draggable={false} className="absolute inset-0 w-full h-full object-cover" />
-          </button>
-        ))}
-      </div>
-
-      {/* 자주 쓰는 도구 */}
-      <div className="grid grid-cols-3 gap-2.5 mb-4">
-        {[
-          { key: "tax", label: shortCall === "내" ? "내 일정" : `${shortCall}\n일정`, bg: "#E7F7EF", img: toolTaxImg, onClick: () => setScreen({ view: "taxSchedule" }) },
-          { key: "faq", label: "도움말\nQ&A", bg: "#F1ECFC", img: toolFaqImg, onClick: () => setScreen({ view: "faq" }) },
-          { key: "docs", label: "서류·양식\n자료실", bg: "#FFF0E6", img: toolDocsImg, onClick: () => setScreen({ view: "documents" }) },
-        ].map((tile) => (
-          <button
-            key={tile.key}
-            onClick={tile.onClick}
-            aria-label={`${tile.label.replace("\n", " ")} 열기`}
-            className="relative overflow-hidden rounded-[20px] active:scale-[0.97] transition-transform"
-            style={{ background: tile.bg, aspectRatio: "298 / 305" }}
-          >
-            <img src={tile.img} alt="" draggable={false} className="absolute inset-0 w-full h-full object-cover" />
-            {/* 제목은 글자로 — 나중에 이름을 바꾸기 쉬워요 */}
-            <span className="absolute left-[11%] right-[20%] bottom-[11%] text-left font-extrabold whitespace-pre-line" style={{ color: "#1A1F2C", fontSize: "clamp(13px, 4.1vw, 17px)", lineHeight: 1.42, letterSpacing: "-0.02em" }}>
-              {tile.label}
+      {/* 사장님 필수 계산기 — 다른 지원금 앱엔 없는 우리 앱만의 강점이라 크게 보여줘요. 자주 쓰는 4개는 바로 열려요 */}
+      <div className="rounded-[26px] mb-6 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #EEF4FF 0%, #E1ECFE 55%, #C9DCFE 100%)", border: "1.5px solid #C9DAFD", boxShadow: "0 12px 26px rgba(62,110,240,0.16)" }}>
+        <img src={calcArtImg} alt="" draggable={false} className="absolute right-0 top-0 pointer-events-none" style={{ height: 150, WebkitMaskImage: "radial-gradient(ellipse 70% 70% at 55% 50%, #000 60%, transparent 100%)", maskImage: "radial-gradient(ellipse 70% 70% at 55% 50%, #000 60%, transparent 100%)" }} />
+        <button onClick={() => setScreen({ view: "calculator" })} className="relative w-full text-left pl-4 pr-[36%] pt-4 pb-3 flex items-start" style={{ minHeight: 132 }} aria-label="사장님 필수 계산기 열기">
+          <div className="flex-1 min-w-0 relative z-10">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold text-white" style={{ background: "linear-gradient(90deg, #4E86FA, #3E6EF0)", boxShadow: "0 3px 8px rgba(62,110,240,0.3)" }}>
+              ⚡ 9가지 · 무료 · 30초
             </span>
-            <ChevronRight size={15} color="#6B7385" className="absolute right-[9%] bottom-[22%]" />
-          </button>
-        ))}
-      </div>
-
-      {/* 사장님 필수 계산기 툴킷 */}
-      <button
-        onClick={() => setScreen({ view: "calculator" })}
-        className="w-full text-left rounded-[24px] pt-4 pl-4 pb-4 pr-3 mb-6 relative overflow-hidden active:scale-[0.99] transition-transform"
-        style={{ background: "linear-gradient(135deg, #EAF1FE 0%, #E3EEFE 55%, #C9DCFE 100%)" }}
-      >
-        <img
-          src={calcArtImg}
-          alt=""
-          draggable={false}
-          className="absolute right-0 bottom-0 h-full"
-          style={{
-            WebkitMaskImage: "radial-gradient(ellipse 70% 70% at 55% 55%, #000 62%, transparent 100%)",
-            maskImage: "radial-gradient(ellipse 70% 70% at 55% 55%, #000 62%, transparent 100%)",
-          }}
-        />
-        <span
-          className="relative z-10 inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold text-white"
-          style={{ background: "linear-gradient(90deg, #94BDFD, #6DA6FC)" }}
-        >
-          부가세, 대출이자 즉시 계산
-        </span>
-        <p className="relative z-10 text-[19px] font-extrabold mt-1.5 mb-3" style={{ color: TEXT }}>사장님 필수 계산기 툴킷</p>
-        <div className="relative z-10 flex flex-wrap gap-1.5 max-w-[68%]">
-          {[
-            { label: "마진율·판매가", Icon: BarChart3 },
-            { label: "부가세 쪼개기", Icon: Calculator },
-            { label: "손익분기점", Icon: Target },
-            { label: "대출이자", Icon: Coins },
-            { label: "4대보험료", Icon: ShieldCheck },
-            { label: "퇴직금", Icon: Briefcase },
-            { label: "최저임금 체크", Icon: CheckCircle2 },
-          ].map(({ label, Icon }) => (
-            <span
-              key={label}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold"
-              style={{ background: "rgba(255,255,255,0.7)", color: "#4F6FE0", boxShadow: "0 1px 3px rgba(61,99,221,0.08)" }}
-            >
-              <Icon size={11} strokeWidth={2.4} />
-              {label}
-            </span>
+            <p className="text-[20px] font-black mt-2" style={{ color: "#1F3A8A", letterSpacing: "-0.03em", lineHeight: 1.35 }}>사장님 필수 계산기</p>
+            <p className="text-[12.5px] mt-1 break-keep" style={{ color: "#4A5578" }}>마진·부가세·주휴수당·4대보험까지<br />결과는 카톡으로 바로 보내요</p>
+          </div>
+        </button>
+        <div className="relative grid grid-cols-4 gap-2 px-3 pb-3">
+          {["margin", "vat", "allowance", "insurance"].map((k) => CALC_TABS.find((c) => c.key === k)).map((c) => (
+            <button key={c.key} onClick={() => setScreen({ view: "calculator", tab: c.key })} aria-label={`${c.label} 계산기`} className="rounded-[18px] bg-white py-2.5 flex flex-col items-center gap-1 active:scale-[0.96] transition-transform" style={{ boxShadow: "0 4px 12px rgba(10,30,110,0.12)" }}>
+              <img src={c.img} alt="" draggable={false} className="w-11 h-11 object-contain" />
+              <span className="text-[11.5px] font-bold whitespace-nowrap" style={{ color: TEXT }}>{c.short}</span>
+            </button>
           ))}
         </div>
-      </button>
+        <button onClick={() => setScreen({ view: "calculator" })} className="relative w-full py-2.5 text-[12.5px] font-bold flex items-center justify-center gap-0.5" style={{ color: "#2F57D8", background: "rgba(255,255,255,0.55)", borderTop: "1px solid #D5E2FD" }}>
+          손익분기점·대출이자·퇴직금·카드수수료·최저임금도 있어요 <ChevronRight size={14} />
+        </button>
+      </div>
+
+      {/* 오늘의 정책 소식 — 매일 바뀌는 볼거리 (뉴스 화면 바로가기 역할도 해요) */}
+      {(() => {
+        const latest = [...NEWS].sort((a, b) => newsDate(b.date) - newsDate(a.date)).slice(0, 3);
+        return (
+          <>
+            <div className="flex items-center justify-between mb-2.5">
+              <p className="text-[16px] font-bold" style={{ color: TEXT }}>오늘의 정책 소식</p>
+              <button onClick={() => setMainTab("news")} className="text-[12.5px] font-semibold flex items-center" style={{ color: MUTED }}>전체 보기 <ChevronRight size={14} /></button>
+            </div>
+            <div className="rounded-[22px] mb-6 overflow-hidden" style={CARD}>
+              {latest.map((n, i) => (
+                <button key={n.id} onClick={() => setScreen({ view: "newsDetail", id: n.id })} className="w-full flex items-center gap-3 px-3.5 py-3 text-left" style={{ borderTop: i ? "1px solid #F1F2F6" : "none" }}>
+                  <NewsImage news={n} className="w-[68px] h-[52px] rounded-xl shrink-0" />
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[13.5px] font-bold line-clamp-2 break-keep" style={{ color: TEXT }}>{n.title}</span>
+                    <span className="block text-[11.5px] mt-0.5" style={{ color: MUTED }}>{n.source} · {n.date}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>
+        );
+      })()}
 
       {/* 안내사항 */}
       <div className="flex items-center gap-2 mb-2.5">
