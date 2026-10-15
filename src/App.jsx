@@ -6318,7 +6318,7 @@ export default function App() {
             className="relative overflow-hidden rounded-[22px] p-3 text-left active:scale-[0.98] transition-transform"
             style={{ gridArea: area, background: `linear-gradient(150deg, ${t.c1} 0%, ${t.c2} 100%)`, border: `1px solid ${t.line}`, boxShadow: `0 6px 14px ${t.shadow}` }}
           >
-            <span className="relative z-10 block font-extrabold whitespace-pre-line" style={{ color: "#1A1F2C", fontSize: 14.5, lineHeight: 1.35, letterSpacing: "-0.02em" }}>{t.label}</span>
+            <span className="relative z-10 block font-extrabold whitespace-pre-line" style={{ color: "#1A1F2C", fontSize: 14.5, lineHeight: 1.45, letterSpacing: "-0.02em" }}>{t.label}</span>
             <img src={t.img} alt="" draggable={false} className="absolute right-1.5 bottom-1.5 object-contain pointer-events-none" style={{ width: t.size || "52%", maxWidth: 80 }} />
           </button>
         );
@@ -6332,8 +6332,10 @@ export default function App() {
             >
               {/* 위쪽 은은한 광택 + 장식 원 */}
               <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(120% 80% at 10% -10%, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 55%)" }} />
-              <div className="absolute -right-10 -top-12 w-40 h-40 rounded-full" style={{ background: "rgba(255,255,255,0.09)" }} />
-              <p className="relative z-10 text-[19px] font-black text-white" style={{ letterSpacing: "-0.03em", lineHeight: 1.3 }}>소상공인<br />지원금 찾기</p>
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute -right-10 -top-12 w-40 h-40 rounded-full" style={{ background: "rgba(255,255,255,0.09)" }} />
+              </div>
+              <p className="relative z-10 text-[19px] font-black text-white" style={{ letterSpacing: "-0.03em", lineHeight: 1.42 }}>소상공인<br />지원금 찾기</p>
               <p className="relative z-10 mt-1.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-semibold text-white whitespace-nowrap" style={{ background: "rgba(40,80,200,0.35)" }}>
                 신청 가능 <b className="text-[14px] font-extrabold tabular-nums" style={{ color: "#FFE680" }}>{openCount}</b>건
               </p>
