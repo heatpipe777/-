@@ -227,6 +227,9 @@ if (only.length) {
   });
 }
 const wanted = (sc) => !only.length || only.some((o) => sc.name.includes(o));
+// 점검 중엔 전면 광고가 버튼을 가리지 않게 잠깐 멈추고(마지막 광고 시각을 미래로), 끝나면 원래 값으로 돌려놔요
+const interSaved = await evaluate(`localStorage.getItem("interAd")`);
+await evaluate(`(() => { const r = JSON.parse(localStorage.getItem("interAd") || "{}"); r.last = Date.now() + 864e5; localStorage.setItem("interAd", JSON.stringify(r)); return 1 })()`);
 for (const [idx, sc] of SCREENS.entries()) {
   if (only.length && !picked.has(idx)) continue;
   for (const [kind, arg] of sc.steps) {
@@ -263,6 +266,7 @@ for (const [idx, sc] of SCREENS.entries()) {
     if (shot.result?.data) writeFileSync(`${process.env.AUDIT_SHOTS}/${String(idx).padStart(2, "0")}_${sc.name.replace(/[\/:*?"<>| ]/g, "_")}.png`, Buffer.from(shot.result.data, "base64"));
   }
 }
+await evaluate(interSaved === null ? `localStorage.removeItem("interAd")` : `localStorage.setItem("interAd", ${JSON.stringify(interSaved)})`);
 ws.close();
 
 let total = 0;

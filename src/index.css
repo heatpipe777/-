@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 최신 안드로이드(실기기 WebView 140+)는 앱 화면이 상태 표시줄 뒤까지 그려져요 → 그 높이(--sat)만큼 위를 비우고,
+   스크롤해도 내용이 시간·배터리 줄 뒤로 비치지 않게 흰 가림막을 고정해요. 에뮬레이터·옛 폰은 0이라 영향 없음 */
+:root {
+  --sat: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  --sab: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px)); /* 아래 버튼 줄 높이 */
+}
+body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: var(--sat); background: #fff; z-index: 60; pointer-events: none; }
+.pt-screen { padding-top: calc(1.75rem + var(--sat)); }
+
 /* 한글 글자가 위아래로 눌려 보이지 않도록 앱 전체 줄 간격을 넉넉하게 맞춰요 */
 body { line-height: 1.6; word-break: keep-all; }
 .leading-none { line-height: 1.15 !important; }

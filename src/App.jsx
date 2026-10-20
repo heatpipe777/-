@@ -436,30 +436,22 @@ const removeAd = async () => {
   }
 };
 // 하단 배너 보이기/숨기기 — 배너 높이만큼 화면 아래 여백을 늘려서 내용이 가려지지 않게 해요
-// ---- 전면 광고 ----
-// 위치: ① 맞춤 진단 결과 직전 ② 지원금 상세를 5개 볼 때마다 (목록으로 돌아올 때)
-// 규칙: 앱을 한 번 켤 때 최대 1번 · 5분 간격 · 하루 최대 2번 · 처음 쓰는 날은 ②만 안 나와요 (진단은 보통 첫날 한 번이라 허용)
+// ---- 전면 광고 ---- (2026-10-20 개편: "원하는 결과를 본 뒤 나갈 때"만)
+// ① 맞춤 진단: 결과 화면을 보고 나갈 때 ② 계산기: 15초 이상 쓰고 목록·홈으로 나갈 때
+// ③ 지원금·뉴스 상세: 3개 볼 때마다 목록으로 돌아갈 때
+// 규칙: 전면 광고끼리 3분 간격 하나만 (첫날부터). 앱 켤 때·알림으로 들어올 때·입력 중엔 이 시점들이 없어서 안 떠요
 // 출시 후 평점·수익을 보고 숫자만 바꾸면 돼요
 const INTER_KEY = "interAd";
-const INTER_RULE = { gapMs: 5 * 60e3, maxPerDay: 2, minDays: 2, detailEvery: 5 };
-let interShownThisSession = false;
-const interAllowed = (kind) => {
-  if (interShownThisSession) return false;
+const INTER_RULE = { gapMs: 3 * 60e3, contentEvery: 3, calcMinMs: 15e3 };
+const interAllowed = () => {
   try {
-    if (kind !== "diag") {
-      const usedDays = (JSON.parse(localStorage.getItem("reviewAsk") || "{}").days || []).length;
-      if (usedDays < INTER_RULE.minDays) return false;
-    }
     const r = JSON.parse(localStorage.getItem(INTER_KEY) || "{}");
-    const today = formatLocalDate(new Date());
-    const count = r.day === today ? r.count || 0 : 0;
-    return count < INTER_RULE.maxPerDay && Date.now() - (r.last || 0) > INTER_RULE.gapMs;
+    return Date.now() - (r.last || 0) > INTER_RULE.gapMs;
   } catch (e) {
     return false;
   }
 };
 const recordInter = () => {
-  interShownThisSession = true;
   try {
     const r = JSON.parse(localStorage.getItem(INTER_KEY) || "{}");
     const today = formatLocalDate(new Date());
@@ -468,7 +460,7 @@ const recordInter = () => {
     // 저장 못 해도 괜찮아요
   }
 };
-// 지원금 상세 본 횟수 (5개마다 한 번 기회)
+// 지원금·뉴스 상세 본 횟수 (3개마다 한 번 기회)
 const countDetailView = () => {
   try {
     const r = JSON.parse(localStorage.getItem(INTER_KEY) || "{}");
@@ -481,8 +473,8 @@ const countDetailView = () => {
 };
 let interReady = false;
 // 미리 불러두기 — 보여줄 순간에 기다림 없이 바로 뜨게
-const prepareInter = async (kind) => {
-  if (!Capacitor.isNativePlatform() || !INTER_AD_ID || interReady || !interAllowed(kind)) return;
+const prepareInter = async () => {
+  if (!Capacitor.isNativePlatform() || !INTER_AD_ID || interReady || !interAllowed()) return;
   try {
     await initAds();
     await AdMob.prepareInterstitial({ adId: adId(INTER_AD_ID, "inter"), isTesting: AD_TESTING });
@@ -492,8 +484,8 @@ const prepareInter = async (kind) => {
   }
 };
 // 준비돼 있으면 보여주고, 사용자가 닫을 때까지 기다려요 (준비 안 됐으면 바로 넘어가요)
-const showInterIfReady = async (kind) => {
-  if (!interReady || !interAllowed(kind)) return;
+const showInterIfReady = async () => {
+  if (!interReady || !interAllowed()) return;
   interReady = false;
   recordInter();
   await new Promise((resolve) => {
@@ -529,7 +521,8 @@ function useBottomBanner(size) {
     const sub = AdMob.addListener(BannerAdPluginEvents.SizeChanged, (size) => {
       const h = adState.kind === "bottom" && !adState.hidden ? Math.round(size?.height || 0) : 0;
       // 배너와 화면 내용 사이 24px 띄워서 실수로 누르지 않게 해요 (AdMob 실수 클릭 정책)
-      document.body.style.paddingBottom = h ? `${h + 24}px` : "";
+      // 최신 폰은 배너가 아래 버튼 줄 위에 떠서, 버튼 줄 높이(--sab)도 더해요 (에뮬레이터·옛 폰은 0)
+      document.body.style.paddingBottom = h ? `calc(${h + 24}px + var(--sab))` : "";
     });
     return () => {
       sub.then((x) => x.remove());
@@ -5717,23 +5710,39 @@ export default function App() {
     recordAppOpen();
   }, []);
   // 하단 탭이 없는 화면에만 광고 배너 (키보드가 올라와 있을 때는 숨겨요)
-  // 전면 광고: 진단 화면에 들어오면 미리 불러두고, 지원금 상세는 5개째에 미리 불러둔 뒤 목록으로 돌아올 때 보여줘요
+  // 전면 광고 시점: 결과·내용을 본 화면에 들어오면 미리 불러두고, 그 화면에서 나갈 때 보여줘요
   const prevView = useRef(screen.view);
   const detailInterDue = useRef(false);
   useEffect(() => {
     const prev = prevView.current;
     prevView.current = screen.view;
-    if (screen.view === "diagnosis") prepareInter("diag");
-    if (screen.view === "detail" && prev !== "detail") {
+    const isContent = (v) => v === "detail" || v === "newsDetail";
+    // ① 맞춤 진단 결과
+    if (screen.view === "diagnosisResult" && prev !== "diagnosisResult") prepareInter();
+    if (prev === "diagnosisResult" && screen.view !== "diagnosisResult") showInterIfReady();
+    // ③ 지원금·뉴스 상세 3개마다
+    if (isContent(screen.view) && !isContent(prev)) {
       const n = countDetailView();
-      detailInterDue.current = n > 0 && n % INTER_RULE.detailEvery === 0;
-      if (detailInterDue.current) prepareInter("detail");
+      detailInterDue.current = n > 0 && n % INTER_RULE.contentEvery === 0;
+      if (detailInterDue.current) prepareInter();
     }
-    if (prev === "detail" && screen.view !== "detail" && detailInterDue.current) {
+    if (isContent(prev) && !isContent(screen.view) && detailInterDue.current) {
       detailInterDue.current = false;
-      showInterIfReady("detail");
+      showInterIfReady();
     }
   }, [screen.view]);
+  // ② 계산기: 하나를 열어 15초 이상 쓰고 닫을 때 (목록으로 돌아가거나 홈으로 나갈 때)
+  const calcStart = useRef(0);
+  const onCalcOpenChange = useCallback((open) => {
+    if (open) {
+      calcStart.current = Date.now();
+      prepareInter();
+    } else if (calcStart.current) {
+      const used = Date.now() - calcStart.current;
+      calcStart.current = 0;
+      if (used >= INTER_RULE.calcMinMs) showInterIfReady();
+    }
+  }, []);
   // 계산기 목록은 아래가 많이 비어서 큰 광고, 그 밖의 화면은 얇은 하단 배너
   // 내용이 짧아 아래가 넉넉한 화면은 큰 광고(300x250), 나머지는 얇은 하단 배너
   useBottomBanner(NO_AD_VIEWS.includes(screen.view) || typing ? null : "banner");
@@ -6094,7 +6103,7 @@ export default function App() {
   if (screen.view === "calculator") {
     return (
       <Shell>
-        <CalculatorToolkit key={screen.tab || "list"} initialTab={screen.tab} onBack={() => setScreen({ view: screen.from || "home" })} />
+        <CalculatorToolkit key={screen.tab || "list"} initialTab={screen.tab} onBack={() => setScreen({ view: screen.from || "home" })} onOpenChange={onCalcOpenChange} />
       </Shell>
     );
   }
@@ -6127,7 +6136,6 @@ export default function App() {
             if (applyRegion) setRegion(answers.region);
             setDiagnosis({ ...answers, regionApplied: applyRegion || (diagRegionApplied(diagnosis, region) && region === answers.region) });
             setStatusFilter("available");
-            await showInterIfReady("diag"); // 결과를 보여주기 직전 (조건이 맞을 때만)
             setScreen({ view: "diagnosisResult" });
           }}
         />
@@ -7019,7 +7027,7 @@ function Shell({ children }) {
         .navArrowBtn { background: transparent; border: 1px solid transparent; box-shadow: none; transition: background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; }
         .navArrowBtn:active { background: #FFFFFF; border-color: ${BORDER}; box-shadow: 0 3px 10px rgba(0,0,0,0.22); }
       `}</style>
-      <div className="w-full max-w-md md:max-w-xl min-h-screen bg-white px-5 pt-7 pb-10 relative">{children}</div>
+      <div className="w-full max-w-md md:max-w-xl min-h-screen bg-white px-5 pt-screen pb-10 relative">{children}</div>
     </div>
   );
 }
