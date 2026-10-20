@@ -3548,10 +3548,15 @@ function EventEditor({ initial, onSave, onDelete, onClose }) {
   );
 }
 
-function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, planDesc, myEvents = [], onSaveEvent, onDeleteEvent, onSelectProgram, callName = "사장님", taxStaff = false, onToggleTaxStaff }) {
+function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, planDesc, myEvents = [], onSaveEvent, onDeleteEvent, onSelectProgram, callName = "사장님", taxStaff = false, onToggleTaxStaff, startAdd = false }) {
   const [filter, setFilter] = useState("all"); // all | my | tax | subsidy
-  const [editing, setEditing] = useState(null); // null | {} (새로) | 이벤트
-  const closeEditor = useCallback(() => setEditing(null), []);
+  // 홈의 "+ 월급날·임대료 등록"으로 들어오면 추가 창부터 열고, 저장 안 하고 닫으면 홈으로 돌아가요
+  const [editing, setEditing] = useState(startAdd ? {} : null); // null | {} (새로) | 이벤트
+  const fromHomeAdd = useRef(startAdd);
+  const closeEditor = useCallback(() => {
+    if (fromHomeAdd.current) onBack();
+    else setEditing(null);
+  }, [onBack]);
   // 원천세·4대보험은 "직원이 있어요"를 켠 사장님께만 보여줘요 (홈과 같은 기준)
   const all = buildScheduleItems({ favorites, myEvents }).filter((x) => taxStaff || x.type !== "tax" || !STAFF_TAX.includes(x.name));
   const shown = all.filter((x) => filter === "all" || x.type === filter);
@@ -3575,6 +3580,7 @@ function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, pl
         onClose={closeEditor}
         onSave={(ev) => {
           onSaveEvent(ev);
+          fromHomeAdd.current = false;
           setEditing(null);
           setFilter("my");
         }}
@@ -4436,7 +4442,7 @@ function ProgramRow({ p, onClick, actions, reason, highlight }) {
 }
 
 // 홈 '사장님 일정' — 가까운 일정 3개, 내 일정이 없으면 등록 안내
-function HomeScheduleList({ favorites, myEvents, taxStaff, onOpen }) {
+function HomeScheduleList({ favorites, myEvents, taxStaff, onOpen, onAdd }) {
   // 직원 관련 세금(원천세·4대보험)은 "직원이 있어요"를 체크한 사장님께만 보여줘요
   const items = buildScheduleItems({ favorites, myEvents })
     .filter((x) => getDday(x.deadline) >= 0 && (taxStaff || x.type !== "tax" || !STAFF_TAX.includes(x.name)))
@@ -4464,7 +4470,7 @@ function HomeScheduleList({ favorites, myEvents, taxStaff, onOpen }) {
         );
       })}
       {myEvents.length === 0 && (
-        <button onClick={onOpen} className="w-full flex items-center gap-2.5 py-2.5 text-left" style={{ borderTop: items.length ? "1px solid #F1F2F6" : "none" }}>
+        <button onClick={onAdd || onOpen} className="w-full flex items-center gap-2.5 py-2.5 text-left" style={{ borderTop: items.length ? "1px solid #F1F2F6" : "none" }}>
           <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[14px] font-bold" style={{ background: "#FFF3E0", color: MY_ACCENT }}>+</span>
           <span className="text-[12.5px] font-semibold" style={{ color: MY_ACCENT }}>월급날·임대료를 등록하면 미리 알려드려요</span>
         </button>
@@ -6112,6 +6118,7 @@ export default function App() {
           callName={callName}
           taxStaff={taxStaff}
           onToggleTaxStaff={() => setTaxStaff(!taxStaff)}
+          startAdd={!!screen.add}
         />
       </Shell>
     );
@@ -6386,7 +6393,7 @@ export default function App() {
         {homeUpcoming === "subsidy" ? (
           <DeadlineSoonList key={dayKey} onSelect={(id) => setScreen({ view: "detail", id })} />
         ) : (
-          <HomeScheduleList key={dayKey} favorites={favorites} myEvents={myEvents} taxStaff={taxStaff} onOpen={() => setScreen({ view: "taxSchedule" })} />
+          <HomeScheduleList key={dayKey} favorites={favorites} myEvents={myEvents} taxStaff={taxStaff} onOpen={() => setScreen({ view: "taxSchedule" })} onAdd={() => setScreen({ view: "taxSchedule", add: true })} />
         )}
         {/* 전체 화면으로 들어가는 길 (지원금 → 마감 임박 목록, 일정 → 사장님 일정 화면) */}
         <button
