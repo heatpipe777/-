@@ -124,6 +124,33 @@ window.__audit = {
       const lines = Math.round(el.getBoundingClientRect().height / lh);
       if (lines >= 2 && lh / fsz < 1.35) issues.push({ type: "글자 눌림(줄 간격 좁음)", el: label(el), ratio: +(lh / fsz).toFixed(2) });
     }
+    // ⑤ 글자가 그림에 가려짐: 글자 줄의 양 끝·가운데 점에서 맨 위에 있는 요소가 다른 그림(img)이면 가린 것
+    //    (화면이 좁은 폰에서 아이콘 줄이 "자세히 보기"를 덮었던 문제) — 화면을 한 칸씩 내려가며 모두 봐요
+    const scroller = [...document.querySelectorAll("*")].filter((e) => { const o = getComputedStyle(e).overflowY; return (o === "auto" || o === "scroll") && e.scrollHeight > e.clientHeight + 10; }).sort((a, b) => b.clientHeight - a.clientHeight)[0] || document.scrollingElement;
+    const vh = window.innerHeight, start = scroller.scrollTop, seen = new Set();
+    for (let pos = 0; pos <= scroller.scrollHeight; pos += Math.max(200, scroller.clientHeight - 80)) {
+      scroller.scrollTop = pos;
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let t = walker.nextNode(); t; t = walker.nextNode()) {
+        const host = t.parentElement;
+        if (!t.textContent.trim() || !host || seen.has(host) || !visible(host) || host.closest("[aria-hidden=true]")) continue;
+        const range = document.createRange(); range.selectNodeContents(t);
+        for (const r of range.getClientRects()) {
+          if (r.width < 4 || r.top < 0 || r.bottom > vh) continue;
+          const y = r.top + r.height / 2;
+          for (const x of [r.left + 2, r.left + r.width / 2, r.right - 2]) {
+            const top = document.elementFromPoint(x, y);
+            if (top && top.tagName === "IMG" && !host.contains(top)) {
+              seen.add(host);
+              issues.push({ type: "글자가 그림에 가려짐", el: label(host) });
+              break;
+            }
+          }
+          if (seen.has(host)) break;
+        }
+      }
+    }
+    scroller.scrollTop = start;
     // 하단 탭바에 내용이 가리는지: 맨 아래까지 내렸을 때 마지막 내용의 아래쪽이 탭바 위에 있어야 해요
     return { screen, vw, issues };
   },

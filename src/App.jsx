@@ -6412,7 +6412,10 @@ export default function App() {
         <div className="relative flex items-center gap-2 pl-3.5 pr-3 pb-3.5">
           <div className="flex-1 min-w-0 flex items-center">
             {CALC_TABS.map((c, i) => (
-              <img key={c.key} src={c.img} alt="" draggable={false} className="w-8 h-8 object-contain shrink-0" style={{ marginLeft: i ? -6 : 0, filter: "drop-shadow(0 2px 3px rgba(20,50,140,0.18))" }} />
+              // 칸(26px)보다 그림(32px)이 커서 서로 겹쳐 보여요. 화면이 좁으면 칸이 줄어 더 겹치고, 오른쪽 글자를 덮지 않아요
+              <span key={c.key} className="h-8 min-w-0" style={{ flex: i === CALC_TABS.length - 1 ? "0 0 32px" : "0 1 26px" }}>
+                <img src={c.img} alt="" draggable={false} className="w-8 h-8 max-w-none object-contain" style={{ filter: "drop-shadow(0 2px 3px rgba(20,50,140,0.18))" }} />
+              </span>
             ))}
           </div>
           <span className="shrink-0 inline-flex items-center gap-0.5 text-[12.5px] font-bold" style={{ color: BLUE }}>
