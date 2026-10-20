@@ -75,15 +75,20 @@ if [ -n "$AUDIT" ]; then
 fi
 if [ $FULL = 1 ]; then
   B=$(anr); OK=0
-  for cfg in "일반폰 reset reset" "작은폰 720x1280 320" "태블릿 1600x2560 320"; do
-    set -- $cfg; s wm size $2; s wm density $3; sleep 8; connect
+  # 모든 기종을 시험할 수 없으니, 실제 폰에서 문제가 났던 조건을 여기에 모아 매번 확인해요
+  #  크기·밀도 / 다크모드(yes|no) / 글자 크기 — 갤럭시(360dp, 다크) S21에서 시스템 줄 아이콘 안 보임, S9(360dp)에서 아이콘 줄 겹침
+  for cfg in "일반폰 reset reset no 1.0" "작은폰 720x1280 320 no 1.0" "태블릿 1600x2560 320 no 1.0" "갤럭시_다크 1080x2400 480 yes 1.0" "글자크게 1080x2400 480 no 1.3"; do
+    set -- $cfg; s wm size $2; s wm density $3; s cmd uimode night $4 >/dev/null; s settings put system font_scale $5; sleep 8; connect
     out=$(cd "$PROJ" && node scripts/layout-audit.mjs 2>&1)
     echo "== $1: 통과 $(echo "$out" | grep -c '^✅') / $(echo "$out" | tail -1)"; echo "$out" | grep "^❌\|^   -" | head -10
-    echo "$out" | grep -q "문제 없음" && OK=$((OK+1))
+    # 다크 모드처럼 시스템 줄 색이 바뀌는 조건: 아이콘이 바탕에 묻히지 않는지 캡처로 확인
+    s screencap -p /sdcard/sysbar.png; $ADB pull /sdcard/sysbar.png "$TEMP/sysbar.png" >/dev/null 2>&1
+    sb=$(cd "$PROJ" && node scripts/dev/sysbar_check.cjs "$TEMP/sysbar.png"); echo "   $sb"
+    case "$sb" in *"안 보임"*) ;; *) echo "$out" | grep -q "문제 없음" && OK=$((OK+1));; esac
   done
-  s wm size reset; s wm density reset
-  A=$(( $(anr) - B )); echo "전체 점검: $OK/3 크기 통과, 응답 없음 $A"
-  [ $OK = 3 ] && [ $A = 0 ] && echo "PASS" > "$TEMP/badagage_full_audit.txt" || echo "FAIL" > "$TEMP/badagage_full_audit.txt"
+  s wm size reset; s wm density reset; s cmd uimode night no >/dev/null; s settings put system font_scale 1.0
+  A=$(( $(anr) - B )); echo "전체 점검: $OK/5 조건 통과, 응답 없음 $A"
+  [ $OK = 5 ] && [ $A = 0 ] && echo "PASS" > "$TEMP/badagage_full_audit.txt" || echo "FAIL" > "$TEMP/badagage_full_audit.txt"
 fi
 
 [ $STOP = 1 ] && $ADB -s $SERIAL emu kill >/dev/null && echo "▶ Pixel_Test 종료"

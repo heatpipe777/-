@@ -6263,7 +6263,7 @@ export default function App() {
           <div className="inline-block px-3 py-1.5 rounded-2xl rounded-bl-md text-[13px] font-semibold break-keep" style={{ background: "white", color: TEXT, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
             {greeting}
           </div>
-          <h1 className="font-black mt-2" style={{ color: "#1F3A8A", fontSize: 21, lineHeight: 1.35, letterSpacing: "-0.03em" }}>
+          <h1 className="font-black mt-2" style={{ color: "#1F3A8A", fontSize: 21, lineHeight: 1.4, letterSpacing: "-0.03em" }}>
             받을 혜택,<br />받아<span style={{ color: "#F07A12" }}>가게!</span>
           </h1>
         </div>
@@ -6419,7 +6419,7 @@ export default function App() {
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold text-white" style={{ background: "linear-gradient(90deg, #4E86FA, #3E6EF0)", boxShadow: "0 3px 8px rgba(62,110,240,0.3)" }}>
             ⚡ 9가지 · 무료 · 30초
           </span>
-          <p className="text-[18px] font-black mt-1.5" style={{ color: "#1F3A8A", letterSpacing: "-0.03em", lineHeight: 1.35 }}>사장님 필수 계산기</p>
+          <p className="text-[18px] font-black mt-1.5" style={{ color: "#1F3A8A", letterSpacing: "-0.03em", lineHeight: 1.4 }}>사장님 필수 계산기</p>
           <p className="text-[12px] mt-0.5 break-keep" style={{ color: "#4A5578" }}>결과는 카톡으로 바로 보내요</p>
         </div>
         {/* 진열용 아이콘 한 줄 + 열기 버튼 */}
