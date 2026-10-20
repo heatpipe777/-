@@ -26,5 +26,4 @@
         <item name="windowSplashScreenBackground">#FFF7E8</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/splash_mascot</item>
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
-    </style>
-</resources>
+    </style></resources>

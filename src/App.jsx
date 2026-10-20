@@ -477,7 +477,8 @@ const prepareInter = async () => {
   if (!Capacitor.isNativePlatform() || !INTER_AD_ID || interReady || !interAllowed()) return;
   try {
     await initAds();
-    await AdMob.prepareInterstitial({ adId: adId(INTER_AD_ID, "inter"), isTesting: AD_TESTING });
+    // immersiveMode: 광고가 떠 있는 동안 아래 버튼 줄을 숨겨요 — 최신 안드로이드(15+)에서 광고 아래쪽 버튼이 버튼 줄에 가려지던 문제
+    await AdMob.prepareInterstitial({ adId: adId(INTER_AD_ID, "inter"), isTesting: AD_TESTING, immersiveMode: true });
     interReady = true;
   } catch (e) {
     interReady = false;
@@ -1809,9 +1810,13 @@ function HeartButton({ active, onClick }) {
   );
 }
 
+// 하위 화면 맨 위 제목 줄: 스크롤해도 화면 위에 붙어 있어요 (조금 내리면 제목 줄이 반쯤 잘려 보이던 문제, 2026-10-20)
+// 화면 좌우 여백(px-5)까지 흰 바탕으로 덮어요. 부모가 화면 전체를 감싸는 요소여야 끝까지 붙어 있어요
+const STICKY_BAR = "sticky z-30 -mx-5 px-5 py-1.5 -mt-1.5 bg-white flex items-center gap-2";
+const STICKY_TOP = { top: "var(--sat, 0px)" };
 function SectionHeader({ title, onBack, right }) {
   return (
-    <div className="flex items-center gap-2 mb-4">
+    <div className={`${STICKY_BAR} mb-2.5`} style={STICKY_TOP}>
       <button onClick={onBack} className="navArrowBtn w-8 h-8 -ml-1.5 rounded-full flex items-center justify-center" aria-label="뒤로가기">
         <ChevronLeft size={20} color={TEXT} />
       </button>
@@ -1823,9 +1828,10 @@ function SectionHeader({ title, onBack, right }) {
 
 // 목록형 화면 상단용 — 그라디언트 배너 + 아이콘으로 심심한 뒤로가기 헤더를 꾸며줘요
 function HeroHeader({ icon: Icon, color, subtitle, title, onBack, right, image, headline }) {
+  // 제목 줄은 화면에 붙어 있게(sticky) 그림 카드와 따로 둬요 — 같은 상자 안에 있으면 상자가 지나가면 같이 사라져요
   return (
-    <div className="mb-5">
-      <div className="flex items-center gap-2 mb-3">
+    <>
+      <div className={`${STICKY_BAR} mb-1.5`} style={STICKY_TOP}>
         <button onClick={onBack} className="navArrowBtn w-9 h-9 -ml-2 rounded-full flex items-center justify-center" aria-label="뒤로가기">
           <ChevronLeft size={22} color={TEXT} />
         </button>
@@ -1833,7 +1839,7 @@ function HeroHeader({ icon: Icon, color, subtitle, title, onBack, right, image, 
         {right}
       </div>
       <div
-        className="relative overflow-hidden rounded-[24px] px-4 py-4 flex items-center gap-3.5"
+        className="relative overflow-hidden rounded-[24px] px-4 py-4 flex items-center gap-3.5 mb-5"
         style={{ background: `linear-gradient(135deg, ${color}1F 0%, ${color}0A 60%, #FFFFFF 100%)`, border: `1px solid ${color}14` }}
       >
         <div className="absolute -right-8 -top-10 w-32 h-32 rounded-full" style={{ background: `${color}12` }} />
@@ -1863,7 +1869,7 @@ function HeroHeader({ icon: Icon, color, subtitle, title, onBack, right, image, 
         )}
         {headline && <Sparkles size={18} className="relative shrink-0 self-start mt-1" color={color} fill={color} style={{ opacity: 0.55 }} />}
       </div>
-    </div>
+    </>
   );
 }
 
@@ -3988,7 +3994,7 @@ function DiagnosisWizard({ onBack, onComplete, intro = false }) {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-6">
+      <div className={`${STICKY_BAR} mb-4`} style={STICKY_TOP}>
         <button
           onClick={() => (step === 0 ? onBack() : setStep(step - 1))}
           className="navArrowBtn w-8 h-8 -ml-1.5 rounded-full flex items-center justify-center shrink-0"
