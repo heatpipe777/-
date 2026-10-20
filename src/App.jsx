@@ -129,25 +129,7 @@ const GOLD = "#B8862A";
 const GOLD_SOFT = "#FBF3E1";
 
 // 앱 전체 공통 스타일 — 홈 화면 시안과 같은 느낌으로 맞춰요
-// 색을 흰색과 섞어 파스텔로 (p = 색의 비율 0~1) — 카드 배경·테두리용
-const tint = (hex, p) => {
-  const h = hex.replace("#", "").slice(0, 6);
-  const c = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
-  return "#" + c.map((v) => Math.round(255 - (255 - v) * p).toString(16).padStart(2, "0")).join("");
-};
-// 카드: 흰색 대신 화면 색의 파스텔 (2026-10-20 — 흰 바탕에 흰 카드라 칸 구분이 안 된다는 의견)
-// 화면 위 그림 카드(HeroHeader)가 그 화면의 색을 --card-* 변수로 정해 주고, 없으면 기본 파랑 파스텔
-const CARD_BASE = "#3D63DD";
-const CARD = { background: `var(--card-bg, ${tint(CARD_BASE, 0.1)})`, border: `1px solid var(--card-line, ${tint(CARD_BASE, 0.22)})`, boxShadow: `0 6px 16px var(--card-shadow, rgba(61,99,221,0.10))` };
-// 특정 색의 파스텔 카드 (목록 카드를 분야 색으로 칠할 때 등)
-const tintCard = (color, p = 0.1) => ({ background: tint(color, p), border: `1px solid ${tint(color, p + 0.14)}`, boxShadow: `0 6px 16px ${color}1C` });
-const setCardTheme = (el, color) => {
-  if (!el) return;
-  el.style.setProperty("--card-bg", tint(color, 0.1));
-  el.style.setProperty("--card-line", tint(color, 0.24));
-  el.style.setProperty("--card-shadow", `${color.slice(0, 7)}1C`);
-};
-const clearCardTheme = (el) => el && ["--card-bg", "--card-line", "--card-shadow"].forEach((k) => el.style.removeProperty(k));
+const CARD = { background: "#FFFFFF", border: "1px solid #EEF0F6", boxShadow: "0 4px 16px rgba(40,60,120,0.05)" };
 const CHIP_ON = { background: "linear-gradient(135deg, #5B8DF7, #3D63DD)", color: "white", boxShadow: "0 4px 10px rgba(61,99,221,0.22)" };
 const CHIP_OFF = { background: "#F3F5FA", color: MUTED };
 const INPUT_BG = "#F3F5FA";
@@ -1848,15 +1830,8 @@ function SectionHeader({ title, onBack, right }) {
 
 // 목록형 화면 상단용 — 그라디언트 배너 + 아이콘으로 심심한 뒤로가기 헤더를 꾸며줘요
 function HeroHeader({ icon: Icon, color, subtitle, title, onBack, right, image, headline }) {
-  // 이 화면의 카드들을 위 그림 카드와 같은 색 계열 파스텔로 (화면을 떠나면 원래대로)
-  const ref = useRef(null);
-  useLayoutEffect(() => {
-    const screenEl = ref.current?.parentElement;
-    setCardTheme(screenEl, color);
-    return () => clearCardTheme(screenEl);
-  }, [color]);
   return (
-    <div className="mb-5" ref={ref}>
+    <div className="mb-5">
       <div className="flex items-center gap-2 mb-3">
         <button onClick={onBack} className="navArrowBtn w-9 h-9 -ml-2 rounded-full flex items-center justify-center" aria-label="뒤로가기">
           <ChevronLeft size={22} color={TEXT} />
@@ -1866,7 +1841,7 @@ function HeroHeader({ icon: Icon, color, subtitle, title, onBack, right, image, 
       </div>
       <div
         className="relative overflow-hidden rounded-[24px] px-4 py-4 flex items-center gap-3.5"
-        style={{ background: `linear-gradient(135deg, ${tint(color, 0.22)} 0%, ${tint(color, 0.12)} 100%)`, border: `1px solid ${tint(color, 0.28)}` }}
+        style={{ background: `linear-gradient(135deg, ${color}1F 0%, ${color}0A 60%, #FFFFFF 100%)`, border: `1px solid ${color}14` }}
       >
         <div className="absolute -right-8 -top-10 w-32 h-32 rounded-full" style={{ background: `${color}12` }} />
         <div className="absolute right-10 -bottom-12 w-24 h-24 rounded-full" style={{ background: `${color}0C` }} />
@@ -4367,7 +4342,7 @@ function ProgramRow({ p, onClick, actions, reason, highlight }) {
       onClick={onClick}
       className="w-full text-left rounded-[22px] pl-3 pr-3.5 py-3.5 active:scale-[0.99] transition-transform cursor-pointer flex items-center gap-3"
       style={{
-        ...(highlight ? { ...tintCard(grp.color), border: `1.5px solid ${BLUE}55`, boxShadow: "0 6px 18px rgba(61,99,221,0.12)" } : tintCard(grp.color)),
+        ...(highlight ? { ...CARD, border: `1.5px solid ${BLUE}55`, boxShadow: "0 6px 18px rgba(61,99,221,0.12)" } : CARD),
         ...(closed ? { opacity: 0.6 } : {}),
       }}
     >
@@ -6230,7 +6205,7 @@ export default function App() {
       {/* 홈 인사 카드: 가게 캐릭터가 동전을 받아 드는 모습 + 인사 말풍선 */}
       <div
         className="relative overflow-hidden mb-3 flex items-center gap-1 pl-1 pr-4 py-3"
-        style={{ background: "linear-gradient(135deg, #E8F0FF 0%, #D2E1FF 100%)", borderRadius: 28, border: "1px solid #C3D6FF", boxShadow: "0 8px 20px rgba(62,114,246,0.14)" }}
+        style={{ background: "linear-gradient(135deg, #F4F8FF 0%, #E6EFFF 100%)", borderRadius: 28, border: "1px solid #DCE6FF", boxShadow: "0 8px 20px rgba(62,114,246,0.12)" }}
       >
         <div className="absolute -right-10 -top-14 w-40 h-40 rounded-full" style={{ background: "rgba(62,114,246,0.06)" }} />
         <div className="absolute rounded-full pointer-events-none" style={{ left: "2%", top: "10%", width: "36%", aspectRatio: "1 / 1", background: "radial-gradient(circle, rgba(255,214,90,0.35) 0%, rgba(255,214,90,0) 65%)" }} />
@@ -6342,10 +6317,10 @@ export default function App() {
               </p>
               <img src={listHeroImg} alt="" draggable={false} className="absolute right-1 bottom-1 w-[42%] max-w-[104px] object-contain pointer-events-none" style={{ filter: "drop-shadow(0 8px 12px rgba(10,30,110,0.28))" }} />
             </button>
-            {tile({ key: "center", label: "지역센터\n찾기", img: centerHeroImg, onClick: () => setScreen({ view: "centers" }), c1: "#FFE5EF", c2: "#F9C8DC", line: "#F2B3CC", shadow: "rgba(224,69,122,0.16)" }, "a")}
-            {tile({ key: "exchange", label: "금리·환율\n정보", img: heroRateImg, onClick: () => setScreen({ view: "exchange" }), c1: "#E0F5E9", c2: "#BFE8D1", line: "#A9DEC1", shadow: "rgba(44,159,107,0.16)" }, "b")}
-            {tile({ key: "docs", label: "서류 준비\n체크리스트", img: heroDocsImg, onClick: () => setScreen({ view: "documents" }), c1: "#FFEBD8", c2: "#FBD2A9", line: "#F4C08E", shadow: "rgba(232,137,12,0.16)", size: "40%" }, "c")}
-            {tile({ key: "faq", label: "도움말 Q&A\n궁금한 점 찾기", img: heroFaqImg, onClick: () => setScreen({ view: "faq" }), c1: "#ECE4FF", c2: "#D4C5FA", line: "#C4B0F4", shadow: "rgba(122,70,214,0.16)", size: "36%" }, "d")}
+            {tile({ key: "center", label: "지역센터\n찾기", img: centerHeroImg, onClick: () => setScreen({ view: "centers" }), c1: "#FFF1F6", c2: "#FCDDEA", line: "#F8D0E0", shadow: "rgba(224,69,122,0.10)" }, "a")}
+            {tile({ key: "exchange", label: "금리·환율\n정보", img: heroRateImg, onClick: () => setScreen({ view: "exchange" }), c1: "#EEF9F3", c2: "#D3F0E1", line: "#C6EAD6", shadow: "rgba(44,159,107,0.10)" }, "b")}
+            {tile({ key: "docs", label: "서류 준비\n체크리스트", img: heroDocsImg, onClick: () => setScreen({ view: "documents" }), c1: "#FFF5EB", c2: "#FDE3CB", line: "#F9D6B5", shadow: "rgba(232,137,12,0.10)", size: "40%" }, "c")}
+            {tile({ key: "faq", label: "도움말 Q&A\n궁금한 점 찾기", img: heroFaqImg, onClick: () => setScreen({ view: "faq" }), c1: "#F5F1FF", c2: "#E4DAFB", line: "#D9CCF7", shadow: "rgba(122,70,214,0.10)", size: "36%" }, "d")}
           </div>
         );
       })()}
@@ -6365,7 +6340,7 @@ export default function App() {
           ))}
         </div>
       </div>
-      <div className="rounded-[22px] mb-6 px-3.5 py-0.5" style={tintCard("#2C9F6B")}>
+      <div className="rounded-[22px] mb-6 px-3.5 py-0.5 bg-white" style={{ border: "1px solid #F0F1F6", boxShadow: "0 6px 20px rgba(40,60,120,0.06)" }}>
         {homeUpcoming === "subsidy" ? (
           <DeadlineSoonList key={dayKey} onSelect={(id) => setScreen({ view: "detail", id })} />
         ) : (
@@ -6423,7 +6398,7 @@ export default function App() {
               <p className="text-[16px] font-bold" style={{ color: TEXT }}>오늘의 정책 소식</p>
               <button onClick={() => setMainTab("news")} aria-label="정책 뉴스 전체 보기" className="text-[12.5px] font-semibold flex items-center" style={{ color: MUTED }}>전체 보기 <ChevronRight size={14} /></button>
             </div>
-            <div className="rounded-[22px] mb-6 overflow-hidden" style={tintCard("#7A46D6")}>
+            <div className="rounded-[22px] mb-6 overflow-hidden" style={CARD}>
               {latest.map((n, i) => (
                 <button key={n.id} onClick={() => setScreen({ view: "newsDetail", id: n.id })} className="w-full flex items-center gap-3 px-3.5 py-3 text-left" style={{ borderTop: i ? "1px solid #F1F2F6" : "none" }}>
                   <NewsImage news={n} className="w-[68px] h-[52px] rounded-xl shrink-0" />
