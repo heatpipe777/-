@@ -39,7 +39,7 @@ const PREFS = {
   myEvents: [
     { id: "e1", title: "월급날", emoji: "💰", repeat: "monthly", day: 10, alert: true },
     { id: "e2", title: "가게 임대료", emoji: "🏠", repeat: "monthly", day: 25, alert: true },
-    { id: "e3", title: "식자재 대금 결제", emoji: "🧾", repeat: "once", date: "2026-10-16", alert: true },
+    { id: "e3", title: "대출 상환", emoji: "🏦", repeat: "monthly", day: 15, alert: true },
   ],
   nickname: "행복분식",
   onboardDone: true,
@@ -88,15 +88,15 @@ const shot = async (name) => {
 
 const SHOTS = [
   ["01_home", ["home"]],
-  ["02_list", ["home", "지원금"]],
+  ["02_list", ["home", "지원금 찾기"]],
   ["03_detail", ["고효율기기"]],
-  ["04_schedule", ["home", "일정 열기"]],
-  ["05_calc", ["calc:clear", "home", "계산기"]],
+  ["04_schedule", ["home", " 일정", "일정 전체 보기"]],
+  ["05_calc", ["calc:clear", "home", "사장님 필수 계산기"]],
   ["06_rates", ["home", "금리·환율"]],
   ["07_center", ["home", "지역센터"]],
   ["08_alert", ["home", "MY", "알림 설정"]],
   ["09_diag", ["home", "맞춤"]],
-  ["09_diag_result", ["diag:on", "home", "결과 보기"]],
+  ["09_diag_result", ["diag:on", "home", "내 맞춤 지원금 결과 보기"]],
   ["09_diag_reset", ["diag:off", "home"]],
   ["10_fav", ["home", "즐겨찾기"]],
   ["11_my", ["home", "MY"]],
@@ -105,7 +105,7 @@ const SHOTS = [
   ["h_docs", ["home", "서류"]],
   ["h_name", ["home", "MY", "내 이름"]],
   ["h_region", ["home", "MY", "내 지역"]],
-  ["h_event", ["home", "일정 열기", "내 일정 추가"]],
+  ["h_event", ["home", " 일정", "일정 전체 보기", "내 일정 추가"]],
 ];
 const only = process.argv[3] ? process.argv[3].split(",") : null;
 for (const [name, steps] of SHOTS) {
