@@ -1754,6 +1754,13 @@ function EventIcon({ emoji, size = 18, className = "" }) {
   if (!src) return <span className={className}>{emoji}</span>;
   return <img src={src} alt="" draggable={false} className={`inline-block object-contain align-[-0.2em] ${className}`} style={{ width: size, height: size }} />;
 }
+// 지역센터 카드 그림: 맡은 지역(covers 첫 번째)의 랜드마크 — 없으면 핀 그림
+const REGION_IMG_KEY = {
+  서울: "seoul", 부산: "busan", 울산: "ulsan", 대구: "daegu", 경북: "gyeongbuk", 경기남부: "gyeonggi", 경기북부: "gyeonggi_north",
+  인천: "incheon", 대전: "daejeon", 세종: "sejong", 충남: "chungnam", 충북: "chungbuk", 광주: "gwangju", 전남: "jeonnam",
+  제주: "jeju", 강원: "gangwon", 전북: "jeonbuk", 경남: "gyeongnam",
+};
+const regionImage = (region) => PROGRAM_IMG_FILES[`./assets/prog/${REGION_IMG_KEY[region]}.webp`] || centerPinImg;
 const programImage = (p) => PROGRAM_IMG_FILES[`./assets/prog/${PROGRAM_IMG_KEY[p.id]}.webp`] || CATEGORY_IMAGES[p.category];
 const CATEGORY_COLORS = {
   고정비: { color: "white", bg: "#22B573", bg2: "#3DDB94" },
@@ -3848,7 +3855,7 @@ function RegionalCentersScreen({ onBack, initialProvince }) {
             style={c.isHQ ? { ...CARD, border: `1.5px solid #D6478E55`, boxShadow: "0 6px 18px rgba(214,71,142,0.12)" } : CARD}
           >
             <div className="flex items-start gap-3 mb-3">
-              <img src={centerPinImg} alt="" className="w-[52px] h-[52px] shrink-0 object-contain" />
+              <img src={regionImage(c.covers?.[0])} alt="" className="w-[52px] h-[52px] shrink-0 object-contain" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                   {c.isHQ && (
