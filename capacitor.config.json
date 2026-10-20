@@ -11,6 +11,9 @@
       "launchAutoHide": false,
       "backgroundColor": "#FFF7E8",
       "showSpinner": false
+    },
+    "SystemBars": {
+      "style": "LIGHT"
     }
   }
 }
