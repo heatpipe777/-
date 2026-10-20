@@ -159,7 +159,7 @@ const SCREENS = [
   { name: "사장님 일정", steps: [["home"], ["click", "서류"], ["home"], ["click", "도움말"], ["home"], ["click", " 일정"], ["click", "일정 전체 보기"]] },
   { name: "내 일정 추가 창", steps: [["click", "내 일정 추가"]] },
   { name: "내 일정 추가 매년·음력", steps: [["click", "제사·기일"]] },
-  { name: "뉴스", steps: [["home"], ["click", "뉴스"]] },
+  { name: "뉴스", steps: [["home"], ["click", "정책 뉴스 전체 보기"]] },
   { name: "뉴스 상세", steps: [["click", "울산시"]] },
   { name: "즐겨찾기", steps: [["home"], ["click", "즐겨찾기"]] },
   { name: "MY", steps: [["home"], ["click", "MY"]] },
@@ -223,6 +223,13 @@ for (const [idx, sc] of SCREENS.entries()) {
   // 도구 검증용: AUDIT_SELFTEST=1이면 끝 여백을 일부러 지우고 검사해요 (잘림을 잡아내야 정상)
   if (process.env.AUDIT_SELFTEST) await evaluate(`document.querySelectorAll("[data-scroll-end]").forEach((e) => e.remove()); true`);
   if (wanted(sc)) results.push(await evaluate(`__audit.check(${JSON.stringify(sc.name)})`));
+  // 디자인 확인용: AUDIT_SHOTS=<폴더>면 화면마다 전체 길이 사진을 저장해요
+  if (process.env.AUDIT_SHOTS && wanted(sc)) {
+    const { mkdirSync, writeFileSync } = await import("node:fs");
+    mkdirSync(process.env.AUDIT_SHOTS, { recursive: true });
+    const shot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });
+    if (shot.result?.data) writeFileSync(`${process.env.AUDIT_SHOTS}/${String(idx).padStart(2, "0")}_${sc.name.replace(/[\/:*?"<>| ]/g, "_")}.png`, Buffer.from(shot.result.data, "base64"));
+  }
 }
 ws.close();
 

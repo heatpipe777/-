@@ -100,7 +100,7 @@ const SHOTS = [
   ["09_diag_reset", ["diag:off", "home"]],
   ["10_fav", ["home", "즐겨찾기"]],
   ["11_my", ["home", "MY"]],
-  ["12_news", ["home", "뉴스"]],
+  ["12_news", ["home", "정책 뉴스 전체 보기"]],
   ["h_faq", ["home", "도움말"]],
   ["h_docs", ["home", "서류"]],
   ["h_name", ["home", "MY", "내 이름"]],

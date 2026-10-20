@@ -107,12 +107,14 @@ import mascotCheerImg from "./assets/mascot/cheer.webp";
 import mascotEmptyImg from "./assets/mascot/empty.webp";
 import mascotSearchImg from "./assets/mascot/search.webp";
 import mascotBellImg from "./assets/mascot/bell.webp";
+import mascotCalendarImg from "./assets/mascot/calendar.webp";
 import ctaCoinImg from "./assets/home-tiles/cta-coin.webp";
 import newsFundImg from "./assets/news/fund.webp";
 import newsFixedImg from "./assets/news/fixed.webp";
 import newsTaxImg from "./assets/news/tax.webp";
 import newsRegionImg from "./assets/news/region.webp";
 import newsDigitalImg from "./assets/news/digital.webp";
+import newsLaborImg from "./assets/news/labor.webp";
 
 const BLUE = "#3D63DD";
 const BLUE_SOFT = "#EEF2FE";
@@ -147,7 +149,7 @@ const NEWS_THUMBS = {
   정책자금: newsFundImg,
   고정비: newsFixedImg,
   "세제·제도": newsTaxImg,
-  인건비: newsFixedImg,
+  인건비: newsLaborImg,
   "지역·상권": newsRegionImg,
   디지털: newsDigitalImg,
 };
@@ -176,8 +178,8 @@ function NewsImage({ news, className, style }) {
           src={NEWS_THUMBS[news.category]}
           alt=""
           draggable={false}
-          className="absolute right-0 top-1/2 -translate-y-1/2 h-full max-w-full object-contain"
-          style={{ WebkitMaskImage: "radial-gradient(circle at 50% 50%, #000 60%, transparent 72%)", maskImage: "radial-gradient(circle at 50% 50%, #000 60%, transparent 72%)" }}
+          className="absolute right-[4%] top-1/2 -translate-y-1/2 h-[86%] max-w-[90%] object-contain"
+          style={{ filter: "drop-shadow(0 6px 10px rgba(40,60,120,0.15))" }}
         />
       </div>
     </div>
@@ -1745,6 +1747,13 @@ const PROGRAM_IMG_KEY = {
 // 작은 입체 아이콘 (설정 줄·메뉴 등) — 이름으로 불러요
 const MINI_IMG_FILES = import.meta.glob("./assets/mini/*.webp", { eager: true, import: "default" });
 const mini = (name) => MINI_IMG_FILES[`./assets/mini/${name}.webp`];
+// 내 일정 종류 아이콘 — 저장된 일정은 이모지로 기억하고, 화면에는 앱 그림체의 작은 입체 아이콘으로 보여줘요(없으면 이모지 그대로)
+const EVENT_ICON = { "💰": "coin", "🏠": "house", "🏦": "bank", "💳": "card", "💡": "bulb", "🎂": "cake", "💍": "ring", "🕯️": "candle", "🏥": "hospital", "🤝": "handshake", "📌": "pin" };
+function EventIcon({ emoji, size = 18, className = "" }) {
+  const src = mini(EVENT_ICON[emoji]);
+  if (!src) return <span className={className}>{emoji}</span>;
+  return <img src={src} alt="" draggable={false} className={`inline-block object-contain align-[-0.2em] ${className}`} style={{ width: size, height: size }} />;
+}
 const programImage = (p) => PROGRAM_IMG_FILES[`./assets/prog/${PROGRAM_IMG_KEY[p.id]}.webp`] || CATEGORY_IMAGES[p.category];
 const CATEGORY_COLORS = {
   고정비: { color: "white", bg: "#22B573", bg2: "#3DDB94" },
@@ -3373,8 +3382,9 @@ function DatePickGrid({ value, onChange }) {
 // 내 일정 추가·수정 창 (아래에서 올라오는 시트)
 function EventEditor({ initial, onSave, onDelete, onClose }) {
   const editing = !!initial?.id;
-  const [title, setTitle] = useState(initial?.title || "");
-  const [emoji, setEmoji] = useState(initial?.emoji || "📌");
+  // 새 일정은 처음에 선택된 "월급날"과 이름·아이콘을 맞춰요
+  const [title, setTitle] = useState(initial ? initial.title || "" : "월급날");
+  const [emoji, setEmoji] = useState(initial?.emoji || (initial ? "📌" : "💰"));
   const [repeat, setRepeat] = useState(initial?.repeat || "monthly");
   const [day, setDay] = useState(initial?.day || 10);
   const [month, setMonth] = useState(initial?.month || TODAY.getMonth() + 1); // 매년 반복: 몇 월
@@ -3428,7 +3438,7 @@ function EventEditor({ initial, onSave, onDelete, onClose }) {
               <div className="flex flex-wrap gap-1.5">
                 {EVENT_PRESETS.filter((p) => p.group === g).map((p) => (
                   <button key={p.key} onClick={() => pickPreset(p)} className="px-3 py-1.5 rounded-full text-[12.5px] font-semibold" style={presetKey === p.key ? CHIP_ON : CHIP_OFF}>
-                    {p.emoji} {p.title}
+                    <EventIcon emoji={p.emoji} size={17} className="mr-1" />{p.title}
                   </button>
                 ))}
               </div>
@@ -3438,7 +3448,7 @@ function EventEditor({ initial, onSave, onDelete, onClose }) {
 
         <p className="text-[13px] font-semibold mb-1.5" style={{ color: TEXT }}>일정 이름</p>
         <div className="flex items-center rounded-xl px-3.5 py-3 mb-4" style={{ background: INPUT_BG }}>
-          <span className="mr-2 text-[16px]">{emoji}</span>
+          <EventIcon emoji={emoji} size={22} className="mr-2 shrink-0" />
           <input value={title} onChange={(e) => setTitle(e.target.value.slice(0, 20))} placeholder={hint} className="flex-1 min-w-0 bg-transparent outline-none text-[15px] font-semibold" style={{ color: TEXT }} />
         </div>
 
@@ -3580,7 +3590,7 @@ function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, pl
           <div className="relative flex items-end justify-between gap-3 mt-1">
             <div className="min-w-0">
               <p className="text-[17px] font-extrabold text-white leading-snug break-keep">
-                {next.type === "my" && <span className="mr-1">{next.emoji}</span>}
+                {next.type === "my" && <EventIcon emoji={next.emoji} size={22} className="mr-1" />}
                 {next.name}
               </p>
               <p className="text-[12px] text-white/85 mt-0.5">
@@ -3677,7 +3687,7 @@ function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, pl
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <p className="text-[13.5px] font-bold truncate" style={{ color: TEXT }}>
-                        {item.type === "my" && <span className="mr-1">{item.emoji}</span>}
+                        {item.type === "my" && <EventIcon emoji={item.emoji} size={17} className="mr-1" />}
                         {item.name}
                       </p>
                       {item.type === "subsidy" && <Heart size={11} color={BLUE} fill={BLUE} className="shrink-0" />}
@@ -3702,7 +3712,7 @@ function TaxScheduleScreen({ onBack, favorites, taxAlertOn, onToggleTaxAlert, pl
 
       {filter === "my" && counts.my === 0 && (
         <div className="rounded-[20px] p-5 text-center mb-4" style={{ background: "#FFF8EE" }}>
-          <p className="text-[24px] mb-1">🗓️</p>
+          <img src={mascotCalendarImg} alt="" draggable={false} className="w-20 h-20 object-contain mx-auto mb-1" />
           <p className="text-[12.5px] leading-relaxed" style={{ color: "#8A5A12" }}>
             월급날·임대료·대출 상환일을 등록하면
             <br />
@@ -4038,7 +4048,7 @@ function DiagnosisWizard({ onBack, onComplete, intro = false }) {
       {/* 처음 설치하고 들어왔을 때만: 왜 하는지 안내 + 나중에 하기 */}
       {intro && step === 0 && (
         <div className="rounded-[18px] px-4 py-3.5 mb-5 flex items-start gap-3" style={{ background: "#FFF7E8", border: "1px solid #FBE3B5" }}>
-          <span className="text-[22px] leading-none mt-0.5">🎯</span>
+          <img src={mascotSearchImg} alt="" draggable={false} className="w-11 h-11 object-contain shrink-0 -mt-0.5" />
           <div className="flex-1 min-w-0">
             <p className="text-[13.5px] font-bold" style={{ color: TEXT }}>1분이면 내게 맞는 지원금을 찾아드려요</p>
             <p className="text-[12px] mt-0.5 break-keep" style={{ color: MUTED }}>7가지만 답하면 돼요. 나중에 언제든 다시 하거나 초기화할 수 있어요.</p>
@@ -4273,19 +4283,20 @@ function DiagnosisResultScreen({ diagnosis, onBack, onRedo, onClear, onViewAll, 
 
       {/* 진단 결과가 전부가 아니에요 — 앱 전체 기능 안내 */}
       <div className="rounded-[22px] p-4 mt-5" style={{ ...CARD, background: "linear-gradient(135deg, #FFF7E8 0%, #FFFFFF 70%)", border: "1px solid #FBE3B5" }}>
-        <p className="text-[15px] font-extrabold" style={{ color: TEXT }}>진단 결과가 전부가 아니에요 💡</p>
+        <p className="text-[15px] font-extrabold" style={{ color: TEXT }}>진단 결과가 전부가 아니에요</p>
         <p className="text-[12.5px] mt-1 break-keep" style={{ color: MUTED }}>
           진단은 답변에 맞춰 골라낸 추천이에요. 받아가게에는 이런 것도 있어요.
         </p>
         <div className="grid grid-cols-2 gap-1.5 mt-3">
           {[
-            ["📋", `전체 지원금 ${allOpenCount}건`],
-            ["📅", "세금 신고일·내 일정 알림"],
-            ["🧮", "사장님 계산기 9가지"],
-            ["📰", "정책 뉴스·지역센터"],
-          ].map(([e, t]) => (
-            <span key={t} className="text-[12px] font-semibold px-2.5 py-2 rounded-xl break-keep" style={{ background: "#FFFFFF", color: TEXT, border: "1px solid #F1E3C8" }}>
-              {e} {t}
+            [listHeroImg, `전체 지원금 ${allOpenCount}건`],
+            [mini("taxcal"), "세금 신고일·내 일정 알림"],
+            [heroCalcImg, "사장님 계산기 9가지"],
+            [heroNewsImg, "정책 뉴스·지역센터"],
+          ].map(([img, t]) => (
+            <span key={t} className="flex items-center gap-1.5 text-[12px] font-semibold px-2 py-1.5 rounded-xl break-keep" style={{ background: "#FFFFFF", color: TEXT, border: "1px solid #F1E3C8" }}>
+              <img src={img} alt="" draggable={false} className="w-7 h-7 object-contain shrink-0" />
+              <span className="min-w-0">{t}</span>
             </span>
           ))}
         </div>
@@ -4433,7 +4444,7 @@ function HomeScheduleList({ favorites, myEvents, taxStaff, onOpen }) {
         return (
           <button key={x.key} onClick={onOpen} className="w-full flex items-center gap-2.5 py-2.5" style={{ borderTop: i > 0 ? "1px solid #F1F2F6" : "none" }}>
             <span className="w-6 h-6 rounded-full flex items-center justify-center text-[12px] shrink-0" style={{ background: x.type === "my" ? t.bg : "transparent" }}>
-              {x.type === "my" ? x.emoji : <img src={mini(x.type === "tax" ? "receipt" : "coin")} alt="" className="w-6 h-6 object-contain" />}
+              {x.type === "my" ? <EventIcon emoji={x.emoji} size={20} /> : <img src={mini(x.type === "tax" ? "receipt" : "coin")} alt="" className="w-6 h-6 object-contain" />}
             </span>
             <span className="flex-1 min-w-0 text-left flex items-baseline gap-1.5">
               <span className="text-[13.5px] font-semibold truncate" style={{ color: TEXT }}>{x.name}</span>
@@ -6389,7 +6400,7 @@ export default function App() {
         className="w-full text-left rounded-[26px] mb-6 relative overflow-hidden active:scale-[0.99] transition-transform"
         style={{ background: "linear-gradient(135deg, #EEF4FF 0%, #E1ECFE 55%, #C9DCFE 100%)", border: "1.5px solid #C9DAFD", boxShadow: "0 12px 26px rgba(62,110,240,0.16)" }}
       >
-        <img src={calcArtImg} alt="" draggable={false} className="absolute right-0 top-0 pointer-events-none" style={{ height: 112, WebkitMaskImage: "radial-gradient(ellipse 70% 70% at 55% 50%, #000 60%, transparent 100%)", maskImage: "radial-gradient(ellipse 70% 70% at 55% 50%, #000 60%, transparent 100%)" }} />
+        <img src={calcArtImg} alt="" draggable={false} className="absolute right-2 top-2 pointer-events-none" style={{ height: 100, filter: "drop-shadow(0 8px 12px rgba(20,50,140,0.18))" }} />
         <div className="relative pl-4 pr-[34%] pt-3.5 pb-2" style={{ minHeight: 96 }}>
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold text-white" style={{ background: "linear-gradient(90deg, #4E86FA, #3E6EF0)", boxShadow: "0 3px 8px rgba(62,110,240,0.3)" }}>
             ⚡ 9가지 · 무료 · 30초
@@ -6417,7 +6428,7 @@ export default function App() {
           <>
             <div className="flex items-center justify-between mb-2.5">
               <p className="text-[16px] font-bold" style={{ color: TEXT }}>오늘의 정책 소식</p>
-              <button onClick={() => setMainTab("news")} className="text-[12.5px] font-semibold flex items-center" style={{ color: MUTED }}>전체 보기 <ChevronRight size={14} /></button>
+              <button onClick={() => setMainTab("news")} aria-label="정책 뉴스 전체 보기" className="text-[12.5px] font-semibold flex items-center" style={{ color: MUTED }}>전체 보기 <ChevronRight size={14} /></button>
             </div>
             <div className="rounded-[22px] mb-6 overflow-hidden" style={CARD}>
               {latest.map((n, i) => (
