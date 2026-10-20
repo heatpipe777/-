@@ -87,7 +87,7 @@ if [ $FULL = 1 ]; then
     out=$(cd "$PROJ" && node scripts/layout-audit.mjs 2>&1)
     echo "== $1: 통과 $(echo "$out" | grep -c '^✅') / $(echo "$out" | tail -1)"; echo "$out" | grep "^❌\|^   -" | head -10
     # 다크 모드처럼 시스템 줄 색이 바뀌는 조건: 아이콘이 바탕에 묻히지 않는지 캡처로 확인
-    s screencap -p /sdcard/sysbar.png; $ADB pull /sdcard/sysbar.png "$TEMP/sysbar.png" >/dev/null 2>&1
+    rm -f "$TEMP/sysbar.png"; s screencap -p /sdcard/sysbar.png; MSYS_NO_PATHCONV=1 $ADB pull /sdcard/sysbar.png "$TEMP/sysbar.png" >/dev/null 2>&1
     sb=$(cd "$PROJ" && node scripts/dev/sysbar_check.cjs "$TEMP/sysbar.png"); echo "   $sb"
     case "$sb" in *"안 보임"*) ;; *) echo "$out" | grep -q "문제 없음" && OK=$((OK+1));; esac
   done
