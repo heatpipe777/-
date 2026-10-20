@@ -512,58 +512,10 @@ const showInterIfReady = async (kind) => {
   });
 };
 
-// 화면 내용이 끝나는 위치 (body 여백·떠 있는 창은 빼고) — 광고 크기 고르기·여백 계산 공통
-const contentBottom = () => {
-  const col = document.querySelector("#root .min-h-screen > div");
-  if (!col) return null;
-  let bottom = 0;
-  for (const c of col.children) {
-    if (getComputedStyle(c).position === "fixed") continue;
-    bottom = Math.max(bottom, c.getBoundingClientRect().bottom + window.scrollY);
-  }
-  return bottom;
-};
-// 큰 광고 자리: 300x250 + 위아래 여백(16) + 내용과 띄우기(24) + 조금 더
-const RECT_SPACE = 250 + 16 + 24 + 10;
-// 내용 아래 빈 공간이 큰 광고(300x250)가 들어갈 만큼 남는 화면이면 true → 얇은 배너 대신 큰 광고
-// 화면이 바뀌거나 내용이 늘고 줄 때(펼치기 등) 다시 재요. 잠깐 사이 여러 번 바뀌면 마지막 것만(0.8초)
-function useRoomyForRect() {
-  const [roomy, setRoomy] = useState(false);
-  useEffect(() => {
-    let timer = null;
-    const check = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        const b = contentBottom();
-        setRoomy(b !== null && b + RECT_SPACE <= window.innerHeight);
-      }, 800);
-    };
-    const mo = new MutationObserver(check);
-    mo.observe(document.getElementById("root"), { childList: true, subtree: true });
-    window.addEventListener("resize", check);
-    document.addEventListener("load", check, true); // 그림이 늦게 뜨면 높이가 바뀌어요
-    check();
-    return () => {
-      clearTimeout(timer);
-      mo.disconnect();
-      window.removeEventListener("resize", check);
-      document.removeEventListener("load", check, true);
-    };
-  }, []);
-  return roomy;
-}
-// 큰 광고(rect)는 아래 빈 공간에 들어가는 광고라, 내용이 광고에 실제로 가려지는 만큼만 여백을 줘요
-// (광고 높이만큼 무조건 늘리면 내용이 짧아도 아래로 한참 스크롤돼요). 얇은 배너는 화면마다 내용이 바뀌어서 그대로 광고 높이만큼
-const adPadding = (space) => {
-  if (adState.size !== "rect") return space;
-  document.body.style.paddingBottom = "";
-  const bottom = contentBottom();
-  if (bottom === null) return space;
-  return Math.max(0, Math.ceil(bottom + space - document.documentElement.scrollHeight));
-};
 // 종료 창 등이 하단 배너를 치웠다가 닫히면 다시 띄우라고 알려요
 const restoreBottomAd = () => window.dispatchEvent(new Event("bottomAdRestore"));
-// size: "banner"(얇은 하단 배너) | "rect"(아래 빈 공간이 넉넉한 화면용 300x250) | null(숨김)
+// 하단 광고는 모든 화면에서 얇은 배너 하나로 통일해요 (2026-10-20 — 빈 공간 따라 큰 광고로 바꾸던 방식은 폰마다 달라 보여서 뺐어요)
+// size: "banner"(얇은 하단 배너) | null(숨김)
 function useBottomBanner(size) {
   const show = !!size;
   const [restoreTick, setRestoreTick] = useState(0);
@@ -575,9 +527,9 @@ function useBottomBanner(size) {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const sub = AdMob.addListener(BannerAdPluginEvents.SizeChanged, (size) => {
-      const h = adState.kind === "bottom" && !adState.hidden ? Math.round(size?.height || 0) + (adState.size === "rect" ? 16 : 0) : 0;
+      const h = adState.kind === "bottom" && !adState.hidden ? Math.round(size?.height || 0) : 0;
       // 배너와 화면 내용 사이 24px 띄워서 실수로 누르지 않게 해요 (AdMob 실수 클릭 정책)
-      document.body.style.paddingBottom = h ? `${adPadding(h + 24)}px` : "";
+      document.body.style.paddingBottom = h ? `${h + 24}px` : "";
     });
     return () => {
       sub.then((x) => x.remove());
@@ -602,9 +554,9 @@ function useBottomBanner(size) {
             adState.hidden = false;
             await AdMob.showBanner({
               adId: adId(BANNER_AD_ID, "banner"),
-              adSize: size === "rect" ? BannerAdSize.MEDIUM_RECTANGLE : BannerAdSize.ADAPTIVE_BANNER,
+              adSize: BannerAdSize.ADAPTIVE_BANNER,
               position: BannerAdPosition.BOTTOM_CENTER,
-              margin: size === "rect" ? 16 : 0,
+              margin: 0,
               isTesting: AD_TESTING,
             });
           }
@@ -5784,8 +5736,7 @@ export default function App() {
   }, [screen.view]);
   // 계산기 목록은 아래가 많이 비어서 큰 광고, 그 밖의 화면은 얇은 하단 배너
   // 내용이 짧아 아래가 넉넉한 화면은 큰 광고(300x250), 나머지는 얇은 하단 배너
-  const roomy = useRoomyForRect();
-  useBottomBanner(NO_AD_VIEWS.includes(screen.view) || typing ? null : roomy ? "rect" : "banner");
+  useBottomBanner(NO_AD_VIEWS.includes(screen.view) || typing ? null : "banner");
   useEffect(() => {
     const isField = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA");
     const onIn = (e) => isField(e.target) && setTyping(true);

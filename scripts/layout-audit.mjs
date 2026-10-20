@@ -250,6 +250,11 @@ for (const [idx, sc] of SCREENS.entries()) {
   // 도구 검증용: AUDIT_SELFTEST=1이면 끝 여백을 일부러 지우고 검사해요 (잘림을 잡아내야 정상)
   if (process.env.AUDIT_SELFTEST) await evaluate(`document.querySelectorAll("[data-scroll-end]").forEach((e) => e.remove()); true`);
   if (wanted(sc)) results.push(await evaluate(`__audit.check(${JSON.stringify(sc.name)})`));
+  // 광고 검토용: AUDIT_ADROOM=1이면 화면마다 내용 아래 빈 공간(px)을 적어요 (큰 광고 300x250 자리 = 300px)
+  if (process.env.AUDIT_ADROOM && wanted(sc)) {
+    const free = await evaluate(`(() => { const col = document.querySelector("#root .min-h-screen > div"); if (!col) return null; let b = 0; for (const c of col.children) { if (getComputedStyle(c).position === "fixed") continue; b = Math.max(b, c.getBoundingClientRect().bottom + window.scrollY); } return Math.round(window.innerHeight - b); })()`);
+    console.log(`ADROOM	${sc.name}	${free}`);
+  }
   // 디자인 확인용: AUDIT_SHOTS=<폴더>면 화면마다 전체 길이 사진을 저장해요
   if (process.env.AUDIT_SHOTS && wanted(sc)) {
     const { mkdirSync, writeFileSync } = await import("node:fs");

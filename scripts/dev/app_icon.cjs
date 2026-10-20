@@ -4,10 +4,10 @@
 const fs = require("fs");
 const path = require("path");
 const sharp = require(path.resolve("node_modules/sharp"));
-const SRC = process.argv[2] || "scripts/dev/mockups/app-icon-3d.png";
+const SRC = process.argv[2] || "scripts/dev/mockups/app-icon-mascot.png"; // 2026-10-20 가게 캐릭터(동전) 아이콘으로 교체 — 옛 원본 app-icon-3d.png
 const STORE = process.argv[3]; // 스토어 폴더(선택)
 const RES = "android/app/src/main/res";
-const BG = "#FFEFD0"; // 적응형 아이콘 배경색 (원본 배경 크림색)
+const BG = "#FDEBC4"; // 적응형 아이콘 배경색 (가게 캐릭터 아이콘 가장자리 크림색, 2026-10-20)
 
 (async () => {
   const meta = await sharp(SRC).metadata();
