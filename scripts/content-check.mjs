@@ -9,7 +9,9 @@ import { execSync } from "node:child_process";
 import { validateContent } from "../src/contentRules.js";
 
 const FILE = "data/content.json";
-const OFFICIAL = [/\.go\.kr$/, /\.or\.kr$/, /^www\.sbiz24\.kr$/, /^sbiz24\.kr$/, /\.re\.kr$/, /^www\.korea\.kr$/, /^www\.kodit\.co\.kr$/, /\.kibo\.or\.kr$/, /^www\.sbiz\.or\.kr$/];
+// 공식 기관 주소: 정부(.go.kr)·공공기관(.or.kr) + .co.kr을 쓰는 공공기관(지역 신용보증재단 등)은 하나씩 확인해서 추가
+const OFFICIAL = [/\.go\.kr$/, /\.or\.kr$/, /^www\.sbiz24\.kr$/, /^sbiz24\.kr$/, /\.re\.kr$/, /^www\.korea\.kr$/, /^www\.kodit\.co\.kr$/, /\.kibo\.or\.kr$/, /^www\.sbiz\.or\.kr$/,
+  /^www\.seoulshinbo\.co\.kr$/, /^www\.ttg\.co\.kr$/, /^www\.ulsanshinbo\.co\.kr$/];
 const fails = [];
 const warns = [];
 const fail = (m) => fails.push(m);
