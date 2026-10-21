@@ -88,6 +88,10 @@ import heroNewsImg from "./assets/cat/hero-news.webp";
 import heroFavImg from "./assets/cat/hero-fav.webp";
 import newsFigGeoje from "./assets/news/fig-geoje.webp";
 import newsFigOnnuri from "./assets/news/fig-onnuri.webp";
+// 지원금·뉴스·금리·최저임금은 정보 파일(data/content.json)에서 — 앱 업데이트 없이 바뀌어요 (src/content.js)
+import { ALL_PROGRAMS, NEWS, NEWS_UPDATED, BOK_RATE, BOK_HISTORY, BOK_MEETINGS, MIN_WAGES, refreshContent } from "./content.js";
+// 정보 파일의 뉴스 그림은 이름으로 들어 있어요 → 앱 안 그림으로 바꿔요
+const NEWS_FIGURES = { "fig-geoje": newsFigGeoje, "fig-onnuri": newsFigOnnuri };
 import heroMyImg from "./assets/cat/hero-my.webp";
 import calc_marginImg from "./assets/calc/margin.webp";
 import calc_breakevenImg from "./assets/calc/breakeven.webp";
@@ -186,221 +190,6 @@ function NewsImage({ news, className, style }) {
   );
 }
 
-// 정책 뉴스 — 정부 보도자료·공식 공고 위주 (마지막 확인: NEWS_UPDATED)
-// 이미지: 기사 원문의 대표 사진(og:image)을 그대로 불러오고, 화면에 사진 출처를 표시해요. 못 불러오면 분야 그림으로 대신해요.
-// 새 소식은 앱 업데이트 때 추가해요. 날짜는 "YYYY.MM.DD" (최신순 정렬·NEW 표시에 써요)
-const NEWS_UPDATED = "2026.10.06";
-const NEWS = [
-  {
-    id: "m5",
-    image: "https://www.korea.kr/newsWeb/resources/attaches/2026.10/06/700f105bfd29890064fd37d9aee6ef8a.jpg",
-    imageSource: "대한민국 정책브리핑",
-    title: "유류세 인하 11월 말까지 연장 — 경유·LPG(부탄) 25% 인하 유지",
-    source: "대한민국 정책브리핑",
-    date: "2026.10.06",
-    category: "고정비",
-    readTime: "1분",
-    summary: "배달·화물 등 차량을 쓰는 사장님의 연료비 부담을 덜어주는 유류세 인하가 2개월 더 이어져요.",
-    bullets: [
-      "휘발유 15% 인하 (리터당 122원↓)",
-      "경유 25% 인하 (리터당 145원↓), 부탄(LPG) 25% 인하 (리터당 51원↓)",
-      "2026년 11월 30일까지 2개월 추가 연장",
-    ],
-    url: "https://www.korea.kr/news/policyNewsView.do?newsId=148973025",
-  },
-  {
-    id: "m6",
-    image: "https://www.korea.kr/newsWeb/resources/attaches/2026.09/29/fac35bd87b21f397b70cdc4b9cd8dfb4.jpg",
-    imageSource: "대한민국 정책브리핑",
-    title: "강원 소상공인에 'AI 안심경영' 서비스 — 근로계약서 자동 작성·노무 상담",
-    source: "행정안전부",
-    date: "2026.09.29",
-    category: "디지털",
-    readTime: "2분",
-    summary: "강원도 소상공인은 AI로 업종별 표준근로계약서를 만들고, 노무·법률 상담과 맞춤 정책 안내를 받을 수 있게 돼요.",
-    bullets: [
-      "업종별 표준근로계약서 자동 작성, 빠진 필수 항목도 확인",
-      "AI 챗봇 기본 상담 + 필요하면 전문가(노무·법률) 연결",
-      "내 가게에 맞는 지원 정책도 함께 안내",
-      "강원특별자치도에서 올해 말부터 제공 (경북은 주민 정착 지원 AI 서비스)",
-    ],
-    url: "https://www.korea.kr/news/policyNewsView.do?newsId=148972766",
-  },
-  {
-    id: "m7",
-    image: "https://www.korea.kr/newsWeb/resources/attaches/2026.07/15/21c9ef1f4ebef2efa14781bc6986ea27.jpg",
-    imageSource: "대한민국 정책브리핑",
-    title: "2027년 최저임금 시간당 1만 700원 확정 — 올해보다 3.7% 인상",
-    source: "고용노동부",
-    date: "2026.08.05",
-    category: "인건비",
-    readTime: "1분",
-    summary: "내년 1월 1일부터 모든 사업장에 시간당 10,700원이 적용돼요. 직원 월급과 아르바이트 시급을 미리 점검해 두세요.",
-    bullets: [
-      "2027년 최저임금 시간급 10,700원 (올해 10,320원보다 380원, 3.7% 인상)",
-      "월 환산액 2,236,300원 (주 40시간, 월 209시간 기준)",
-      "업종 구분 없이 모든 사업장에 똑같이 적용",
-      "2027년 1월 1일부터 효력",
-    ],
-    url: "https://www.moel.go.kr/news/enews/report/enewsView.do?news_seq=19744",
-  },
-  {
-    id: "m1",
-    image: "https://www.korea.kr/newsWeb/resources/attaches/2026.10/06/9f448bb0920216f8f184af88a6bed7f1.jpg",
-    imageSource: "대한민국 정책브리핑",
-    title: "거제·통영 특별재난지역 소상공인 정책자금, 금리 1.5%·한도 3억 원으로",
-    source: "중소벤처기업부",
-    date: "2026.10.06",
-    category: "정책자금",
-    readTime: "2분",
-    summary: "특별재난지역으로 선포된 거제·통영의 피해 소상공인은 긴급경영안정자금을 더 낮은 금리로, 더 많이, 더 오래 빌릴 수 있어요.",
-    bullets: [
-      "소상공인 긴급경영안정자금 금리 2.0% → 1.5% (직접대출 기준, 대리대출은 1.4% 고정)",
-      "대출 한도 최대 1억 원 → 최대 3억 원",
-      "상환기간 5년 → 10년 (5년 거치 후 5년 나눠 갚기)",
-      "신청 전에 관할 시·군에 피해 신고를 하고 재해확인증을 받아야 해요",
-    ],
-    contacts: [
-      { label: "소상공인 1533-0100", tel: "1533-0100" },
-      { label: "중소기업 1811-3655", tel: "1811-3655" },
-    ],
-    figure: { src: newsFigGeoje, caption: "소상공인·중소기업 긴급경영안정자금 우대 조건", url: "https://www.korea.kr/news/policyNewsView.do?newsId=148973061" },
-    url: "https://www.mss.go.kr/site/smba/ex/bbs/View.do?cbIdx=86&bcIdx=1071601",
-  },
-  {
-    id: "m2",
-    image: "https://www.korea.kr/newsWeb/resources/attaches/2026.09/30/b228f5ad0c0c543fc2ea3fc2f0be420c.jpg",
-    imageSource: "대한민국 정책브리핑",
-    title: "온누리상품권 18년 만에 개편 — 전통시장·지방 골목상권 혜택 커진다",
-    source: "중소벤처기업부",
-    date: "2026.10.01",
-    category: "지역·상권",
-    featured: true,
-    readTime: "3분",
-    summary: "온누리상품권이 전통시장과 지방 골목상권 중심으로 바뀌어요. 손님 혜택이 커지고, 가맹 혜택은 영세 상인에게 집중돼요.",
-    bullets: [
-      "전통시장에서 쓰면 구매 때 5% 할인 + 사용 후 5% 환급, 총 10% 혜택 (2027년 시행)",
-      "지방 골목상권에서 쓰면 5% 할인 + 3% 환급, 총 8% 혜택",
-      "골목형상점가 지정 기준을 지방 재정 여건에 맞춰 완화 (재정자립도 하위 지역은 점포 15개 이상)",
-      "기업형 슈퍼마켓(SSM) 등은 가맹점 등록·갱신을 제한해 영세 상인에게 혜택 집중",
-    ],
-    figure: { src: newsFigOnnuri, caption: "2027년 디지털 온누리 전통시장·지방소비 차등환급(안)", url: "https://www.korea.kr/news/policyNewsView.do?newsId=148972815" },
-    url: "https://www.mss.go.kr/site/smba/ex/bbs/View.do?cbIdx=86&bcIdx=1071532",
-  },
-  {
-    id: "m3",
-    image: "https://cdn.jungbunews.com/news/photo/202609/2740073_2742546_3518.jpg",
-    imageSource: "중부뉴스통신",
-    title: "티메프 피해 소상공인, 정책자금 상환기간 최대 7년 연장",
-    source: "중소벤처기업부",
-    date: "2026.09.22",
-    category: "정책자금",
-    readTime: "2분",
-    summary: "티몬·위메프 정산 지연으로 피해를 입은 사업자가 정책자금을 갚기 어렵다면, 상환기간 연장 같은 맞춤 채무조정을 받을 수 있어요.",
-    bullets: [
-      "대상: 정상 상환 중이거나 연체 30일 이하인 피해 소상공인 중 일시적으로 경영이 어려운 곳",
-      "소상공인시장진흥공단 정책자금 상환기간을 최대 7년까지 연장",
-      "폐업 후 직장인으로 전환한 경우 1년 근속하면 금리 0.5%p 감면",
-      "중소기업은 중진공에서 원금 상환 비율 조정·상환 유예 지원",
-    ],
-    contacts: [
-      { label: "소상공인 1533-0100", tel: "1533-0100" },
-      { label: "중소기업 1811-3655", tel: "1811-3655" },
-    ],
-    url: "https://www.mss.go.kr/site/smba/ex/bbs/View.do?cbIdx=86&bcIdx=1071372",
-  },
-  {
-    id: "m4",
-    image: "https://news.nateimg.co.kr/orgImg/yt/2026/09/22/PCM20230320000254990_P2.jpg",
-    imageSource: "연합뉴스",
-    title: "「소상공인기본법」 개정안 국무회의 통과 — 진짜 영세 소상공인에게 지원 집중",
-    source: "중소벤처기업부",
-    date: "2026.09.22",
-    category: "세제·제도",
-    readTime: "2분",
-    summary: "정부가 국세청 소득·비용 자료까지 활용해, 여러 점포를 가진 사업자나 부업 사업자가 아닌 실제 영세 소상공인을 가려 지원할 수 있게 돼요.",
-    bullets: [
-      "중기부가 국세청·고용노동부에 소득·비용 정보를 요청할 수 있는 근거 마련",
-      "점포가 여러 개인 '다중사업자', 직장인 '부업사업자'를 구분해 지원 대상 정확히 파악",
-      "사업자 단위 지원 때문에 생기던 중복 지원 문제 해소",
-      "지금은 국무회의 의결 단계예요 — 국회를 통과해야 시행돼요",
-    ],
-    url: "https://www.mss.go.kr/site/smba/ex/bbs/View.do?cbIdx=86&bcIdx=1071342",
-  },
-  {
-    id: "n5",
-    image: "https://www.hksisaeconomy.com/data/photos/portnews/202609/20260906201504-71428.jpg",
-    title: "울산시, 중소기업·소상공인에 760억 원 규모 경영안정자금 지원",
-    source: "한국시사경제",
-    date: "2026.09.06",
-    category: "지역·상권",
-    readTime: "2분",
-    summary: "울산시가 4차 소상공인 경영안정자금 지원계획을 공고했어요. 9월 10일부터 선착순으로 받고 있고, 예산이 소진되면 마감돼요.",
-    bullets: [
-      "울산시, 4차 소상공인 경영안정자금 지원계획 공고",
-      "총 760억 원 규모로 중소기업·소상공인 대상 지원",
-      "9월 10일부터 선착순 접수 — 예산 소진 시 조기 마감",
-    ],
-    programId: 17,
-    url: "https://hksisaeconomy.com/news/article.html?no=1229062",
-  },
-  {
-    id: "n4",
-    image: "https://www.korea.kr/newsWeb/resources/attaches/2026.07/01/633cc081876773dfc4caee297fdbc63e.jpg",
-    imageSource: "대한민국 정책브리핑",
-    title: "2026년 하반기부터 이렇게 달라져요 — 노란우산공제 납입한도 연 1,800만 원으로",
-    source: "대한민국 정책브리핑",
-    date: "2026.07.02",
-    category: "세제·제도",
-    readTime: "2분",
-    summary: "하반기에 바뀌는 제도 중 소상공인과 관련된 내용이에요. 노란우산공제에 한 해 더 많이 넣을 수 있게 됐어요.",
-    bullets: [
-      "노란우산공제 납입한도: 분기 300만 원 → 연 1,800만 원으로 확대",
-      "공제부금 소득공제 한도는 사업소득금액에 따라 200만~600만 원",
-      "중고차 매매·수출업자는 매입세액공제 특례 공제한도 신설",
-    ],
-    url: "https://www.korea.kr/news/policyNewsView.do?newsId=148967417",
-  },
-  {
-    id: "n3",
-    image: "https://www.korea.kr/newsWeb/resources/attaches/2026.01/27/be9b8c5b6d3faf516e9c08f44bb0db03.jpg",
-    imageSource: "대한민국 정책브리핑",
-    title: "영세 소상공인 고정비 부담 던다 — 경영안정 바우처 최대 25만 원",
-    source: "중소벤처기업부",
-    date: "2026.01.27",
-    category: "고정비",
-    readTime: "2분",
-    summary: "공과금·4대보험료 같은 고정비에 쓸 수 있는 바우처를 사업체당 최대 25만 원 지원해요. 12월 18일까지 신청할 수 있어요.",
-    bullets: [
-      "대상: 연매출 1억 400만 원 미만, 2025년 12월 31일 이전 개업해 영업 중인 소상공인",
-      "사업체당 최대 25만 원 — 전기·가스·수도요금, 4대보험료, 차량 연료비 등에 사용",
-      "신청: 소상공인경영안정바우처.kr 또는 소상공인24 (12월 18일 18시까지)",
-      "바우처는 2026년 12월 31일까지 써야 해요",
-    ],
-    contacts: [{ label: "바우처 콜센터 1533-0600", tel: "1533-0600" }],
-    programId: "voucher",
-    url: "https://www.mss.go.kr/site/smba/ex/bbs/View.do?cbIdx=86&bcIdx=1065091",
-  },
-  {
-    id: "n1",
-    // 기업마당 공고엔 사진이 없어서, 같은 공고를 소개한 정책브리핑 카드뉴스 대표 이미지를 써요
-    image: "https://www.korea.kr/newsWeb/resources/attaches/2025.12/30/9e6f350d84bd21ffd32562f993267431.jpg",
-    imageSource: "대한민국 정책브리핑",
-    imagePosition: "center top", // 이미지 위쪽 제목 글자가 잘리지 않게
-    title: "2026년 중소벤처기업부 소상공인 정책자금 융자사업 공고",
-    source: "중소벤처기업부",
-    date: "2025.12.29",
-    category: "정책자금",
-    readTime: "3분",
-    summary: "일반·특별·긴급 경영안정자금부터 신용취약자금, 대환대출, 재도전특별자금, 청년고용연계자금, 성장기반자금까지 — 올해 소진공이 지원하는 정책자금 전체 종류를 정부가 공식 발표했어요.",
-    bullets: [
-      "일반·특별·긴급 경영안정자금 등 소진공 정책자금 전체 종류를 한 번에 공고",
-      "신용취약자금, 대환대출, 재도전특별자금도 포함돼 있어요",
-      "청년고용연계자금·성장기반자금까지 업종·상황별로 골라 신청 가능",
-    ],
-    url: "https://www.bizinfo.go.kr/web/lay1/bbs/S1T122C128/AS/74/view.do?pblancId=PBLN_000000000117021",
-  },
-];
 // ---- 광고 (AdMob) ----
 // AdMob 광고 단위 (앱 ID는 android/app/src/main/res/values/strings.xml 의 admob_app_id)
 // 에뮬레이터에서는 자동으로 구글 테스트 광고(항상 나옴)로 바꿔 광고 위치를 바로 확인할 수 있어요.
@@ -830,7 +619,6 @@ function MssPressFeed() {
   );
 }
 // 최신순 (날짜가 같으면 위에 적은 순서)
-NEWS.sort((a, b) => b.date.localeCompare(a.date));
 const newsDate = (d) => parseLocalDate(d.replaceAll(".", "-"));
 
 // "YYYY-MM-DD"를 한국(기기) 시간 기준 그날 0시로 해석해요 (new Date("YYYY-MM-DD")는 UTC 기준이라 하루 어긋날 수 있어요)
@@ -1499,7 +1287,6 @@ function diagnoseProgram(p, diag) {
   return { eligible: true, score, reason: reasons[0] || warnings[0] || null, warnings };
 }
 
-
 // 시/도별 구·시·군 목록 (2026년 기준 행정구역 전체)
 const DISTRICTS = {
   서울: ["강남구", "강동구", "강북구", "강서구", "관악구", "광진구", "구로구", "금천구", "노원구", "도봉구", "동대문구", "동작구", "마포구", "서대문구", "서초구", "성동구", "성북구", "송파구", "양천구", "영등포구", "용산구", "은평구", "종로구", "중구", "중랑구"],
@@ -1521,130 +1308,6 @@ const DISTRICTS = {
 };
 
 // 실제 조사된 정확한 정보가 들어간 프로그램 (상세 가이드형)
-const DETAILED_PROGRAM = {
-  id: "voucher",
-  name: "소상공인 경영안정바우처",
-  region: "전국",
-  category: "고정비",
-  amountLabel: "최대 25만원",
-  deadline: "2026-12-18",
-  detailed: true,
-  popularity: 980,
-  target: {
-    ok: [
-      "2025년 12월 31일 이전 개업, 현재 정상 영업 중",
-      "2025년 연매출 0원 초과 ~ 1억 400만 원 미만 (국세청 신고 기준)",
-      "2025년 신규 개업자는 월평균 매출 × 12개월로 연환산",
-    ],
-    no: [
-      "2025년 신고 매출이 0원인 경우",
-      "휴업·폐업 상태 사업자",
-      "여러 사업체 운영 시 이미 다른 사업체로 지원받은 경우",
-    ],
-  },
-  amount: { value: "25만 원", note: "사업체당 최대, 카드형 디지털 바우처로 지급 · 사용기한 2026.12.31" },
-  usage: { ok: ["전기·가스요금 등 공과금", "4대 보험료", "차량 연료비", "전통시장 화재공제료"], no: ["통신비"] },
-  schedule: { apply: "2026.2.9 ~ 12.18", use: "2026.12.31까지" },
-  steps: [
-    { t: "온라인 신청", d: "'소상공인24' 또는 전용 사이트에서 신청" },
-    { t: "자격 확인", d: "국세청 신고 매출액 기준 자동 확인, 별도 서류 없음" },
-    { t: "카드 등록", d: "대표자 본인 명의 개인 카드 등록 (법인카드 불가)" },
-    { t: "바우처 지급 및 사용", d: "승인 후 등록 카드로 바로 사용 가능" },
-  ],
-  faq: [
-    { q: "카드는 아무거나 등록해도 되나요?", a: "법인카드는 등록할 수 없어요. 대표자 본인 명의의 개인 카드만 가능해요." },
-    { q: "서류를 따로 준비해야 하나요?", a: "기본적으로 국세청 신고 매출액으로 판단해요. 2025년 신규 개업자는 연환산 계산이 필요해요." },
-  ],
-};
-
-// 실제 확인한 전국 공통 정책자금 대출 (출처: 소상공인시장진흥공단 소상공인정책자금 누리집 ols.semas.or.kr, 2026년 기준)
-// 대출류는 특정 마감일이 아니라 "매월/매분기 접수 후 예산 소진 시 마감"되는 상시 자금이라 recurring: true로 표시해요
-const NATIONAL_LOANS = [
-  {
-    id: 101,
-    name: "일반경영안정자금",
-    region: "전국",
-    category: "경영",
-    target: "소상공인기본법상 소상공인 (세금 체납 없는 정상 영업 사업자)",
-    amountLabel: "최대 7,000만원",
-    deadline: "2099-12-31",
-    recurring: true,
-    recurringNote: "직접대출은 매월 첫째주, 예산 소진 시 조기 마감",
-    verified: true,
-    note: "소진공 직접대출로 신청해요. 2026년 기준금리(분기별 변동, 3분기 3.85%)에 자금별 가산금리가 붙어 연 2.0~5.45% 수준이에요. 정확한 금리·한도는 신청 시점 공고를 확인하세요.",
-    popularity: 960,
-  },
-  {
-    id: 102,
-    name: "신용취약소상공인 특화자금",
-    region: "전국",
-    category: "신용",
-    target: "대표자 개인신용평점(NCB) 839점 이하 중·저신용 소상공인 (신용관리교육 이수 필요)",
-    amountLabel: "최대 3,000만원",
-    deadline: "2099-12-31",
-    recurring: true,
-    recurringNote: "소진공 직접대출, 상시 접수 (예산 소진 시 마감)",
-    verified: true,
-    note: "은행 문턱이 높은 중·저신용 소상공인을 위한 자금이에요. 통상 대출기간 5년, 신용관리교육 이수가 조건이에요.",
-    popularity: 540,
-  },
-  {
-    id: 103,
-    name: "저금리 대환대출",
-    region: "전국",
-    category: "신용",
-    target: "고금리 기존 대출을 보유한 중·저신용 소상공인 (NCB 919점 이하)",
-    amountLabel: "최대 5,000만원",
-    deadline: "2099-12-31",
-    recurring: true,
-    recurringNote: "소진공 직접대출, 상시 접수 (예산 소진 시 마감)",
-    verified: true,
-    note: "고금리 대출을 저금리·장기분할상환으로 갈아탈 수 있어요. 2026년부터 대상 신용점수 기준이 완화됐어요.",
-    popularity: 715,
-  },
-  {
-    id: 104,
-    name: "재도전특별자금",
-    region: "전국",
-    category: "재기",
-    target: "재창업 준비·초기단계, 채무조정 성실 이행 중인 소상공인",
-    amountLabel: "최대 7,000만원~2억원 (유형별 상이)",
-    deadline: "2099-12-31",
-    recurring: true,
-    recurringNote: "소진공 직접대출, 상시 접수 (예산 소진 시 마감)",
-    verified: true,
-    note: "폐업 후 재창업하거나 채무를 성실히 조정 중인 분들을 위한 자금이에요. 기준금리에 +0.4~1.6%p 가산되고 유형별로 한도가 달라요.",
-    popularity: 460,
-  },
-];
-
-// 지역·분야별 지원사업 — verified: true인 항목은 검색으로 실제 확인한 정보
-const SAMPLE_PROGRAMS = [
-  { id: 1, name: "소상공인 고효율기기 지원사업", region: "전국", category: "에너지", target: "비주거용 전기 사용 소상공인, 고효율가전 교체 희망자", amountLabel: "1등급 가전 구매비 40% 환급 (품목별 한도)", deadline: "2026-12-31", verified: true, note: "한국전력공사가 운영해요. 2026.2.9~12.31 접수하고, 2026년 1월 1일 이후 구매분은 소급 신청할 수 있어요. 예산(388억원)이 소진되면 조기 마감돼요.", popularity: 640 },
-  { id: 2, name: "서울시 중소기업육성자금 (경영안정자금)", region: "서울", category: "보증", target: "서울특별시 소재 사업자등록을 마친 소상공인·중소기업 (융자제한업종 제외)", amountLabel: "자금 종류별 상이 (서울신용보증재단 보증부대출)", deadline: "2099-12-31", recurring: true, recurringNote: "서울신용보증재단 통해 연중 상시 접수, 예산 소진 시 조기 마감", verified: true, note: "경제활성화자금·희망동행자금(대환대출)·서울배달상생자금 등 여러 세부 자금 중 상황에 맞는 걸 골라 신청해요. 정확한 한도·금리는 서울신용보증재단 공고를 확인하세요.", popularity: 810 },
-  { id: 3, name: "경기도 소상공인 정책자금", region: "경기", category: "경영", target: "경기도 소재 사업자등록을 마친 소상공인", amountLabel: "최대 5,000만원 (연 2.5%)", deadline: "2099-12-31", recurring: true, recurringNote: "경기신용보증재단 통해 연중 상시 접수, 예산 소진 시 조기 마감", verified: true, note: "일반 정책자금보다 낮은 금리로 운전·시설자금을 지원해요. 정확한 한도·조건은 경기신용보증재단 공고를 확인하세요.", popularity: 520 },
-  { id: 4, name: "2026년 스마트상점 기술보급사업", region: "전국", category: "디지털전환", target: "키오스크·서빙로봇·사이니지 등 스마트기술 도입 희망 소상공인", amountLabel: "구입형 최대 700만원 · 렌탈형 연 최대 350만원", deadline: "2026-09-30", verified: true, note: "2026년 2차 모집(8.26~9.30)까지 접수가 끝났어요. 다음 공고는 보통 연초에 소상공인스마트상점(sbiz.or.kr/smst)에 올라와요.", popularity: 890 },
-  { id: 5, name: "부산 자영업자 청년고용 인건비 지원", region: "부산", category: "고용", target: "부산 소재 자영업체에서 청년을 신규 고용한 소상공인", amountLabel: "1인당 월 180만원, 최대 24개월", deadline: "2099-12-31", recurring: true, recurringNote: "부산시소상공인종합지원센터 통해 연중 공모, 예산 소진 시 조기 마감", verified: true, note: "청년을 신규 채용하면 인건비 일부를 지원받아요. 세부 연령·소득 기준은 회차별 공고를 확인하세요.", popularity: 705 },
-  { id: 7, name: "대구·경북 소상공인 경영안정자금 (이차보전)", region: "대구", regions: ["대구", "경북"], category: "보증", target: "연 매출 5억원 이하 소상공인 (국세·지방세 체납자, 휴·폐업, 유흥·사치업종 제외)", amountLabel: "대출이자 1~2년간 일부 지원 (신용보증재단 특례보증 연계)", deadline: "2099-12-31", recurring: true, recurringNote: "대구신용보증재단 통해 상·하반기 공고, 예산 소진 시 조기 마감", verified: true, note: "대출 자체가 아니라 대출받을 때 발생하는 이자 일부를 지자체가 보전해줘요. 보증서 발급 후 협약은행에서 대출을 실행해요.", popularity: 430 },
-  { id: 8, name: "희망인천 특례보증", region: "인천", category: "보증", target: "인천광역시 소재 소기업·소상공인 (홈플러스 폐점 피해기업 등 포함)", amountLabel: "업체당 최대 5,000만원 + 이자지원(1년차 연 2%, 2~3년차 연 1.5%)", deadline: "2099-12-31", recurring: true, recurringNote: "인천신용보증재단 통해 연중 상시 접수, 예산 소진 시 조기 마감", verified: true, note: "보증기간 6년(1년 거치·5년 분할상환)에 이자까지 지원해줘요. 정확한 대상·한도는 인천신용보증재단 공고를 확인하세요.", popularity: 610 },
-  { id: 11, name: "강원특별자치도 소상공인 경영안정자금", region: "강원", category: "경영", target: "강원 도내 소재 사업장 소상공인 (개인신용평점 NICE 710점 이상 또는 KCB 620점 이상)", amountLabel: "연간 2,000억원 규모 융자 (기본 이자지원 연 2%, 다자녀 추가 지원)", deadline: "2099-12-31", recurring: true, recurringNote: "1차(2~6월)·2차(7월~) 두 차례 공고, 자금 소진 시 조기 마감", verified: true, note: "일시상환(2년) 또는 분할상환(2년 거치·3년 분할) 중 선택할 수 있어요. 다자녀 소상공인은 이자지원이 추가돼요. 정확한 일정·한도는 강원특별자치도 공고를 확인하세요.", popularity: 380 },
-  { id: 12, name: "제주도 소상공인 육성자금 (경영안정자금)", region: "제주", category: "경영", target: "제주특별자치도 소재 사업자등록을 마친 소상공인", amountLabel: "2026년 총 420억원 규모 저금리 융자", deadline: "2099-12-31", recurring: true, recurringNote: "제주경제통상진흥원·제주신용보증재단 통해 연중 상시 접수, 예산 소진 시 조기 마감", verified: true, note: "제주도가 시설·경영안정자금 등 저금리 융자를 지원해요. 정확한 한도·금리는 제주경제통상진흥원 공고를 확인하세요.", popularity: 295 },
-  { id: 13, name: "광주광역시 미소금융 이자지원 사업", region: "광주", category: "신용", target: "미소금융(창업·운영·시설개선·긴급생계자금) 이용 중인 개인신용평점 하위 20%(KCB 700점·NICE 749점 이하), 기초생활수급자, 차상위계층, 근로장려금 수급자 소상공인", amountLabel: "연 4.5% 이자 1년 전액 지원", deadline: "2026-12-31", recurring: true, recurringNote: "예산(2억5천만원) 소진 시 조기 마감", verified: true, note: "미소금융재단 대출을 정상 상환하면 광주시가 이자를 보전해줘요. 광주지역 7개 미소금융 수행기관이나 광주경제진흥상생일자리재단에서 신청해요.", popularity: 250 },
-  { id: 14, name: "대전광역시 소상공인 인건비 지원사업", region: "대전", category: "고용", target: "대전 소재 소상공인, 2026.1.1~9.10 사이 18세 이상 근로자 신규 고용(월 60시간 이상, 3개월 이상 고용유지, 4대보험 가입)", amountLabel: "근로자 1인당 150만원 (월 50만원×3개월)", deadline: "2026-11-30", verified: true, note: "대전비즈 홈페이지에서 온라인 접수하며 예산 소진 시까지 상시·선착순으로 접수해요. 문의: 대전일자리경제진흥원(042-380-3063).", popularity: 410 },
-  { id: 15, name: "대전광역시 소상공인 경영회복 지원금", region: "대전", category: "고정비", target: "대전 소재 소상공인, 전년도 매출 1억 400만원 미만, 임차료·공과금 등 경영비용 지출 증빙 가능자", amountLabel: "업체당 최대 30만원", deadline: "2026-03-31", verified: true, note: "2026.2.9~3.31 접수가 끝났어요. 공동사업자는 대표자 1인만, 여러 사업체를 운영해도 1개 사업체만 지원됐어요.", popularity: 365 },
-  { id: 16, name: "경상남도 소상공인 정책자금", region: "경남", category: "경영", target: "경남 도내 소재 「소상공인기본법」상 소상공인 (개인·법인)", amountLabel: "최대 1억원, 이차보전 최대 연 3.0%(1년)", deadline: "2026-12-31", recurring: true, recurringNote: "2026.1.19~12.31 상시 접수, 총 2,000억원 규모 소진 시 조기 마감", verified: true, note: "경영안정자금·창업명절 특별자금·버팀목 특별자금 등 여러 세부 자금 중 상황에 맞는 걸 골라 신청해요. 경남신용보증재단에서 온라인·방문 신청.", popularity: 455 },
-  { id: 17, name: "울산광역시 소상공인 경영안정자금 (4차)", region: "울산", category: "보증", target: "울산 소재 소상공인 (도소매업·음식업은 상시근로자 5인 미만, 제조업·건설업 등은 10인 미만)", amountLabel: "업체당 최대 8,000만원, 이자지원 연 1.2~2.5%", deadline: "2026-12-31", recurring: true, recurringNote: "2026.9.10부터 선착순 접수, 200억원 규모 소진 시 조기 마감", verified: true, note: "울산신용보증재단의 보증·추천을 받아 협약은행에서 대출을 실행하고, 울산시가 대출이자 일부를 지원해요. 상환방식을 몇 가지 중 고를 수 있어요.", popularity: 500 },
-  { id: 18, name: "충청북도 소상공인 육성자금", region: "충북", category: "경영", target: "충북 내 사업장을 둔 소상공인 (제조업·건설업·운수업·광업은 10인 미만, 그 외 업종은 5인 미만)", amountLabel: "최대 7,000만원 (착한가격업소는 최대 1억원), 이차보전 연 2%", deadline: "2026-12-31", recurring: true, recurringNote: "총 2,000억원을 1차(700억)·2차(600억)·3차(700억)로 나눠 접수, 회차별 예산 소진 시 마감", verified: true, note: "신규 운전자금부터 시설개보수자금까지 지원해요. '보증드림' 앱이나 충북신용보증재단(043-249-5700)에서 신청해요.", popularity: 340 },
-  { id: 19, name: "세종특별자치시 소상공인자금", region: "세종", category: "경영", target: "세종 소재 사업자등록 후 운영 중인 「소상공인기본법」상 소상공인", amountLabel: "최대 7,000만원, 이자지원 최대 연 2.0%", deadline: "2026-12-31", recurring: true, recurringNote: "분기별 공급(1월 100억·4월 200억·7월 200억·10월 100억), 분기 예산 소진 시 마감", verified: true, note: "세종신용보증재단에서 보증서를 발급받아 협약은행에서 대출을 실행해요. 신청·문의는 세종신용보증재단으로.", popularity: 210 },
-  { id: 21, name: "충남도 소상공인 재기 지원", region: "충남", category: "재기", target: "「충청남도 소상공인 지원 및 보호에 관한 조례」상 도내 소상공인 중 매출 감소 등 경영위기 요건 충족자", amountLabel: "경영개선·재창업 자금 최대 850만원", deadline: "2099-12-31", recurring: true, recurringNote: "충남경제진흥원 통해 연중 여러 차례 회차 모집, 회차별 접수 일정·모집 인원(70개 업체 내외) 상이", verified: true, note: "2025년 매출 감소, 2026년 1분기 매출 감소, 또는 물가상승률(2.5%)보다 적게 오른 소상공인 등이 대상이에요. 회차 공고는 충남경제진흥원에서 확인하세요.", popularity: 300 },
-  { id: 22, name: "전북특별자치도 중소기업육성자금 (경영안정자금)", region: "전북", category: "경영", target: "전북 도내 사업자등록을 마친 소상공인·중소기업", amountLabel: "2026년 3분기 총 590억원 규모 (경영안정자금 400억원 포함)", deadline: "2099-12-31", recurring: true, recurringNote: "분기별 순차 공고, 전북도 중소기업종합지원시스템에서 온라인 접수", verified: true, note: "창업·경쟁력강화자금, 경영안정자금, 벤처기업육성자금으로 나뉘어요. 소상공인은 주로 경영안정자금(운전자금) 쪽에 해당돼요. 정확한 회차별 일정은 전북도 공고를 확인하세요.", popularity: 260 },
-  { id: 23, name: "소상공인 고용보험료 지원사업", region: "전국", category: "고정비", target: "자영업자 고용보험에 가입한 소상공인 (상시근로자 5인 미만, 광업·제조·건설·운수업은 10인 미만)", amountLabel: "고용보험료의 50~80% (기준보수 등급별), 최대 5년", deadline: "2026-12-31", verified: true, note: "기준보수 1~2등급은 80%, 3~4등급 60%, 5~7등급 50%를 돌려받아요. 폐업 시 실업급여를 받을 수 있는 안전망이에요. 문의: 중소기업통합콜센터 1357", popularity: 0 },
-  { id: 24, name: "희망리턴패키지 원스톱폐업지원", region: "전국", category: "재기", target: "폐업했거나 폐업 예정인 소상공인", amountLabel: "점포철거비 최대 600만원 + 사업정리컨설팅·법률자문·채무조정", deadline: "2099-12-31", recurring: true, recurringNote: "2026년 1월부터 예산 소진 시까지 접수", verified: true, note: "점포철거비는 전용면적 3.3㎡당 20만원 한도예요. 컨설팅(세무·부동산·심리 등 최대 3개 분야)·법률자문·채무조정을 함께 신청할 수 있어요. 희망리턴패키지(hope.sbiz.or.kr)·소상공인24에서 신청해요.", popularity: 0 },
-  { id: 25, name: "희망리턴패키지 특화취업지원", region: "전국", category: "재기", target: "취업 의사가 있는 폐업(예정) 소상공인 (만 15~69세)", amountLabel: "취업교육·심리회복 + 전직장려수당 최대 100만원", deadline: "2099-12-31", recurring: true, recurringNote: "예산 소진 시까지 접수", verified: true, note: "폐업 후 직장인으로 새 출발하려는 사장님을 위한 사업이에요. 국민취업지원제도와 연계돼요. 소상공인24에서 신청하고, 문의는 1533-0100이에요.", popularity: 0 },
-  { id: 26, name: "전남 함평군 소상공인 융자금 이차보전", region: "전남", category: "보증", target: "함평군에 사업장을 두고 1년 이상 운영 중인 소상공인 (신규 사업장 우선)", amountLabel: "대출 최대 3,000만원, 이자 3.0% 최장 2년 지원", deadline: "2099-12-31", recurring: true, recurringNote: "2026.3.24부터 선착순 접수, 예산 소진 시 마감", verified: true, note: "함평군청 민원봉사과에서 접수하고, 전남신용보증재단 나주지점이 보증 상담을 함께 해줘요. 전남 다른 시·군(목포 등)도 비슷한 이차보전 사업이 있으니 시·군청에 문의하세요.", popularity: 0 },
-];
-
-const ALL_PROGRAMS = [DETAILED_PROGRAM, ...NATIONAL_LOANS, ...SAMPLE_PROGRAMS];
 
 const CATEGORY_ICON = {
   고정비: PiggyBank,
@@ -2070,7 +1733,7 @@ function DetailedGuide({ program, onBack, favorites, onToggleFavorite }) {
       </div>
 
       <a
-        href="https://www.sbiz24.kr"
+        href={program.applyUrl || "https://www.sbiz24.kr"}
         target="_blank"
         rel="noopener noreferrer"
         className="w-full mt-5 py-4 rounded-2xl text-white text-[14.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] transition-transform"
@@ -2173,7 +1836,7 @@ function SimpleDetail({ program, onBack, favorites, onToggleFavorite }) {
       </div>
 
       <a
-        href="https://www.sbiz24.kr"
+        href={program.applyUrl || "https://www.sbiz24.kr"}
         target="_blank"
         rel="noopener noreferrer"
         className="w-full mt-5 py-4 rounded-2xl text-[14.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] transition-transform"
@@ -2531,15 +2194,6 @@ function ExchangeRateContent() {
   );
 }
 
-// 금리 정보 — 한국은행 기준금리 및 소상공인 정책자금 금리 (2026년 9월 기준 실제 수치)
-const BOK_RATE = { rate: 3.0, date: "2026.08.27", change: "+0.25" };
-const BOK_HISTORY = [
-  { date: "~26.06", rate: 2.5, note: "유지" },
-  { date: "26.07.16", rate: 2.75, note: "3년 9개월 만에 인상" },
-  { date: "26.08.27", rate: 3.0, note: "2회 연속 인상" },
-];
-// 2026년 남은 통화정책방향 결정회의 (한국은행 발표 일정)
-const BOK_MEETINGS = ["2026-10-22", "2026-11-26"];
 // 은행 공식 로고는 상표라 쓰지 않고, 은행 대표색 배지로 보여줘요
 const BANKS = [
   { name: "KB국민", mark: "KB", bg: "linear-gradient(135deg, #FFCD3C, #FFB300)", fg: "#5C4A2E", url: "https://www.kbstar.com" },
@@ -4927,10 +4581,6 @@ function CardFeeCalc() {
 }
 
 // 연도별 최저시급 — 새해 1월 1일이 되면 자동으로 바뀌어요 (새 연도 고시되면 한 줄 추가)
-const MIN_WAGES = [
-  { year: 2026, wage: 10320 },
-  { year: 2027, wage: 10700 }, // 2026.8 고용노동부 고시
-];
 function minWageNow() {
   const y = TODAY.getFullYear();
   return [...MIN_WAGES].reverse().find((m) => m.year <= y) || MIN_WAGES[0];
@@ -5263,7 +4913,7 @@ function NewsDetailScreen({ news, allNews, onBack, onSelectNews, onSelectProgram
           <p className="text-[13px] font-bold mb-2" style={{ color: TEXT }}>기사 속 자료</p>
           <a href={news.figure.url} target="_blank" rel="noopener noreferrer" className="block rounded-[20px] p-3 mb-4" style={CARD}>
             <p className="text-[12px] font-semibold mb-2 px-0.5 break-keep" style={{ color: "#5E6577" }}>{news.figure.caption}</p>
-            <img src={news.figure.src} alt={news.figure.caption} className="w-full h-auto rounded-xl" style={{ border: "1px solid #EEF0F6" }} />
+            <img src={NEWS_FIGURES[news.figure.src] || news.figure.src} alt={news.figure.caption} className="w-full h-auto rounded-xl" style={{ border: "1px solid #EEF0F6" }} />
             <p className="text-[10.5px] mt-2 px-0.5 flex items-center gap-1" style={{ color: MUTED }}>
               출처: 대한민국 정책브리핑 · 공공누리 제1유형(출처표시) <ExternalLink size={10} />
             </p>
@@ -5422,12 +5072,13 @@ export default function App() {
   };
   const [favorites, setFavorites] = useState(new Set());
   // 데이터에서 빠진 지원금이 즐겨찾기에 남아 있어도 개수에는 안 세요
-  const favCount = useMemo(() => ALL_PROGRAMS.filter((p) => favorites.has(p.id)).length, [favorites]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
 
   // 날짜가 바뀐 뒤 앱으로 돌아오면 D-day·마감 여부·알림 예약을 새 날짜로 다시 계산해요
   const [dayKey, setDayKey] = useState(() => TODAY.getTime());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const favCount = useMemo(() => ALL_PROGRAMS.filter((p) => favorites.has(p.id)).length, [favorites, dayKey]);
   // 홈 인사 문구 — 홈 화면에 들어올 때마다 새로 골라요 (아래 useEffect)
   const [greetSeed, setGreetSeed] = useState(0);
   const atHomeHub = mainTab === "home" && homeScreen === "hub" && screen.view === "home";
@@ -5436,9 +5087,15 @@ export default function App() {
   }, [atHomeHub]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const greeting = useMemo(() => homeGreeting({ callName, favorites, myEvents, taxStaff }), [greetSeed, callName, favorites, myEvents, taxStaff, dayKey]);
+  // 최신 정보 파일 받아오기 (앱을 켤 때·다시 열 때, 6시간에 한 번) — 바뀌면 dayKey를 바꿔 목록·알림 예약을 다시 계산해요
+  useEffect(() => {
+    refreshContent().then((changed) => changed && setDayKey((k) => k + 1));
+  }, []);
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === "visible" && refreshToday()) setDayKey(TODAY.getTime());
+      if (document.visibilityState !== "visible") return;
+      if (refreshToday()) setDayKey(TODAY.getTime());
+      refreshContent().then((changed) => changed && setDayKey((k) => k + 1));
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
@@ -5946,7 +5603,6 @@ export default function App() {
           </div>
         )}
 
-
         <p className="text-[13px] font-bold mt-5 mb-2.5 px-1" style={{ color: TEXT }}>알림 방식</p>
         <div className="rounded-[20px] overflow-hidden" style={CARD}>
           {[
@@ -6293,7 +5949,6 @@ export default function App() {
           <ChevronRight size={18} color="#D99100" strokeWidth={2.6} />
         </span>
       </button>
-
 
       {/* 바로가기 퍼즐(벤토)형 — 뉴스·일정·계산기는 아래에 각자 칸이 있어서 여기엔 없어요
           10칸 기준: 지원금 큰 칸(6칸×2줄) / 오른쪽 지역센터·금리(4칸씩) / 아래 서류·도움말 반반
@@ -6662,7 +6317,7 @@ export default function App() {
           <>
             <HeroHeader icon={Newspaper} color="#7A46D6" image={heroNewsImg} title="소상공인 정책 뉴스" subtitle="정부 보도자료·공식 공고 중심으로" headline="꼭 필요한 소식만 모았어요!" onBack={() => setMainTab("home")} />
             <p className="flex items-center gap-1 text-[11.5px] -mt-2 mb-3 px-1" style={{ color: MUTED }}>
-              <CalendarCheck size={12} /> {NEWS_UPDATED} 기준 · 새 소식은 앱 업데이트 때 추가돼요
+              <CalendarCheck size={12} /> {NEWS_UPDATED} 기준 · 새 소식은 매달 추가돼요
             </p>
 
             <div className="flex gap-1.5 overflow-x-auto pt-1 pb-3 -mt-1 mb-2 -mx-4 px-4" style={{ scrollbarWidth: "none" }}>
@@ -6907,7 +6562,7 @@ export default function App() {
 // 웹 버전(public/privacy.html)과 내용·이메일·시행일을 맞춰 둘 것
 function PrivacyPolicyScreen({ onBack }) {
   const CONTACT_EMAIL = "heatpipe777@gmail.com";
-  const EFFECTIVE_DATE = "2026-10-07";
+  const EFFECTIVE_DATE = "2026-10-21";
   const sections = [
     {
       title: "1. 수집하는 개인정보 항목",
@@ -6922,7 +6577,7 @@ function PrivacyPolicyScreen({ onBack }) {
     {
       title: "3. 외부 공개 데이터 호출",
       body:
-        "환율 정보 표시를 위해 공개 환율 API(open.er-api.com)를, 지도 표시를 위해 OpenStreetMap을, 뉴스 대표 사진 표시를 위해 각 기사 원문 사이트를, 최신 보도자료 목록을 위해 중소벤처기업부 RSS(mss.go.kr)를 호출해요. 이 요청에는 개인을 식별할 수 있는 정보가 포함되지 않아요.",
+        "환율 정보 표시를 위해 공개 환율 API(open.er-api.com)를, 지도 표시를 위해 OpenStreetMap을, 뉴스 대표 사진 표시를 위해 각 기사 원문 사이트를, 최신 보도자료 목록을 위해 중소벤처기업부 RSS(mss.go.kr)를, 지원금·뉴스 최신 정보를 받기 위해 GitHub(raw.githubusercontent.com)를 호출해요. 이 요청에는 개인을 식별할 수 있는 정보가 포함되지 않아요.",
     },
     {
       title: "4. 광고",
