@@ -5906,10 +5906,10 @@ export default function App() {
   if (screen.view === "alertSettings") {
     return (
       <Shell>
-        <HeroHeader icon={Bell} color="#E5674D" image={heroAlertImg} title="알림 설정" subtitle="마감일·세금 신고일·금리 발표일" headline="미리 알려드려요!" onBack={() => setScreen({ view: "home" })} />
+        <HeroHeader icon={Bell} color="#F2B705" image={heroAlertImg} title="알림 설정" subtitle="마감일·세금 신고일·금리 발표일" headline="미리 알려드려요!" onBack={() => setScreen({ view: "home" })} />
         <div className="rounded-[20px] overflow-hidden" style={CARD}>
           {[
-            { key: "deadline", img: "bell", icon: Bell, color: "#E5674D", bg: "#FDEEE9", title: "지원금 마감 알림", sub: "즐겨찾기에서 🔔 켠 지원금", on: notifyEnabled, toggle: toggleNotifyEnabled },
+            { key: "deadline", img: "bell", icon: Bell, color: "#E8A800", bg: "#FFF6D1", title: "지원금 마감 알림", sub: "즐겨찾기에서 🔔 켠 지원금", on: notifyEnabled, toggle: toggleNotifyEnabled },
             { key: "tax", img: "taxcal", icon: CalendarCheck, color: "#2C9F6B", bg: "#E7F7EF", title: "세금 신고·납부일 알림", sub: "부가세·종합소득세 등", on: taxAlertOn, toggle: toggleTaxAlert },
             { key: "rate", img: "bank", icon: Landmark, color: BLUE, bg: BLUE_SOFT, title: "금리 발표일 알림", sub: "한국은행 기준금리 발표 당일", on: rateAlertOn, toggle: toggleRateAlert },
           ].map((r, i) => (
