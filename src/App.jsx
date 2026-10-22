@@ -3717,7 +3717,7 @@ function DiagnosisWizard({ onBack, onComplete, intro = false }) {
           <button
             onClick={() => goNext(answers)}
             className="w-full mt-5 py-4 rounded-2xl text-[14.5px] font-bold active:scale-[0.99] transition-transform"
-            style={selected.length ? BTN_PRIMARY : { background: "#fff", border: `1.5px solid ${BLUE}`, color: BLUE }}
+            style={selected.length ? BTN_PRIMARY : { background: "linear-gradient(135deg, #E3EAFF, #CFDCFF)", color: "#2F4FC0", boxShadow: "0 2px 8px rgba(61,99,221,.18)" }}
           >
             {selected.length ? (step === STEPS.length - 1 ? "결과 보기" : "다음") : "해당 없어요 · 건너뛰기 ›"}
           </button>
