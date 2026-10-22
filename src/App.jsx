@@ -3717,10 +3717,13 @@ function DiagnosisWizard({ onBack, onComplete, intro = false }) {
           <button
             onClick={() => goNext(answers)}
             className="w-full mt-5 py-4 rounded-2xl text-[14.5px] font-bold active:scale-[0.99] transition-transform"
-            style={selected.length ? BTN_PRIMARY : { background: "#E7E9F0", color: MUTED }}
+            style={selected.length ? BTN_PRIMARY : { background: "#fff", border: `1.5px solid ${BLUE}`, color: BLUE }}
           >
-            {selected.length ? (step === STEPS.length - 1 ? "결과 보기" : "다음") : "건너뛰기"}
+            {selected.length ? (step === STEPS.length - 1 ? "결과 보기" : "다음") : "해당 없어요 · 건너뛰기 ›"}
           </button>
+          {!selected.length && (
+            <p className="text-[11.5px] text-center mt-2" style={{ color: MUTED }}>해당하는 게 없으면 그냥 넘어가도 돼요</p>
+          )}
         </>
       ) : (
         <div className="space-y-2">
