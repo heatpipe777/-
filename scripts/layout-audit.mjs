@@ -187,7 +187,7 @@ const SCREENS = [
   { name: "내 일정 추가 창", steps: [["click", "내 일정 추가"]] },
   { name: "내 일정 추가 매년·음력", steps: [["click", "제사·기일"]] },
   { name: "뉴스", steps: [["home"], ["click", "정책 뉴스 전체 보기"]] },
-  { name: "뉴스 상세", steps: [["click", "울산시"]] },
+  { name: "뉴스 상세", steps: [["click", "거제·통영"]] },
   { name: "즐겨찾기", steps: [["home"], ["click", "즐겨찾기"]] },
   { name: "MY", steps: [["home"], ["click", "MY"]] },
   { name: "내 이름", steps: [["click", "내 이름"]] },
