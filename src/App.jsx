@@ -314,25 +314,34 @@ function useBottomBanner(size) {
       // 최신 폰은 배너가 아래 버튼 줄 위에 떠서, 버튼 줄 높이(--sab)도 더해요 (에뮬레이터·옛 폰은 0)
       document.body.style.paddingBottom = h ? `calc(${h + 24}px + var(--sab))` : "";
     });
-    // 인터넷이 잠깐 끊겨 배너를 못 받으면 SDK는 다시 시도하지 않아요 → 30초·60초·120초 뒤 새로 띄워요(한 번 받으면 횟수 초기화)
+    // 배너를 못 받으면 SDK는 다시 시도하지 않아요 → 인터넷이 돌아오면 바로, 아니면 15초·30초·60초 뒤 새로 띄워요
+    // (실패 직후 계속 요청하면 구글이 권하지 않고 배터리만 써요. 한 번 받으면 횟수 초기화)
     let retries = 0;
     let retryTimer = null;
+    let failed = false;
+    const retryNow = async () => {
+      clearTimeout(retryTimer);
+      if (!failed || adState.kind !== "bottom") return;
+      failed = false;
+      await removeAd();
+      restoreBottomAd();
+    };
     const failSub = AdMob.addListener(BannerAdPluginEvents.FailedToLoad, () => {
       if (adState.kind !== "bottom" || retries >= 3) return;
+      failed = true;
       clearTimeout(retryTimer);
-      retryTimer = setTimeout(async () => {
-        if (adState.kind !== "bottom") return;
-        await removeAd();
-        restoreBottomAd();
-      }, 30000 * 2 ** retries++);
+      retryTimer = setTimeout(retryNow, 15000 * 2 ** retries++);
     });
     const loadSub = AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
       retries = 0;
+      failed = false;
     });
+    window.addEventListener("online", retryNow);
     return () => {
       sub.then((x) => x.remove());
       failSub.then((x) => x.remove());
       loadSub.then((x) => x.remove());
+      window.removeEventListener("online", retryNow);
       clearTimeout(retryTimer);
     };
   }, []);
