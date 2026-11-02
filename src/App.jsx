@@ -2210,7 +2210,9 @@ function InterestRateContent({ onOpenCalculator, rateAlertOn, onToggleRateAlert 
   const nextDate = next ? parseLocalDate(next) : null;
   // 앱에 넣어 둔 기준금리보다 새 발표가 이미 있었으면(앱 업데이트 전) 한국은행에서 확인하도록 안내
   const lastMeeting = BOK_MEETINGS.filter((d) => getDday(d) <= 0).pop();
-  const rateStale = lastMeeting && lastMeeting > BOK_RATE.date.replace(/./g, "-");
+  const rateStale = lastMeeting && lastMeeting > BOK_RATE.date.replace(/\./g, "-");
+  const rateUp = BOK_RATE.change.startsWith("+");
+  const rateDown = BOK_RATE.change.startsWith("-");
   const lastMeetingDate = lastMeeting ? parseLocalDate(lastMeeting) : null;
   const maxRate = 3.5;
   const policyRates = [
@@ -2240,10 +2242,17 @@ function InterestRateContent({ onOpenCalculator, rateAlertOn, onToggleRateAlert 
           <p className="font-black text-white leading-none tabular-nums" style={{ fontSize: 56, letterSpacing: "-0.03em" }}>
             {BOK_RATE.rate.toFixed(2)}<span style={{ fontSize: 30 }}>%</span>
           </p>
-          <span className="mb-1.5 text-[12px] font-bold px-2 py-0.5 rounded-full bg-white" style={{ color: RED }}>▲ {BOK_RATE.change.slice(1)}%p</span>
+          {/* 정보 파일 change: "+0.25" 인상 / "-0.25" 인하 / "0" 동결 */}
+          <span className="mb-1.5 text-[12px] font-bold px-2 py-0.5 rounded-full bg-white" style={{ color: rateUp ? RED : rateDown ? BLUE : MUTED }}>
+            {rateUp ? `▲ ${BOK_RATE.change.slice(1)}%p` : rateDown ? `▼ ${BOK_RATE.change.slice(1)}%p` : "동결"}
+          </span>
         </div>
         <p className="relative text-[12px] text-white/80 mt-3 leading-relaxed break-keep">
-          기준금리가 오르면 변동금리 대출 이자도 따라 오를 수 있어요. 정책자금은 상승 폭이 작은 편이에요.
+          {rateDown
+            ? "기준금리가 내리면 변동금리 대출 이자도 따라 내려갈 수 있어요. 금리 바뀌는 시기를 확인해 보세요."
+            : rateUp
+              ? "기준금리가 오르면 변동금리 대출 이자도 따라 오를 수 있어요. 정책자금은 상승 폭이 작은 편이에요."
+              : "이번엔 기준금리가 그대로예요. 변동금리 대출 이자는 은행 사정에 따라 조금씩 바뀔 수 있어요."}
         </p>
       </div>
 
@@ -6529,7 +6538,7 @@ export default function App() {
             ))}
           </div>
 
-          <p className="text-[11.5px] text-center mt-8" style={{ color: MUTED }}>받아가게 v1.1</p>
+          <p className="text-[11.5px] text-center mt-8" style={{ color: MUTED }}>받아가게 v1.2</p>
           <p className="text-[11px] text-center mt-1 leading-relaxed" style={{ color: MUTED }}>정부·공공기관의 공식 앱이 아닌 민간 정보 서비스예요</p>
         </>
       )}
