@@ -9,3 +9,6 @@ play-upload-key.json
 *service-account*.json
 *.jks
 *.keystore
+
+# 작업 기록(개인 메모, 공개 저장소에 올리지 않음)
+docs/작업기록.md
