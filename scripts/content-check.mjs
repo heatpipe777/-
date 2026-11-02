@@ -70,7 +70,9 @@ if (!process.argv.includes("--no-links")) {
       try {
         const r = await fetch(url, { method, redirect: "follow", signal: AbortSignal.timeout(15000), headers: { "user-agent": "Mozilla/5.0 (Linux; Android 14) content-check" } });
         if (r.status < 400) return;
-        if (method === "GET") fail(`${what}: 열리지 않아요 (${r.status}) ${url}`);
+        // 502·503·504는 사이트 일시 장애이거나 예약 작업 환경의 중계 서버가 해외 접속 차단을 대신 돌려준 것 → 경고만
+        if (method === "GET" && r.status >= 502 && r.status <= 504) warn(`${what}: 일시적으로 열리지 않거나 해외 접속 차단(${r.status}) — 직접 확인 ${url}`);
+        else if (method === "GET") fail(`${what}: 열리지 않아요 (${r.status}) ${url}`);
       } catch (e) {
         if (method === "GET") warn(`${what}: 연결 실패(${e.name}) — 사이트가 해외 접속을 막을 수 있어요, 직접 확인 ${url}`);
       }

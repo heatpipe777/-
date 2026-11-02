@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updated": "2026-10-21",
+  "updated": "2026-11-02",
   "newsUpdated": "2026.10.06",
   "programs": [
     {
@@ -216,8 +216,7 @@
       "recurringNote": "대구신용보증재단 통해 상·하반기 공고, 예산 소진 시 조기 마감",
       "verified": true,
       "note": "대출 자체가 아니라 대출받을 때 발생하는 이자 일부를 지자체가 보전해줘요. 보증서 발급 후 협약은행에서 대출을 실행해요.",
-      "popularity": 430,
-      "applyUrl": "https://www.ttg.co.kr"
+      "popularity": 430
     },
     {
       "id": 8,
